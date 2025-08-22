@@ -16,8 +16,9 @@ class DBHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
+        // Produk
         await db.execute('''
           CREATE TABLE products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,11 +27,25 @@ class DBHelper {
             price REAL
           )
         ''');
+
+        // Transaksi
         await db.execute('''
           CREATE TABLE transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
             total REAL
+          )
+        ''');
+
+        // Item transaksi
+        await db.execute('''
+          CREATE TABLE transaction_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transaction_id INTEGER,
+            product_name TEXT,
+            price REAL,
+            qty INTEGER,
+            FOREIGN KEY(transaction_id) REFERENCES transactions(id)
           )
         ''');
 
@@ -61,11 +76,44 @@ class DBHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
-  static Future<int> insertTransaction(double total) async {
+  /// Simpan transaksi + detail item
+  static Future<void> insertTransaction(
+    List<Map<String, dynamic>> cart,
+    double total,
+  ) async {
     final db = await database;
-    return await db.insert("transactions", {
+
+    // simpan transaksi
+    int trxId = await db.insert("transactions", {
       "date": DateTime.now().toIso8601String(),
       "total": total,
     });
+
+    // simpan detail item
+    for (var item in cart) {
+      await db.insert("transaction_items", {
+        "transaction_id": trxId,
+        "product_name": item["name"],
+        "price": item["price"],
+        "qty": item["qty"] ?? 1,
+      });
+    }
+  }
+
+  /// Ambil semua transaksi + item
+  static Future<List<Map<String, dynamic>>> getTransactions() async {
+    final db = await database;
+    return await db.query("transactions", orderBy: "date DESC");
+  }
+
+  static Future<List<Map<String, dynamic>>> getTransactionItems(
+    int trxId,
+  ) async {
+    final db = await database;
+    return await db.query(
+      "transaction_items",
+      where: "transaction_id = ?",
+      whereArgs: [trxId],
+    );
   }
 }

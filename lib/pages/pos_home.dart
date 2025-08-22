@@ -1,3 +1,4 @@
+import 'package:cashier/pages/report_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier/db/db_helper.dart';
 import 'package:cashier/services/printer_service.dart';
@@ -37,7 +38,7 @@ class _POSHomeState extends State<POSHome> {
   void _saveAndPrint() async {
     if (cart.isEmpty) return;
 
-    await DBHelper.insertTransaction(total);
+    await DBHelper.insertTransaction(cart, total);
     await printer.printReceipt(cart, total);
 
     setState(() {
@@ -50,10 +51,41 @@ class _POSHomeState extends State<POSHome> {
     );
   }
 
+  void _addToCart(Map<String, dynamic> product) {
+    setState(() {
+      // cek kalau produk sudah ada → tambah qty
+      int index = cart.indexWhere((item) => item["id"] == product["id"]);
+      if (index >= 0) {
+        cart[index]["qty"] += 1;
+      } else {
+        cart.add({
+          "id": product["id"],
+          "name": product["name"],
+          "price": product["price"],
+          "qty": 1,
+        });
+      }
+      total += product["price"];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Aplikasi Kasir Flutter")),
+      appBar: AppBar(
+        title: const Text("Aplikasi Kasir Flutter"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportPage()),
+              );
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(

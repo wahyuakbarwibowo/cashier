@@ -9,23 +9,22 @@ class PrinterService {
   ) async {
     List<BluetoothDevice> devices = await bluetooth.getBondedDevices();
     if (devices.isNotEmpty) {
-      // connect ke device pertama (bisa diganti UI pilihan printer)
       await bluetooth.connect(devices.first);
 
-      // Header toko
       bluetooth.printCustom("TOKO SEDERHANA", 3, 1);
       bluetooth.printCustom("Jl. Raya No. 123", 1, 1);
       bluetooth.printNewLine();
 
-      // Info transaksi
       bluetooth.printCustom("Tanggal: ${DateTime.now()}", 1, 0);
       bluetooth.printCustom("-----------------------------", 1, 1);
 
-      // Daftar produk
+      // tampilkan item
       for (var item in cart) {
         String name = item["name"];
+        int qty = item["qty"];
         double price = item["price"];
-        bluetooth.printLeftRight(name, "Rp$price", 1);
+        double subtotal = qty * price;
+        bluetooth.printLeftRight("$name x$qty", "Rp$subtotal", 1);
       }
 
       bluetooth.printCustom("-----------------------------", 1, 1);
