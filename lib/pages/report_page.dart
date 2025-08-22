@@ -1,3 +1,4 @@
+import 'package:cashier/pages/transaction_detail_page.dart';
 import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
 
@@ -9,7 +10,7 @@ class ReportPage extends StatefulWidget {
 }
 
 class _ReportPageState extends State<ReportPage> {
-  List<Map<String, dynamic>> transactions = [];
+  List<Map<String, dynamic>> _transactions = [];
 
   @override
   void initState() {
@@ -17,59 +18,35 @@ class _ReportPageState extends State<ReportPage> {
     _loadTransactions();
   }
 
-  Future<void> _loadTransactions() async {
-    final trx = await DBHelper.getTransactions();
+  void _loadTransactions() async {
+    var data = await DBHelper.getTransactions();
     setState(() {
-      transactions = trx;
+      _transactions = data;
     });
-  }
-
-  void _openDetail(int trxId) async {
-    final items = await DBHelper.getTransactionItems(trxId);
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Detail Transaksi"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: items
-              .map(
-                (item) => ListTile(
-                  title: Text(item["product_name"]),
-                  subtitle: Text("Qty: ${item["qty"]}"),
-                  trailing: Text("Rp${item["price"] * item["qty"]}"),
-                ),
-              )
-              .toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Tutup"),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Laporan Penjualan")),
+      appBar: AppBar(title: const Text("Laporan Transaksi")),
       body: ListView.builder(
-        itemCount: transactions.length,
+        itemCount: _transactions.length,
         itemBuilder: (context, index) {
-          final trx = transactions[index];
+          var tx = _transactions[index];
           return ListTile(
-            title: Text("Transaksi #${trx['id']}"),
+            title: Text("Tanggal: ${tx["date"]}"),
             subtitle: Text(
-              "Total: Rp${trx["total"]} "
-              "Diskon: Rp${trx["discount"]} "
-              "Pajak: Rp${trx["tax"]} "
-              "Grand: Rp${trx["grand_total"]}",
+              "Total: Rp${tx["total"]} | Diskon: Rp${tx["discount"]} | Pajak: Rp${tx["tax"]} | Grand: Rp${tx["grand_total"]}",
             ),
-            trailing: Text("Rp${trx['total']}"),
-            onTap: () => _openDetail(trx['id']),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TransactionDetailPage(transaction: tx),
+                ),
+              );
+            },
           );
         },
       ),

@@ -1,3 +1,4 @@
+import 'package:cashier/main.dart';
 import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
 import 'product_form_page.dart';
@@ -40,34 +41,44 @@ class _ProductPageState extends State<ProductPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Kelola Produk")),
-      body: ListView.builder(
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          final item = products[index];
-          return ListTile(
-            title: Text(item["name"]),
-            subtitle: Text("Rp${item["price"]} • Barcode: ${item["barcode"]}"),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () => _openForm(product: item),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _deleteProduct(item["id"]),
-                ),
-              ],
+    return POSScaffold(
+      title: "Manajemen Produk", // ⬅️ ini harus String
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                var p = products[index];
+                return ListTile(
+                  title: Text(p["name"]),
+                  subtitle: Text("Rp${p["price"]}"),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _openForm(product: p),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          DBHelper.deleteProduct(p["id"]);
+                          _loadProducts();
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        child: const Icon(Icons.add),
+          ),
+          ElevatedButton(
+            // ⬅️ ini sudah benar ada di children Column
+            onPressed: () => _openForm(),
+            child: const Text("Tambah Produk"),
+          ),
+        ],
       ),
     );
   }

@@ -63,6 +63,21 @@ class DBHelper {
     );
   }
 
+  static Future<List<Map<String, dynamic>>> getTransactionItems(
+    int transactionId,
+  ) async {
+    final db = await database;
+    return await db.rawQuery(
+      '''
+        SELECT ti.id, ti.qty, ti.price, ti.product_id, p.name as product_name
+        FROM transaction_items ti
+        LEFT JOIN products p ON p.id = ti.product_id
+        WHERE ti.transaction_id = ?
+      ''',
+      [transactionId],
+    );
+  }
+
   static Future<Map<String, dynamic>?> getProductByBarcode(
     String barcode,
   ) async {
@@ -100,17 +115,6 @@ class DBHelper {
   static Future<List<Map<String, dynamic>>> getTransactions() async {
     final db = await database;
     return await db.query("transactions", orderBy: "date DESC");
-  }
-
-  static Future<List<Map<String, dynamic>>> getTransactionItems(
-    int trxId,
-  ) async {
-    final db = await database;
-    return await db.query(
-      "transaction_items",
-      where: "transaction_id = ?",
-      whereArgs: [trxId],
-    );
   }
 
   static Future<int> insertTransactionItem(Map<String, dynamic> item) async {
