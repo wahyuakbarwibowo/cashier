@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:cashier/pages/pos_home.dart'; // pastikan path sesuai
+import 'pages/pos_home.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const POSApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class POSApp extends StatelessWidget {
+  const POSApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Aplikasi Kasir Flutter',
+      title: "Aplikasi Kasir Flutter",
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: POSHome(), // 🔥 set POSHome sebagai halaman utama
+      home: const POSHome(),
     );
   }
 }

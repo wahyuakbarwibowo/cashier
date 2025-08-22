@@ -18,7 +18,6 @@ class DBHelper {
       path,
       version: 2,
       onCreate: (db, version) async {
-        // Produk
         await db.execute('''
           CREATE TABLE products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,7 +27,6 @@ class DBHelper {
           )
         ''');
 
-        // Transaksi
         await db.execute('''
           CREATE TABLE transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +35,6 @@ class DBHelper {
           )
         ''');
 
-        // Item transaksi
         await db.execute('''
           CREATE TABLE transaction_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,20 +73,16 @@ class DBHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
-  /// Simpan transaksi + detail item
   static Future<void> insertTransaction(
     List<Map<String, dynamic>> cart,
     double total,
   ) async {
     final db = await database;
-
-    // simpan transaksi
     int trxId = await db.insert("transactions", {
       "date": DateTime.now().toIso8601String(),
       "total": total,
     });
 
-    // simpan detail item
     for (var item in cart) {
       await db.insert("transaction_items", {
         "transaction_id": trxId,
@@ -100,7 +93,6 @@ class DBHelper {
     }
   }
 
-  /// Ambil semua transaksi + item
   static Future<List<Map<String, dynamic>>> getTransactions() async {
     final db = await database;
     return await db.query("transactions", orderBy: "date DESC");

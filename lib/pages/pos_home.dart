@@ -1,10 +1,12 @@
-import 'package:cashier/pages/report_page.dart';
 import 'package:flutter/material.dart';
-import 'package:cashier/db/db_helper.dart';
-import 'package:cashier/services/printer_service.dart';
-import 'package:cashier/pages/barcode_scanner_page.dart';
+import '../db/db_helper.dart';
+import '../services/printer_service.dart';
+import 'barcode_scanner_page.dart';
+import 'report_page.dart';
 
 class POSHome extends StatefulWidget {
+  const POSHome({super.key});
+
   @override
   State<POSHome> createState() => _POSHomeState();
 }
@@ -17,22 +19,36 @@ class _POSHomeState extends State<POSHome> {
   void _scanBarcode() async {
     final barcode = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => BarcodeScannerPage()),
+      MaterialPageRoute(builder: (_) => const BarcodeScannerPage()),
     );
 
     if (barcode != null) {
       final product = await DBHelper.getProductByBarcode(barcode);
       if (product != null) {
-        setState(() {
-          cart.add(product);
-          total += product["price"];
-        });
+        _addToCart(product);
       } else {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Produk tidak ditemukan")));
       }
     }
+  }
+
+  void _addToCart(Map<String, dynamic> product) {
+    setState(() {
+      int index = cart.indexWhere((item) => item["id"] == product["id"]);
+      if (index >= 0) {
+        cart[index]["qty"] += 1;
+      } else {
+        cart.add({
+          "id": product["id"],
+          "name": product["name"],
+          "price": product["price"],
+          "qty": 1,
+        });
+      }
+      total += product["price"];
+    });
   }
 
   void _saveAndPrint() async {
@@ -49,24 +65,6 @@ class _POSHomeState extends State<POSHome> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Transaksi tersimpan & struk dicetak")),
     );
-  }
-
-  void _addToCart(Map<String, dynamic> product) {
-    setState(() {
-      // cek kalau produk sudah ada → tambah qty
-      int index = cart.indexWhere((item) => item["id"] == product["id"]);
-      if (index >= 0) {
-        cart[index]["qty"] += 1;
-      } else {
-        cart.add({
-          "id": product["id"],
-          "name": product["name"],
-          "price": product["price"],
-          "qty": 1,
-        });
-      }
-      total += product["price"];
-    });
   }
 
   @override
@@ -94,8 +92,8 @@ class _POSHomeState extends State<POSHome> {
               itemBuilder: (context, index) {
                 final item = cart[index];
                 return ListTile(
-                  title: Text(item["name"]),
-                  subtitle: Text("Rp${item["price"]}"),
+                  title: Text("${item['name']} x${item['qty']}"),
+                  trailing: Text("Rp${item['price'] * item['qty']}"),
                 );
               },
             ),

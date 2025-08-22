@@ -18,7 +18,6 @@ class PrinterService {
       bluetooth.printCustom("Tanggal: ${DateTime.now()}", 1, 0);
       bluetooth.printCustom("-----------------------------", 1, 1);
 
-      // tampilkan item
       for (var item in cart) {
         String name = item["name"];
         int qty = item["qty"];
