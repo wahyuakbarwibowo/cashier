@@ -21,9 +21,11 @@ class DBHelper {
         await db.execute('''
           CREATE TABLE products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            barcode TEXT,
-            name TEXT,
-            price REAL
+            date TEXT,
+            total REAL,
+            discount REAL,
+            tax REAL,
+            grand_total REAL
           )
         ''');
 
@@ -39,7 +41,7 @@ class DBHelper {
           CREATE TABLE transaction_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             transaction_id INTEGER,
-            product_name TEXT,
+            product_id INTEGER,
             price REAL,
             qty INTEGER,
             FOREIGN KEY(transaction_id) REFERENCES transactions(id)
@@ -73,7 +75,7 @@ class DBHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
-  static Future<void> insertTransaction(
+  static Future<int> insertTransaction(
     List<Map<String, dynamic>> cart,
     double total,
   ) async {
@@ -91,6 +93,8 @@ class DBHelper {
         "qty": item["qty"] ?? 1,
       });
     }
+
+    return trxId;
   }
 
   static Future<List<Map<String, dynamic>>> getTransactions() async {
@@ -107,5 +111,35 @@ class DBHelper {
       where: "transaction_id = ?",
       whereArgs: [trxId],
     );
+  }
+
+  static Future<int> insertTransactionItem(Map<String, dynamic> item) async {
+    final db = await database;
+    return await db.insert("transaction_items", item);
+  }
+
+  static Future<int> insertProduct(Map<String, dynamic> product) async {
+    final db = await database;
+    return await db.insert("products", product);
+  }
+
+  static Future<int> updateProduct(int id, Map<String, dynamic> product) async {
+    final db = await database;
+    return await db.update(
+      "products",
+      product,
+      where: "id = ?",
+      whereArgs: [id],
+    );
+  }
+
+  static Future<int> deleteProduct(int id) async {
+    final db = await database;
+    return await db.delete("products", where: "id = ?", whereArgs: [id]);
+  }
+
+  static Future<List<Map<String, dynamic>>> getProducts() async {
+    final db = await database;
+    return await db.query("products", orderBy: "name ASC");
   }
 }

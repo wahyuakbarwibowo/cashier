@@ -1,3 +1,4 @@
+import 'package:cashier/pages/product_page.dart';
 import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
 import '../services/printer_service.dart';
@@ -67,12 +68,120 @@ class _POSHomeState extends State<POSHome> {
     );
   }
 
+  void _saveTransaction(double discount, double tax) async {
+    double total = cart.fold(0, (sum, item) => sum + item["price"]);
+    double grandTotal = total - discount + tax;
+
+    int id = await DBHelper.insertTransaction(
+      {
+            "date": DateTime.now().toIso8601String(),
+            "total": total,
+            "discount": discount,
+            "tax": tax,
+            "grand_total": grandTotal,
+          }
+          as List<Map<String, dynamic>>,
+      total,
+    );
+
+    for (var item in cart) {
+      await DBHelper.insertTransactionItem({
+        "transaction_id": id,
+        "product_id": item["id"],
+        "qty": 1,
+        "price": item["price"],
+      });
+    }
+
+    setState(() {
+      cart.clear();
+    });
+  }
+
+  void _checkout() {
+    final _discountCtrl = TextEditingController();
+    bool includeTax = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            double subtotal = cart.fold(0, (sum, item) => sum + item["price"]);
+            double discount = double.tryParse(_discountCtrl.text) ?? 0;
+            double tax = includeTax ? (subtotal - discount) * 0.1 : 0;
+            double grandTotal = subtotal - discount + tax;
+
+            return AlertDialog(
+              title: const Text("Checkout"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Subtotal: Rp$subtotal"),
+                  TextField(
+                    controller: _discountCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Diskon (Rp)"),
+                    onChanged: (_) => setStateDialog(() {}),
+                  ),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: includeTax,
+                        onChanged: (val) {
+                          setStateDialog(() {
+                            includeTax = val!;
+                          });
+                        },
+                      ),
+                      const Text("Tambahkan Pajak 10%"),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Grand Total: Rp$grandTotal",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Batal"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _saveTransaction(discount, tax);
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Simpan"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Aplikasi Kasir Flutter"),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.inventory),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProductPage()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.list),
             onPressed: () {

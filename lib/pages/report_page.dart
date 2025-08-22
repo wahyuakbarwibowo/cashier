@@ -62,7 +62,12 @@ class _ReportPageState extends State<ReportPage> {
           final trx = transactions[index];
           return ListTile(
             title: Text("Transaksi #${trx['id']}"),
-            subtitle: Text("Tanggal: ${trx['date']}"),
+            subtitle: Text(
+              "Total: Rp${trx["total"]} "
+              "Diskon: Rp${trx["discount"]} "
+              "Pajak: Rp${trx["tax"]} "
+              "Grand: Rp${trx["grand_total"]}",
+            ),
             trailing: Text("Rp${trx['total']}"),
             onTap: () => _openDetail(trx['id']),
           );
