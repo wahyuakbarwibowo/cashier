@@ -19,5 +19,6 @@
 *   **📊 Laporan Cerdas & Interaktif**: Pantau omzet, laba bersih, serta saldo hutang-piutang. Klik laporan untuk melihat detail transaksi secara mendalam.
 *   **✅ Validasi Stok**: Keamanan transaksi dengan pengecekan stok otomatis agar tidak jualan barang yang kosong.
 *   **🖨️ Thermal Print**: Layout struk khusus yang hemat kertas dan rapi di printer thermal.
+*   **💰 Format Rupiah Otomatis**: Input nominal dengan separator ribuan (titik) secara otomatis untuk kemudahan transaksi retail dan digital.
 
 **Aminmart Cashier** — Solusi kasir modern di genggaman Anda.

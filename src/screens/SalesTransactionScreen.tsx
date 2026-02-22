@@ -90,13 +90,30 @@ const getPriceBreakdown = (item: CartItem) => {
   return { totalPrice, label: `${qty} Satuan`, unitPrice: p.selling_price || 0 };
 };
 
+// Helper to format number with thousand separators (Indonesian locale - dots)
+const formatCurrency = (value: string): string => {
+  // Remove all non-numeric characters except minus sign
+  const numericValue = value.replace(/[^0-9]/g, "");
+  if (!numericValue) return "0";
+  // Format with thousand separators (dots for Indonesian locale)
+  return parseInt(numericValue, 10).toLocaleString("id-ID");
+};
+
+// Helper to parse formatted currency string to number
+const parseCurrency = (value: string): number => {
+  // Remove all non-numeric characters except minus sign
+  const numericValue = value.replace(/[^0-9]/g, "");
+  if (!numericValue) return 0;
+  return parseInt(numericValue, 10);
+};
+
 export default function SalesTransactionScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paidAmount, setPaidAmount] = useState<string>("0");
+  const [paidAmount, setPaidAmount] = useState<string>("");
   const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -351,14 +368,15 @@ export default function SalesTransactionScreen() {
   const finalTotal = total - pointsToRedeem; // Total after points redemption
 
   // Calculate change based on paid amount and final total
-  const change = Number(paidAmount) - finalTotal;
+  const paidValue = parseCurrency(paidAmount);
+  const change = paidValue - finalTotal;
 
   // Calculate points earned based on final total (after redemption)
   const earnedPoints = Math.floor(finalTotal / 1000); // Example: 1 point per 1000 IDR
 
   const resetForm = () => {
     setCart([]);
-    setPaidAmount("0");
+    setPaidAmount("");
     setSearchQuery("");
     setSelectedCustomerId(null);
     setCustomerName("");
@@ -468,7 +486,7 @@ export default function SalesTransactionScreen() {
         setPaidAmountError("Jumlah pembayaran wajib diisi.");
         isValid = false;
       } else {
-        const paidValue = parseFloat(paidAmount);
+        const paidValue = parseCurrency(paidAmount);
         if (isNaN(paidValue) || paidValue < 0) {
           setPaidAmountError("Jumlah pembayaran harus berupa angka positif.");
           isValid = false;
@@ -547,7 +565,7 @@ export default function SalesTransactionScreen() {
         customer_id: finalCustomerId,
         payment_method_id: selectedPaymentMethodId,
         total: finalTotal,
-        paid: isDebt ? finalTotal : Number(paidAmount),
+        paid: isDebt ? finalTotal : paidValue,
         change: isDebt ? 0 : change,
         points_earned: earnedPoints,
         points_redeemed: pointsToRedeem,
@@ -858,9 +876,11 @@ export default function SalesTransactionScreen() {
                 </HelperText>
                 <TextInput
                   label="Jumlah Bayar" // Added label
-                  value={paidAmount}
+                  value={paidAmount ? formatCurrency(paidAmount) : ""}
                   onChangeText={(text) => {
-                    setPaidAmount(text);
+                    // Store raw numeric value (without formatting) in state
+                    const rawValue = text.replace(/[^0-9]/g, "");
+                    setPaidAmount(rawValue);
                     clearErrorOnInput(setPaidAmountError);
                   }}
                   keyboardType="numeric"

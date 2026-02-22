@@ -41,6 +41,23 @@ import { parseISODate, getCurrentDateISO, createTimestamp } from "../utils/dateU
 import { validateDigitalTransaction } from "../utils/validation";
 import { ROUTES } from "../constants/routes";
 
+// Helper to format number with thousand separators (Indonesian locale - dots)
+const formatCurrency = (value: string): string => {
+  // Remove all non-numeric characters except minus sign
+  const numericValue = value.replace(/[^0-9]/g, "");
+  if (!numericValue) return "";
+  // Format with thousand separators (dots for Indonesian locale)
+  return parseInt(numericValue, 10).toLocaleString("id-ID");
+};
+
+// Helper to parse formatted currency string to number
+const parseCurrency = (value: string): number => {
+  // Remove all non-numeric characters except minus sign
+  const numericValue = value.replace(/[^0-9]/g, "");
+  if (!numericValue) return 0;
+  return parseInt(numericValue, 10);
+};
+
 export default function DigitalTransactionScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -133,7 +150,7 @@ export default function DigitalTransactionScreen() {
         );
 
         if (etrx) {
-          setEditTrxId(etrx.id);
+          setEditTrxId(etrx.id ?? null);
           setCategory(etrx.category);
           setPhoneNumber(etrx.phone_number);
           setCustomerName(etrx.customer_name || "");
@@ -227,8 +244,8 @@ export default function DigitalTransactionScreen() {
 
   // Recalculate profit when prices change
   useEffect(() => {
-    const costValue = parseFloat(costPrice) || 0;
-    const sellValue = parseFloat(sellingPrice) || 0;
+    const costValue = parseCurrency(costPrice);
+    const sellValue = parseCurrency(sellingPrice);
     setProfit(sellValue - costValue);
   }, [costPrice, sellingPrice]);
 
@@ -272,8 +289,8 @@ export default function DigitalTransactionScreen() {
       return; // Stop if validation fails
     }
 
-    const finalCostValue = parseFloat(costPrice) || 0;
-    const finalSellValue = parseFloat(sellingPrice); // Already validated to be a number > 0
+    const finalCostValue = parseCurrency(costPrice);
+    const finalSellValue = parseCurrency(sellingPrice);
     const profitValue = finalSellValue - finalCostValue;
 
     setIsSubmitting(true);
@@ -281,7 +298,7 @@ export default function DigitalTransactionScreen() {
       // Construct the timestamp for created_at. Use the selected date and current time.
       const createdAtTimestamp = createTimestamp(transactionDate);
 
-      const paidValue = parseFloat(paid) || finalSellValue;
+      const paidValue = parseCurrency(paid) || finalSellValue;
 
       let trxId: number;
       if (editTrxId) {
@@ -291,7 +308,7 @@ export default function DigitalTransactionScreen() {
           phone_number: phoneNumber.trim(),
           customer_name: customerName.trim(),
           provider: provider.trim(),
-          amount: parseFloat(amount),
+          amount: parseCurrency(amount),
           cost_price: finalCostValue,
           selling_price: finalSellValue,
           paid: paidValue,
@@ -308,7 +325,7 @@ export default function DigitalTransactionScreen() {
           phone_number: phoneNumber.trim(),
           customer_name: customerName.trim(),
           provider: provider.trim(),
-          amount: parseFloat(amount),
+          amount: parseCurrency(amount),
           cost_price: finalCostValue,
           selling_price: finalSellValue,
           paid: paidValue,
@@ -509,8 +526,13 @@ export default function DigitalTransactionScreen() {
             <TextInput
               label="Nominal / Item"
               placeholder="Contoh: 10000"
-              value={amount}
-              onChangeText={(text) => { setAmount(text); clearErrorOnInput(setAmountError); }}
+              value={amount ? formatCurrency(amount) : ""}
+              onChangeText={(text) => {
+                // Store raw numeric value (without formatting) in state
+                const rawValue = text.replace(/[^0-9]/g, "");
+                setAmount(rawValue);
+                clearErrorOnInput(setAmountError);
+              }}
               keyboardType="numeric"
               mode="outlined"
               style={styles.fieldMargin}
@@ -526,8 +548,13 @@ export default function DigitalTransactionScreen() {
                 <TextInput
                   label="Harga Modal"
                   placeholder="0"
-                  value={costPrice}
-                  onChangeText={(text) => { setCostPrice(text); clearErrorOnInput(setCostPriceError); }}
+                  value={costPrice ? formatCurrency(costPrice) : ""}
+                  onChangeText={(text) => {
+                    // Store raw numeric value (without formatting) in state
+                    const rawValue = text.replace(/[^0-9]/g, "");
+                    setCostPrice(rawValue);
+                    clearErrorOnInput(setCostPriceError);
+                  }}
                   keyboardType="numeric"
                   mode="outlined"
                   error={!!costPriceError}
@@ -540,8 +567,13 @@ export default function DigitalTransactionScreen() {
                 <TextInput
                   label="Harga Jual"
                   placeholder="0"
-                  value={sellingPrice}
-                  onChangeText={(text) => { setSellingPrice(text); clearErrorOnInput(setSellingPriceError); }}
+                  value={sellingPrice ? formatCurrency(sellingPrice) : ""}
+                  onChangeText={(text) => {
+                    // Store raw numeric value (without formatting) in state
+                    const rawValue = text.replace(/[^0-9]/g, "");
+                    setSellingPrice(rawValue);
+                    clearErrorOnInput(setSellingPriceError);
+                  }}
                   keyboardType="numeric"
                   mode="outlined"
                   error={!!sellingPriceError}
@@ -564,8 +596,12 @@ export default function DigitalTransactionScreen() {
             <TextInput
               label="Jumlah Dibayar"
               placeholder="0"
-              value={paid}
-              onChangeText={(text) => { setPaid(text); }}
+              value={paid ? formatCurrency(paid) : ""}
+              onChangeText={(text) => {
+                // Store raw numeric value (without formatting) in state
+                const rawValue = text.replace(/[^0-9]/g, "");
+                setPaid(rawValue);
+              }}
               keyboardType="numeric"
               mode="outlined"
               style={styles.fieldMargin}
@@ -588,17 +624,17 @@ export default function DigitalTransactionScreen() {
               style={styles.mainActionBtn}
               contentStyle={{ paddingVertical: 8 }}
               loading={isSubmitting}
-              disabled={
+              disabled={Boolean(
                 isSubmitting ||
-                !phoneNumber.trim() ||
+                phoneNumber.length === 0 ||
                 !transactionDate ||
-                (providers.length > 0 && !provider && provider !== "Lainnya") ||
-                !amount ||
-                !sellingPrice ||
-                (costPrice && parseFloat(costPrice) < 0) || // Check cost price negativity
-                (amount && (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0)) ||
-                (sellingPrice && (isNaN(parseFloat(sellingPrice)) || parseFloat(sellingPrice) <= 0))
-              }
+                (providers.length > 0 && provider.length === 0) ||
+                amount.length === 0 ||
+                sellingPrice.length === 0 ||
+                (costPrice && parseCurrency(costPrice) < 0) || // Check cost price negativity
+                (amount && parseCurrency(amount) <= 0) ||
+                (sellingPrice && parseCurrency(sellingPrice) <= 0)
+              )}
             >
               {editTrxId ? "Update Transaksi" : "Proses Transaksi"}
             </Button>

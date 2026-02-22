@@ -23,6 +23,23 @@ import {
   useTheme,
 } from "react-native-paper";
 
+// Helper to format number with thousand separators (Indonesian locale - dots)
+const formatCurrency = (value: string): string => {
+  // Remove all non-numeric characters
+  const numericValue = value.replace(/[^0-9]/g, "");
+  if (!numericValue) return "";
+  // Format with thousand separators (dots for Indonesian locale)
+  return parseInt(numericValue, 10).toLocaleString("id-ID");
+};
+
+// Helper to parse formatted currency string to number
+const parseCurrency = (value: string): number => {
+  // Remove all non-numeric characters
+  const numericValue = value.replace(/[^0-9]/g, "");
+  if (!numericValue) return 0;
+  return parseInt(numericValue, 10);
+};
+
 type Props = DrawerScreenProps<DrawerParamList, "ProductForm">;
 
 interface ProductFormData {
@@ -66,11 +83,11 @@ function useProductForm(onSuccess?: (result: SaveResult) => void) {
 
         if (field === "purchasePackagePrice" || field === "purchasePackageQty") {
           const packagePrice =
-            parseFloat(
+            parseCurrency(
               field === "purchasePackagePrice"
                 ? (value as string)
                 : prev.purchasePackagePrice
-            ) || 0;
+            );
           const packageQty =
             parseInt(
               field === "purchasePackageQty"
@@ -85,9 +102,9 @@ function useProductForm(onSuccess?: (result: SaveResult) => void) {
 
         if (field === "packagePrice" || field === "packageQty") {
           const packagePrice =
-            parseFloat(
+            parseCurrency(
               field === "packagePrice" ? (value as string) : prev.packagePrice
-            ) || 0;
+            );
           const packageQty =
             parseInt(
               field === "packageQty" ? (value as string) : prev.packageQty
@@ -118,13 +135,13 @@ function useProductForm(onSuccess?: (result: SaveResult) => void) {
     const formattedProduct: Product = {
       code: formData.code.trim() || undefined,
       name: formData.name.trim(),
-      purchase_price: parseFloat(formData.purchasePrice) || 0,
-      purchase_package_price: parseFloat(formData.purchasePackagePrice) || 0,
+      purchase_price: parseCurrency(formData.purchasePrice),
+      purchase_package_price: parseCurrency(formData.purchasePackagePrice),
       purchase_package_qty: parseInt(formData.purchasePackageQty) || 0,
-      selling_price: parseFloat(formData.sellingPrice) || 0,
-      package_price: parseFloat(formData.packagePrice) || 0,
+      selling_price: parseCurrency(formData.sellingPrice),
+      package_price: parseCurrency(formData.packagePrice),
       package_qty: parseInt(formData.packageQty) || 0,
-      discount: parseFloat(formData.discount) || 0,
+      discount: parseCurrency(formData.discount),
       stock: parseInt(formData.stock) || 0,
     };
 
@@ -342,18 +359,22 @@ export default function ProductFormScreen({ navigation, route }: Props) {
             <View style={styles.row}>
               <PaperTextInput
                 label="Satuan"
-                value={formData.purchasePrice}
-                onChangeText={(value) => updateField("purchasePrice", value)}
+                value={formData.purchasePrice ? formatCurrency(formData.purchasePrice) : ""}
+                onChangeText={(value) => {
+                  const rawValue = value.replace(/[^0-9]/g, "");
+                  updateField("purchasePrice", rawValue);
+                }}
                 keyboardType="numeric"
                 mode="outlined"
                 style={[styles.input, styles.flexInput]}
               />
               <PaperTextInput
                 label="Paket"
-                value={formData.purchasePackagePrice}
-                onChangeText={(value) =>
-                  updateField("purchasePackagePrice", value)
-                }
+                value={formData.purchasePackagePrice ? formatCurrency(formData.purchasePackagePrice) : ""}
+                onChangeText={(value) => {
+                  const rawValue = value.replace(/[^0-9]/g, "");
+                  updateField("purchasePackagePrice", rawValue);
+                }}
                 keyboardType="numeric"
                 mode="outlined"
                 style={[styles.input, styles.flexInput]}
@@ -374,16 +395,22 @@ export default function ProductFormScreen({ navigation, route }: Props) {
             <View style={styles.row}>
               <PaperTextInput
                 label="Satuan"
-                value={formData.sellingPrice}
-                onChangeText={(value) => updateField("sellingPrice", value)}
+                value={formData.sellingPrice ? formatCurrency(formData.sellingPrice) : ""}
+                onChangeText={(value) => {
+                  const rawValue = value.replace(/[^0-9]/g, "");
+                  updateField("sellingPrice", rawValue);
+                }}
                 keyboardType="numeric"
                 mode="outlined"
                 style={[styles.input, styles.flexInput]}
               />
               <PaperTextInput
                 label="Paket"
-                value={formData.packagePrice}
-                onChangeText={(value) => updateField("packagePrice", value)}
+                value={formData.packagePrice ? formatCurrency(formData.packagePrice) : ""}
+                onChangeText={(value) => {
+                  const rawValue = value.replace(/[^0-9]/g, "");
+                  updateField("packagePrice", rawValue);
+                }}
                 keyboardType="numeric"
                 mode="outlined"
                 style={[styles.input, styles.flexInput]}
@@ -400,8 +427,11 @@ export default function ProductFormScreen({ navigation, route }: Props) {
 
             <PaperTextInput
               label="Diskon (%)"
-              value={formData.discount}
-              onChangeText={(value) => updateField("discount", value)}
+              value={formData.discount ? formatCurrency(formData.discount) : ""}
+              onChangeText={(value) => {
+                const rawValue = value.replace(/[^0-9]/g, "");
+                updateField("discount", rawValue);
+              }}
               keyboardType="numeric"
               mode="outlined"
               style={styles.input}
