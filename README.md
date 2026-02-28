@@ -28,22 +28,23 @@
 ---
 
 ## 🛠️ Tech Stack
-*   **Language**: Kotlin
-*   **UI Toolkit**: Jetpack Compose
-*   **Database**: Room (SQLite)
+*   **Language**: Kotlin 2.3.10
+*   **UI Toolkit**: Jetpack Compose (Compose BOM 2024.12.01)
+*   **Database**: Room 2.8.4 (SQLite)
 *   **Architecture**: MVVM
-*   **Async**: Kotlin Coroutines
-*   **Navigation**: Navigation Compose
+*   **Async**: Kotlin Coroutines 1.10.1
+*   **Navigation**: Navigation Compose 2.8.5
 *   **Printing**: Android Bluetooth API (58mm Thermal Printer)
+*   **Annotation Processing**: KSP 2.3.5
 
 ---
 
 ## 🚀 Cara Menjalankan Project
 
 ### Prerequisites
-- **Android Studio** (Arctic Fox atau lebih baru)
-- **JDK 11** atau lebih baru
-- **Android SDK** (API 34)
+- **Android Studio** (Meerkat atau lebih baru)
+- **JDK 17** atau lebih baru
+- **Android SDK** (API 35)
 - **Device Android** (min. Android 7.0 / API 24) atau Emulator
 
 ---
@@ -58,14 +59,40 @@ cd aminmart/app-cashier
 
 ### 2. Build & Run via Android Studio
 
-1.  Buka **Android Studio** → **Open Project** → Pilih folder `android`
+1.  Buka **Android Studio** → **Open Project** → Pilih folder project
 2.  Tunggu Gradle sync selesai
 3.  Pilih device yang terhubung atau emulator
 4.  Klik tombol **Run** (▶️) atau tekan `Shift + F10`
 
 ---
 
-### 3. Build & Run via Command Line (ADB)
+### 3. Build & Run via Command Line (Makefile)
+
+Project ini dilengkapi dengan **Makefile** untuk streamline development workflow:
+
+```bash
+# Clean build
+make clean
+
+# Build debug APK
+make build
+
+# Build + Install ke device
+make install
+
+# Build + Install + Run (quick dev)
+make dev
+
+# View logs
+make logs
+
+# Run tests
+make test
+```
+
+---
+
+### 4. Build & Run via Command Line (Gradle/ADB)
 
 #### a. Connect Device via USB
 - Enable **USB Debugging** di Developer Options pada device Android
@@ -104,6 +131,11 @@ adb shell am start -n com.wahyuakbarwibowo.aminmartkasir/.MainActivity
 #### f. Quick Command (Build + Install + Run)
 ```bash
 ./gradlew installDebug && adb shell am start -n com.wahyuakbarwibowo.aminmartkasir/.MainActivity
+```
+
+Atau gunakan Makefile:
+```bash
+make dev
 ```
 
 ---
@@ -211,11 +243,11 @@ Sistem digital menggunakan tabel dinamis:
 
 ## 📁 Project Structure
 ```
-android/
+app-cashier/
 ├── app/
 │   ├── src/
 │   │   └── main/
-│   │       ├── java/com/wahyuakbarwibowo/aminmartkasir/
+│   │       ├── kotlin/com/wahyuakbarwibowo/aminmartkasir/
 │   │       │   ├── ui/          # Compose UI screens
 │   │       │   ├── data/        # Room entities & DAOs
 │   │       │   ├── viewmodel/   # MVVM ViewModels
@@ -223,7 +255,8 @@ android/
 │   │       └── res/             # Resources (strings, themes, etc.)
 │   └── build.gradle
 ├── build.gradle
-└── settings.gradle
+├── settings.gradle
+└── Makefile
 ```
 
 ---
