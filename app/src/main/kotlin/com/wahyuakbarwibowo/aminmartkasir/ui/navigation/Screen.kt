@@ -3,7 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.navigation
 sealed class Screen(val route: String) {
     object Dashboard : Screen("dashboard")
     object Products : Screen("products")
-    object ProductForm : Screen("product_form/{productId}") {
+    object ProductForm : Screen("product_form/{productId}?") {
         fun createRoute(productId: Long? = null) = if (productId != null) {
             "product_form/$productId"
         } else {

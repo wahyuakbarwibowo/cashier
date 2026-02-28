@@ -47,6 +47,7 @@ fun AppNavigation(
                 navArgument("productId") {
                     type = NavType.LongType
                     defaultValue = -1L
+                    nullable = false
                 }
             )
         ) { backStackEntry ->
