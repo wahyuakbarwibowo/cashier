@@ -63,7 +63,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "kasir_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance
                 instance
