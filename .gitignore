@@ -1,39 +1,43 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
-node_modules/
-
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
-
-# Native
-.kotlin/
-*.orig.*
-*.keystore
-android/signing.properties
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
+# OSX
+#
 .DS_Store
-*.pem
 
-# local env files
-.env*.local
+# Android/IntelliJ
+#
+build/
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
 
-# typescript
-*.tsbuildinfo
+# Bundle artifacts
+*.jsbundle
+
+# Keystore & Signing (SECRETS)
+*.keystore
+*.jks
+signing.properties
+keystore.properties
+release-signing.properties
+
+# Local properties & secrets
+local.properties
+secrets.xml
+google-services.json
+firebase-app.json
+
+# Sensitive API keys
+**/secrets/
+**/.env
+**/*.env
+**/api_keys.xml
+**/google_maps_api_key.xml
+
+# Debug keystore (safe to commit if needed, but better ignore)
+debug.keystore
+
+# Build outputs (may contain signed APKs)
+app/build/
+app/release/

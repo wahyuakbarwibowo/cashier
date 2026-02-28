@@ -1,6 +1,6 @@
 # 🛒 Aminmart Cashier (Retail & PPOB)
 
-**Aminmart Cashier** adalah aplikasi Point of Sales (POS) berbasis **React Native** & **Expo** yang intuitif, cepat, dan modern. Dirancang khusus untuk memenuhi kebutuhan toko retail, minimarket, serta agen pulsa & PPOB dalam satu platform yang terintegrasi.
+**Aminmart Cashier** adalah aplikasi Point of Sales (POS) berbasis **Kotlin** & **Jetpack Compose** yang intuitif, cepat, dan modern. Dirancang khusus untuk memenuhi kebutuhan toko retail, minimarket, serta agen pulsa & PPOB dalam satu platform yang terintegrasi.
 
 ---
 
@@ -28,43 +28,173 @@
 ---
 
 ## 🛠️ Tech Stack
-*   **Framework**: React Native (Expo SDK 52)
-*   **Database**: SQLite via `expo-sqlite` (Offline)
-*   **Navigation**: React Navigation (Drawer & Stack)
-*   **Printing**: `expo-print` (Formatted for 58mm Thermal Bluetooth Printer)
-*   **UI Components**: React Native Paper & Custom Design Systems
+*   **Language**: Kotlin
+*   **UI Toolkit**: Jetpack Compose
+*   **Database**: Room (SQLite)
+*   **Architecture**: MVVM
+*   **Async**: Kotlin Coroutines
+*   **Navigation**: Navigation Compose
+*   **Printing**: Android Bluetooth API (58mm Thermal Printer)
 
 ---
 
 ## 🚀 Cara Menjalankan Project
 
-1.  **Clone Repository**
-    ```bash
-    git clone https://github.com/wahyuakbarwibowo/rn-cashier-app.git
-    cd rn-cashier-app
-    ```
+### Prerequisites
+- **Android Studio** (Arctic Fox atau lebih baru)
+- **JDK 11** atau lebih baru
+- **Android SDK** (API 34)
+- **Device Android** (min. Android 7.0 / API 24) atau Emulator
 
-2.  **Install Dependencies**
-    ```bash
-    bun install
-    # atau menggunakan npm
-    npm install
-    ```
+---
 
-3.  **Jalankan Aplikasi**
-    ```bash
-    bun start
-    ```
-    Gunakan aplikasi **Expo Go** di Android/iOS untuk men-scan QR code yang muncul.
+### 1. Clone Repository
+```bash
+git clone https://github.com/wahyuakbarwibowo/rn-cashier-app.git
+cd aminmart/app-cashier
+```
+
+---
+
+### 2. Build & Run via Android Studio
+
+1.  Buka **Android Studio** → **Open Project** → Pilih folder `android`
+2.  Tunggu Gradle sync selesai
+3.  Pilih device yang terhubung atau emulator
+4.  Klik tombol **Run** (▶️) atau tekan `Shift + F10`
+
+---
+
+### 3. Build & Run via Command Line (ADB)
+
+#### a. Connect Device via USB
+- Enable **USB Debugging** di Developer Options pada device Android
+- Connect device via USB ke komputer
+
+#### b. Verify Device Connection
+```bash
+adb devices
+```
+Output:
+```
+List of devices attached
+ABC123XYZ    device
+```
+
+#### c. Build Debug APK
+```bash
+# Di root folder project
+./gradlew assembleDebug
+```
+APK akan dihasilkan di: `app/build/outputs/apk/debug/app-debug.apk`
+
+#### d. Install APK ke Device
+```bash
+adb install app/build/outputs/apk/debug/app-debug.apk
+```
+
+#### e. Run Aplikasi
+```bash
+# Launch aplikasi
+adb shell am start -n com.wahyuakbarwibowo.aminmartkasir/.MainActivity
+
+# Atau jika sudah terinstall, buka dari app drawer
+```
+
+#### f. Quick Command (Build + Install + Run)
+```bash
+./gradlew installDebug && adb shell am start -n com.wahyuakbarwibowo.aminmartkasir/.MainActivity
+```
+
+---
+
+## 🐛 Local Debugging dengan ADB
+
+### View Logs (Logcat)
+```bash
+# Filter logs berdasarkan tag aplikasi
+adb logcat -s "AminmartKasir"
+
+# Filter berdasarkan package name
+adb logcat --pid=$(adb shell pidof -s com.wahyuakbarwibowo.aminmartkasir)
+
+# Clear logs
+adb logcat -c
+
+# Save logs ke file
+adb logcat -d > logs.txt
+```
+
+### Debug Database (Room)
+```bash
+# Pull database dari device
+adb pull /data/data/com.wahyuakbarwibowo.aminmartkasir/databases/aminmart_kasir.db
+
+# Buka dengan DB Browser for SQLite atau Android Studio Database Inspector
+```
+
+### Screen Capture & Recording
+```bash
+# Screenshot
+adb shell screencap -p /sdcard/screenshot.png
+adb pull /sdcard/screenshot.png
+
+# Screen record (max 3 menit)
+adb shell screenrecord /sdcard/demo.mp4
+adb pull /sdcard/demo.mp4
+```
+
+### Network Debugging
+```bash
+# Forward TCP port untuk network inspection
+adb reverse tcp:8080 tcp:8080
+
+# Monitor network traffic
+adb shell dumpsys netstats
+```
+
+### Debug Layout & UI
+```bash
+# Show layout bounds (enable di Developer Options juga bisa)
+adb shell setprop debug.layout true
+
+# Dump window hierarchy untuk UI testing
+adb shell dumpsys window windows
+```
+
+### Uninstall & Clear Data
+```bash
+# Uninstall aplikasi
+adb uninstall com.wahyuakbarwibowo.aminmartkasir
+
+# Clear data (tanpa uninstall)
+adb shell pm clear com.wahyuakbarwibowo.aminmartkasir
+
+# Clear cache only
+adb shell pm trim-caches com.wahyuakbarwibowo.aminmartkasir
+```
+
+---
+
+## 🔧 Tips Debugging
+
+| Issue | Solution |
+|-------|----------|
+| Device tidak terdeteksi | `adb kill-server` → `adb start-server` → reconnect USB |
+| Permission denied | Enable USB Debugging + "Install via USB" di Developer Options |
+| Build gagal | `./gradlew clean` → sync Gradle di Android Studio |
+| App crash on startup | Cek `adb logcat` untuk error message |
+| Bluetooth tidak connect | Pastikan izin Bluetooth dan Location sudah granted |
+| Database corrupt | `adb shell pm clear com.wahyuakbarwibowo.aminmartkasir` |
 
 ---
 
 ## 🖨️ Panduan Cetak Struk (Thermal Printer)
 Aplikasi ini dioptimalkan untuk kertas thermal ukuran **58mm**.
-1.  Pastikan Printer Bluetooth sudah terhubung dengan perangkat Android/iOS Anda.
-2.  Setelah transaksi berhasil, klik tombol **"Cetak Struk"**.
-3.  Pilih Printer Bluetooth yang sesuai pada dialog sistem printing.
-4.  Teks dan layout akan otomatis menyesuaikan lebar kertas thermal.
+1.  Pastikan Printer Bluetooth sudah terhubung dengan perangkat Android Anda
+2.  Setelah transaksi berhasil, klik tombol **"Cetak Struk"**
+3.  Pilih Printer Bluetooth yang sesuai pada dialog pairing
+4.  Teks dan layout akan otomatis menyesuaikan lebar kertas thermal
 
 ---
 
@@ -76,6 +206,25 @@ Sistem digital menggunakan tabel dinamis:
 *   `receivables`: Data piutang pelanggan.
 *   `payables`: Data hutang ke supplier.
 *   `expenses`: Data pengeluaran operasional.
+
+---
+
+## 📁 Project Structure
+```
+android/
+├── app/
+│   ├── src/
+│   │   └── main/
+│   │       ├── java/com/wahyuakbarwibowo/aminmartkasir/
+│   │       │   ├── ui/          # Compose UI screens
+│   │       │   ├── data/        # Room entities & DAOs
+│   │       │   ├── viewmodel/   # MVVM ViewModels
+│   │       │   └── MainActivity.kt
+│   │       └── res/             # Resources (strings, themes, etc.)
+│   └── build.gradle
+├── build.gradle
+└── settings.gradle
+```
 
 ---
 
