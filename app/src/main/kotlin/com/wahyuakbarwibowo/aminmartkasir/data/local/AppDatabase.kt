@@ -1,6 +1,7 @@
 package com.wahyuakbarwibowo.aminmartkasir.data.local
 
 import android.content.Context
+import androidx.lifecycle.ViewModelProvider
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -8,6 +9,7 @@ import androidx.room.TypeConverters
 import com.wahyuakbarwibowo.aminmartkasir.data.local.converter.Converters
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.*
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
+import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
 
 @Database(
     entities = [
@@ -66,6 +68,11 @@ abstract class AppDatabase : RoomDatabase() {
                 INSTANCE = instance
                 instance
             }
+        }
+
+        fun getViewModelFactory(context: Context): ViewModelProvider.Factory {
+            val database = getDatabase(context)
+            return ViewModelFactory(database)
         }
     }
 }
