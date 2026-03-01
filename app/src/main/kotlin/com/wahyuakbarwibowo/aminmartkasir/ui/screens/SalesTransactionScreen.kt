@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.*
@@ -27,7 +28,9 @@ fun SalesTransactionScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCreateProduct: () -> Unit,
     onTransactionSuccess: () -> Unit,
-    viewModel: SalesViewModel = viewModel()
+    onOpenDrawer: () -> Unit,
+    viewModelFactory: Factory? = null,
+    viewModel: SalesViewModel = viewModel(factory = viewModelFactory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showProductSelector by remember { mutableStateOf(false) }
@@ -48,8 +51,8 @@ fun SalesTransactionScreen(
             TopAppBar(
                 title = { Text("Transaksi Penjualan") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
                 actions = {
@@ -286,7 +289,8 @@ fun SalesTransactionScreen(
                     // Print will be triggered from dialog
                 }
             },
-            transactionData = lastTransactionData
+            transactionData = lastTransactionData,
+            viewModelFactory = viewModelFactory
         )
     }
 

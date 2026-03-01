@@ -113,6 +113,11 @@ class ViewModelFactory(
                     shopProfileRepository = ShopProfileRepository(database.shopProfileDao())
                 ) as T
             }
+            modelClass.isAssignableFrom(BackupViewModel::class.java) -> {
+                BackupViewModel(
+                    backupRepository = BackupRepository(database)
+                ) as T
+            }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
     }

@@ -37,7 +37,7 @@ class BluetoothPrinterHelper(private val context: Context) {
     }
     
     fun isBluetoothEnabled(): Boolean {
-        return bluetoothAdapter != null
+        return bluetoothAdapter?.isEnabled == true
     }
     
     fun isBluetoothPermissionGranted(): Boolean {
@@ -211,6 +211,111 @@ class BluetoothPrinterHelper(private val context: Context) {
                 printText("$footerNote\n")
             }
             printText("Terima kasih atas kunjungan Anda!\n")
+            printText("\n")
+            
+            // Cut paper
+            sendCommand(CUT_PAPER)
+            
+            // Feed paper
+            for (i in 1..3) {
+                sendCommand(LINE_FEED)
+            }
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun printDigitalReceipt(
+        shopName: String,
+        shopAddress: String?,
+        shopPhone: String?,
+        transactionId: String,
+        date: String,
+        category: String,
+        provider: String,
+        targetNumber: String,
+        productName: String,
+        sellingPrice: Double,
+        notes: String?,
+        paid: Double,
+        change: Double,
+        footerNote: String? = null
+    ) {
+        if (!isConnected) return
+        
+        try {
+            // Initialize
+            sendCommand(INIT)
+            
+            // Shop name (center, bold, double size)
+            sendCommand(ALIGN_CENTER)
+            sendCommand(BOLD_ON)
+            sendCommand(DOUBLE_SIZE_ON)
+            printText("$shopName\n")
+            sendCommand(DOUBLE_SIZE_OFF)
+            sendCommand(BOLD_OFF)
+            
+            // Shop info
+            if (!shopAddress.isNullOrBlank()) {
+                printText("$shopAddress\n")
+            }
+            if (!shopPhone.isNullOrBlank()) {
+                printText("Telp: $shopPhone\n")
+            }
+            printText("\n")
+            
+            // Transaction title
+            sendCommand(ALIGN_CENTER)
+            sendCommand(BOLD_ON)
+            printText("STRUK TRANSAKSI DIGITAL\n")
+            sendCommand(BOLD_OFF)
+            printText("--------------------------------\n")
+            
+            // Transaction info
+            sendCommand(ALIGN_LEFT)
+            printText("No       : $transactionId\n")
+            printText("Tgl      : $date\n")
+            printText("Kategori : $category\n")
+            printText("Provider : $provider\n")
+            printText("Tujuan   : $targetNumber\n")
+            printText("--------------------------------\n")
+            
+            // Product info
+            sendCommand(BOLD_ON)
+            printText("$productName\n")
+            sendCommand(BOLD_OFF)
+            printText("Harga    :  %15s\n".format(formatCurrency(sellingPrice)))
+            
+            if (!notes.isNullOrBlank()) {
+                printText("--------------------------------\n")
+                printText("SN / Token:\n")
+                sendCommand(BOLD_ON)
+                printText("$notes\n")
+                sendCommand(BOLD_OFF)
+            }
+            
+            printText("--------------------------------\n")
+            
+            // Payment info
+            sendCommand(ALIGN_RIGHT)
+            printText("TOTAL    :  %15s\n".format(formatCurrency(sellingPrice)))
+            printText("Bayar    :  %15s\n".format(formatCurrency(paid)))
+            printText("Kembali  :  %15s\n".format(formatCurrency(change)))
+            
+            printText("\n")
+            sendCommand(ALIGN_CENTER)
+            sendCommand(BOLD_ON)
+            printText("--------------------------------\n")
+            sendCommand(BOLD_OFF)
+            
+            // Footer
+            if (!footerNote.isNullOrBlank()) {
+                printText("$footerNote\n")
+            }
+            printText("Terima kasih!\n")
+            printText("Simpan struk ini sebagai\n")
+            printText("bukti transaksi yang sah.\n")
             printText("\n")
             
             // Cut paper

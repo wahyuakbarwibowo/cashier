@@ -5,14 +5,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SalesHistoryViewModel
+import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -21,12 +25,14 @@ import java.util.*
 fun SaleDetailScreen(
     saleId: Long,
     onNavigateBack: () -> Unit,
-    viewModel: SalesHistoryViewModel = viewModel()
+    viewModelFactory: Factory? = null,
+    viewModel: SalesHistoryViewModel = viewModel(factory = viewModelFactory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val sale = remember { uiState.sales.find { it.id == saleId } }
-    val items = remember { uiState.saleItems[saleId] ?: emptyList() }
+    val sale = uiState.sales.find { it.id == saleId }
+    val items = uiState.saleItems[saleId] ?: emptyList()
     val dateFormat = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale("id", "ID"))
+    var showPrinterDialog by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -35,6 +41,13 @@ fun SaleDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                actions = {
+                    if (sale != null) {
+                        IconButton(onClick = { showPrinterDialog = true }) {
+                            Icon(Icons.Default.Print, contentDescription = "Cetak")
+                        }
                     }
                 }
             )
@@ -141,6 +154,33 @@ fun SaleDetailScreen(
                 }
             }
         }
+    }
+
+    if (showPrinterDialog && sale != null) {
+        val transactionData = LastTransactionData(
+            transactionId = "TRX-${sale.id}",
+            items = items.map { item ->
+                BluetoothPrinterHelper.ReceiptItem(
+                    name = "Product ${item.productId}", // Ideally we should have product name here
+                    qty = item.qty,
+                    price = item.price,
+                    subtotal = item.subtotal
+                )
+            },
+            subtotal = items.sumOf { it.subtotal },
+            discount = 0.0, // We should probably store discount in SaleEntity if needed
+            total = sale.total,
+            paid = sale.paid,
+            change = sale.change,
+            pointsEarned = sale.pointsEarned
+        )
+
+        BluetoothPrinterDialog(
+            onDismiss = { showPrinterDialog = false },
+            onDeviceConnected = {},
+            transactionData = transactionData,
+            viewModelFactory = viewModelFactory
+        )
     }
 }
 

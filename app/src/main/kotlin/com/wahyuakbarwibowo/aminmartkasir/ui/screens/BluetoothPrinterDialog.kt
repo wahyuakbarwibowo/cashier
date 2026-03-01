@@ -16,7 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PrinterViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
 
@@ -26,16 +28,30 @@ fun BluetoothPrinterDialog(
     onDismiss: () -> Unit,
     onDeviceConnected: () -> Unit,
     transactionData: LastTransactionData? = null,
-    viewModel: PrinterViewModel = viewModel()
+    digitalTransaction: PhoneHistoryEntity? = null,
+    viewModelFactory: Factory? = null,
+    viewModel: PrinterViewModel = viewModel(factory = viewModelFactory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showPermissionRationale by remember { mutableStateOf(false) }
     
+    val bluetoothEnableLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (viewModel.isBluetoothEnabled()) {
+            if (viewModel.checkBluetoothPermission(context)) {
+                viewModel.loadPairedDevices()
+            }
+        } else {
+            onDismiss() // Close if user cancels enabling bluetooth
+        }
+    }
+    
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.all { it }) {
             viewModel.loadPairedDevices()
         } else {
             showPermissionRationale = true
@@ -44,28 +60,56 @@ fun BluetoothPrinterDialog(
     
     LaunchedEffect(Unit) {
         viewModel.initialize(context)
-        if (viewModel.checkBluetoothPermission(context)) {
-            viewModel.loadPairedDevices()
+        if (!viewModel.isBluetoothEnabled()) {
+            bluetoothEnableLauncher.launch(
+                android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            )
+        } else if (!viewModel.checkBluetoothPermission(context)) {
+            val neededPermissions = mutableListOf<String>()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                neededPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+                neededPermissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            } else {
+                neededPermissions.add(Manifest.permission.BLUETOOTH)
+                neededPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+            permissionLauncher.launch(neededPermissions.toTypedArray())
         } else {
-            permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            viewModel.loadPairedDevices()
         }
     }
     
     // Auto-print when connected and transaction data is provided
-    LaunchedEffect(uiState.isConnected, transactionData) {
-        if (uiState.isConnected && transactionData != null && !uiState.isPrinting) {
+    LaunchedEffect(uiState.isConnected, transactionData, digitalTransaction) {
+        if (uiState.isConnected && !uiState.isPrinting) {
             val transactionDate = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
-            viewModel.printReceipt(
-                transactionId = transactionData.transactionId,
-                date = transactionDate,
-                items = transactionData.items,
-                subtotal = transactionData.subtotal,
-                discount = transactionData.discount,
-                total = transactionData.total,
-                paid = transactionData.paid,
-                change = transactionData.change,
-                pointsEarned = transactionData.pointsEarned
-            )
+            
+            if (transactionData != null) {
+                viewModel.printReceipt(
+                    transactionId = transactionData.transactionId,
+                    date = transactionDate,
+                    items = transactionData.items,
+                    subtotal = transactionData.subtotal,
+                    discount = transactionData.discount,
+                    total = transactionData.total,
+                    paid = transactionData.paid,
+                    change = transactionData.change,
+                    pointsEarned = transactionData.pointsEarned
+                )
+            } else if (digitalTransaction != null) {
+                viewModel.printDigitalReceipt(
+                    transactionId = "TRX-DIG-${digitalTransaction.id}",
+                    date = transactionDate,
+                    category = digitalTransaction.category,
+                    provider = digitalTransaction.provider ?: "-",
+                    targetNumber = digitalTransaction.phoneNumber ?: "-",
+                    productName = digitalTransaction.notes?.replace("TRX Digital: ", "") ?: "Produk Digital",
+                    sellingPrice = digitalTransaction.sellingPrice,
+                    notes = digitalTransaction.notes,
+                    paid = digitalTransaction.paid,
+                    change = digitalTransaction.paid - digitalTransaction.sellingPrice
+                )
+            }
         }
     }
     

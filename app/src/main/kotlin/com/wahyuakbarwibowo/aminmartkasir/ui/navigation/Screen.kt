@@ -23,8 +23,13 @@ sealed class Screen(val route: String) {
     object Payables : Screen("payables")
     object DigitalTransaction : Screen("digital_transaction")
     object DigitalReports : Screen("digital_reports")
+    object DigitalReportDetail : Screen("digital_report_detail/{reportId}") {
+        fun createRoute(reportId: Long) = "digital_report_detail/$reportId"
+    }
+    object DigitalManagement : Screen("digital_management")
     object Settings : Screen("settings")
     object LowStock : Screen("low_stock")
     object Reports : Screen("reports")
     object ProfitLoss : Screen("profit_loss")
+    object Backup : Screen("backup")
 }

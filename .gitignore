@@ -41,3 +41,5 @@ debug.keystore
 # Build outputs (may contain signed APKs)
 app/build/
 app/release/
+
+*.log

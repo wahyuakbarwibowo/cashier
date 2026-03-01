@@ -46,10 +46,22 @@ class PrinterViewModel(
     }
     
     fun checkBluetoothPermission(context: Context): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.BLUETOOTH_CONNECT
-        ) == PackageManager.PERMISSION_GRANTED
+        val permissions = mutableListOf(Manifest.permission.BLUETOOTH_CONNECT)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            permissions.add(Manifest.permission.BLUETOOTH)
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        
+        return permissions.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    fun isBluetoothEnabled(): Boolean {
+        return printerHelper?.isBluetoothEnabled() == true
     }
     
     fun loadPairedDevices() {
@@ -118,6 +130,58 @@ class PrinterViewModel(
                     it.copy(
                         isPrinting = false,
                         successMessage = "Berhasil mencetak struk"
+                    ) 
+                }
+            } catch (e: Exception) {
+                _uiState.update { 
+                    it.copy(
+                        isPrinting = false,
+                        error = "Gagal mencetak: ${e.message}"
+                    ) 
+                }
+            }
+        }
+    }
+
+    fun printDigitalReceipt(
+        transactionId: String,
+        date: String,
+        category: String,
+        provider: String,
+        targetNumber: String,
+        productName: String,
+        sellingPrice: Double,
+        notes: String?,
+        paid: Double,
+        change: Double
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isPrinting = true) }
+            
+            try {
+                val profile = _uiState.value.shopProfile
+                
+                printerHelper?.printDigitalReceipt(
+                    shopName = profile?.name ?: "Aminmart Cashier",
+                    shopAddress = profile?.address,
+                    shopPhone = profile?.phoneNumber,
+                    transactionId = transactionId,
+                    date = date,
+                    category = category,
+                    provider = provider,
+                    targetNumber = targetNumber,
+                    productName = productName,
+                    sellingPrice = sellingPrice,
+                    notes = notes,
+                    paid = paid,
+                    change = change,
+                    footerNote = profile?.footerNote
+                )
+                
+                _uiState.update { 
+                    it.copy(
+                        isPrinting = false,
+                        successMessage = "Berhasil mencetak struk digital"
                     ) 
                 }
             } catch (e: Exception) {

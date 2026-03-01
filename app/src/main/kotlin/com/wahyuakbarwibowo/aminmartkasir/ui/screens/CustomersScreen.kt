@@ -20,6 +20,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.CustomerViewModel
 @Composable
 fun CustomersScreen(
     onNavigateBack: () -> Unit,
+    onOpenDrawer: () -> Unit,
     viewModel: CustomerViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -31,8 +32,8 @@ fun CustomersScreen(
             TopAppBar(
                 title = { Text("Pelanggan") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
                 actions = {
