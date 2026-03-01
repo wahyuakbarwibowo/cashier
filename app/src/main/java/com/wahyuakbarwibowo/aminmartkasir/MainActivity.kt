@@ -8,21 +8,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.rememberNavController
 import com.wahyuakbarwibowo.aminmartkasir.data.local.AppDatabase
 import com.wahyuakbarwibowo.aminmartkasir.ui.navigation.AppNavigation
 import com.wahyuakbarwibowo.aminmartkasir.ui.theme.AminmartKasirTheme
 
 class MainActivity : ComponentActivity() {
-    
+
     private lateinit var database: AppDatabase
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // Initialize database
         database = AppDatabase.getDatabase(applicationContext)
-        
+
         enableEdgeToEdge()
         setContent {
             AminmartKasirTheme {
@@ -31,7 +32,11 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    AppNavigation(navController = navController)
+                    val viewModelFactory = AppDatabase.getViewModelFactory(applicationContext)
+                    AppNavigation(
+                        navController = navController,
+                        viewModelFactory = viewModelFactory
+                    )
                 }
             }
         }

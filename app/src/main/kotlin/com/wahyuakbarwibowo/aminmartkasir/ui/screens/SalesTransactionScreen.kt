@@ -25,6 +25,7 @@ import java.util.*
 @Composable
 fun SalesTransactionScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToCreateProduct: () -> Unit,
     onTransactionSuccess: () -> Unit,
     viewModel: SalesViewModel = viewModel()
 ) {
@@ -224,6 +225,10 @@ fun SalesTransactionScreen(
             onProductSelected = { product ->
                 viewModel.addToCart(product)
                 showProductSelector = false
+            },
+            onCreateProduct = {
+                showProductSelector = false
+                onNavigateToCreateProduct()
             },
             onDismiss = { showProductSelector = false }
         )
@@ -426,6 +431,7 @@ fun SummaryRow(
 fun ProductSelectorDialog(
     products: List<ProductEntity>,
     onProductSelected: (ProductEntity) -> Unit,
+    onCreateProduct: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -494,8 +500,15 @@ fun ProductSelectorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Tutup")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(onClick = onCreateProduct) {
+                    Text("Buat Produk")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Tutup")
+                }
             }
         }
     )
