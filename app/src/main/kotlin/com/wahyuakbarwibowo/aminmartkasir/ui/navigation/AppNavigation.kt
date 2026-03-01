@@ -46,14 +46,18 @@ fun AppNavigation(
             arguments = listOf(
                 navArgument("productId") {
                     type = NavType.LongType
-                    defaultValue = -1L
-                    nullable = false
+                    nullable = true
                 }
             )
         ) { backStackEntry ->
-            val productId = backStackEntry.arguments?.getLong("productId")
+            val args = backStackEntry.arguments
+            val productId = if (args?.containsKey("productId") == true) {
+                args.getLong("productId")
+            } else {
+                null
+            }
             ProductFormScreen(
-                productId = if (productId == -1L) null else productId,
+                productId = productId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -68,6 +72,7 @@ fun AppNavigation(
         composable(Screen.SalesTransaction.route) {
             SalesTransactionScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToCreateProduct = { navController.navigate(Screen.ProductForm.createRoute()) },
                 onTransactionSuccess = { navController.navigate(Screen.SalesHistory.route) },
                 viewModel = viewModel(factory = viewModelFactory)
             )
