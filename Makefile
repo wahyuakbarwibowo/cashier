@@ -1,7 +1,7 @@
 # Aminmart Cashier - Makefile
 # Android Kotlin Project Build & Development Commands
 
-.PHONY: help clean build debug release install run devices sync deps test lint
+.PHONY: help clean build debug release install run devices sync deps test lint logs logs-all logs-clear logs-crash
 
 # Default target
 help:
@@ -23,7 +23,9 @@ help:
 	@echo ""
 	@echo "Device Management:"
 	@echo "  make devices    - List connected Android devices"
-	@echo "  make logs       - View app logs (logcat)"
+	@echo "  make logs       - View logs for this app process"
+	@echo "  make logs-all   - View all logcat logs (tail)"
+	@echo "  make logs-crash - Clear then watch crash/fatal logs"
 	@echo "  make logs-clear - Clear logcat logs"
 	@echo ""
 	@echo "Testing & Quality:"
@@ -103,12 +105,28 @@ devices:
 
 # View app logs
 logs:
-	$(ADB) logcat -s "AminmartKasir"
+	@PID=$$($(ADB) shell pidof -s $(PACKAGE)); \
+	if [ -z "$$PID" ]; then \
+		echo "App process not running. Showing crash-focused logs instead..."; \
+		$(ADB) logcat -v time AndroidRuntime:E ActivityManager:E libc:F DEBUG:F *:S; \
+	else \
+		$(ADB) logcat --pid=$$PID -v time; \
+	fi
+
+# View all logs (tail)
+logs-all:
+	$(ADB) logcat -v time
 
 # Clear logs
 logs-clear:
 	$(ADB) logcat -c
 	@echo "✓ Logcat cleared"
+
+# Clear logs then focus only on crashes/fatal errors
+logs-crash:
+	$(ADB) logcat -c
+	@echo "✓ Logcat cleared. Reproduce the issue now..."
+	$(ADB) logcat -v time AndroidRuntime:E ActivityManager:E libc:F DEBUG:F *:S
 
 # Run unit tests
 test:

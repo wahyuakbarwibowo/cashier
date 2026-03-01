@@ -36,6 +36,8 @@ fun SalesTransactionScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showPrinterDialog by remember { mutableStateOf(false) }
     var lastTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
+    var successTransactionId by remember { mutableStateOf<String?>(null) }
+    var successTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
 
     LaunchedEffect(uiState.cartItems) {
         viewModel.calculatePoints()
@@ -203,9 +205,30 @@ fun SalesTransactionScreen(
             
             Button(
                 onClick = {
+                    val transactionId = "TRX-${System.currentTimeMillis()}"
+                    val transactionData = LastTransactionData(
+                        transactionId = transactionId,
+                        items = uiState.cartItems.map { cartItem ->
+                            BluetoothPrinterHelper.ReceiptItem(
+                                name = cartItem.product.name,
+                                qty = cartItem.qty,
+                                price = cartItem.price,
+                                subtotal = cartItem.subtotal
+                            )
+                        },
+                        subtotal = uiState.subtotal,
+                        discount = uiState.discount,
+                        total = uiState.total,
+                        paid = uiState.paid,
+                        change = uiState.change,
+                        pointsEarned = uiState.pointsEarned
+                    )
+
+                    successTransactionId = transactionId
+                    successTransactionData = transactionData
+                    lastTransactionData = transactionData
                     viewModel.processTransaction()
                     showSuccessDialog = true
-                    onTransactionSuccess()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -267,36 +290,16 @@ fun SalesTransactionScreen(
         )
     }
 
-    if (showSuccessDialog) {
-        val transactionId = "TRX-${System.currentTimeMillis()}"
-        val transactionDate = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
-        
-        showSuccessDialog = false
-        
-        // Store transaction data for printing
-        val transactionData = LastTransactionData(
-            transactionId = transactionId,
-            items = uiState.cartItems.map { cartItem ->
-                BluetoothPrinterHelper.ReceiptItem(
-                    name = cartItem.product.name,
-                    qty = cartItem.qty,
-                    price = cartItem.price,
-                    subtotal = cartItem.subtotal
-                )
-            },
-            subtotal = uiState.subtotal,
-            discount = uiState.discount,
-            total = uiState.total,
-            paid = uiState.paid,
-            change = uiState.change,
-            pointsEarned = uiState.pointsEarned
-        )
-        lastTransactionData = transactionData
-        
+    if (showSuccessDialog && successTransactionId != null && successTransactionData != null) {
+        val transactionId = successTransactionId ?: return
+        val transactionData = successTransactionData ?: return
+
         // Show success dialog with print option
         AlertDialog(
             onDismissRequest = { 
                 showSuccessDialog = false
+                successTransactionId = null
+                successTransactionData = null
                 viewModel.clearCart()
                 onTransactionSuccess()
             },
@@ -326,6 +329,8 @@ fun SalesTransactionScreen(
                     TextButton(
                         onClick = {
                             showSuccessDialog = false
+                            successTransactionId = null
+                            successTransactionData = null
                             viewModel.clearCart()
                             onTransactionSuccess()
                         }
@@ -575,7 +580,7 @@ fun CustomerSelectorDialog(
                             )
                             if (!customer.phone.isNullOrBlank()) {
                                 Text(
-                                    text = customer.phone!!,
+                                    text = customer.phone.orEmpty(),
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }

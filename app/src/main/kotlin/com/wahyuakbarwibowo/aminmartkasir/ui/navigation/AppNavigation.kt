@@ -46,19 +46,16 @@ fun AppNavigation(
             arguments = listOf(
                 navArgument("productId") {
                     type = NavType.LongType
-                    nullable = true
+                    defaultValue = -1L
+                    nullable = false
                 }
             )
         ) { backStackEntry ->
-            val args = backStackEntry.arguments
-            val productId = if (args?.containsKey("productId") == true) {
-                args.getLong("productId")
-            } else {
-                null
-            }
+            val productId = backStackEntry.arguments?.getLong("productId") ?: -1L
             ProductFormScreen(
-                productId = productId,
-                onNavigateBack = { navController.popBackStack() }
+                productId = if (productId == -1L) null else productId,
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = viewModel(factory = viewModelFactory)
             )
         }
         
