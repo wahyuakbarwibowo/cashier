@@ -23,6 +23,7 @@ import java.util.*
 fun ProductsScreen(
     onNavigateToProductForm: (Long?) -> Unit,
     onNavigateBack: () -> Unit,
+    onOpenDrawer: () -> Unit,
     viewModel: ProductViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -34,8 +35,8 @@ fun ProductsScreen(
             TopAppBar(
                 title = { Text("Produk") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
                 actions = {

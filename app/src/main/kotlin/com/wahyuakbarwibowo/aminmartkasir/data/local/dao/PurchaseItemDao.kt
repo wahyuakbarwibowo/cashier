@@ -9,6 +9,9 @@ interface PurchaseItemDao {
     @Query("SELECT * FROM purchase_items WHERE purchaseId = :purchaseId ORDER BY id ASC")
     fun getPurchaseItemsByPurchaseId(purchaseId: Long): Flow<List<PurchaseItemEntity>>
 
+    @Query("SELECT * FROM purchase_items ORDER BY id ASC")
+    fun getAllPurchaseItemsForBackup(): Flow<List<PurchaseItemEntity>>
+
     @Query("SELECT * FROM purchase_items WHERE purchaseId = :purchaseId ORDER BY id ASC")
     suspend fun getPurchaseItemsByPurchaseIdOnce(purchaseId: Long): List<PurchaseItemEntity>
 

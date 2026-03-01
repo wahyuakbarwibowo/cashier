@@ -28,6 +28,8 @@ fun DashboardScreen(
     onNavigateToCustomers: () -> Unit,
     onNavigateToSuppliers: () -> Unit,
     onNavigateToLowStock: () -> Unit,
+    onNavigateToDigital: () -> Unit,
+    onOpenDrawer: () -> Unit,
     viewModel: DashboardViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -36,9 +38,15 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Aminmart Kasir") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -111,6 +119,12 @@ fun DashboardScreen(
                 text = "Transaksi Penjualan",
                 icon = Icons.Default.ShoppingCart,
                 onClick = onNavigateToSales
+            )
+            
+            QuickActionButton(
+                text = "Transaksi Digital",
+                icon = Icons.Default.PhoneIphone,
+                onClick = onNavigateToDigital
             )
             
             QuickActionButton(

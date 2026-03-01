@@ -14,7 +14,8 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.screens.*
 fun AppNavigation(
     navController: NavHostController,
     startDestination: String = Screen.Dashboard.route,
-    viewModelFactory: Factory
+    viewModelFactory: Factory,
+    onOpenDrawer: () -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -27,6 +28,8 @@ fun AppNavigation(
                 onNavigateToCustomers = { navController.navigate(Screen.Customers.route) },
                 onNavigateToSuppliers = { navController.navigate(Screen.Suppliers.route) },
                 onNavigateToLowStock = { navController.navigate(Screen.LowStock.route) },
+                onNavigateToDigital = { navController.navigate(Screen.DigitalTransaction.route) },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -37,6 +40,7 @@ fun AppNavigation(
                     navController.navigate(Screen.ProductForm.createRoute(productId))
                 },
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -62,6 +66,7 @@ fun AppNavigation(
         composable(Screen.Customers.route) {
             CustomersScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -71,6 +76,8 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCreateProduct = { navController.navigate(Screen.ProductForm.createRoute()) },
                 onTransactionSuccess = { navController.navigate(Screen.SalesHistory.route) },
+                onOpenDrawer = onOpenDrawer,
+                viewModelFactory = viewModelFactory,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -81,6 +88,7 @@ fun AppNavigation(
                     navController.navigate(Screen.SaleDetail.createRoute(saleId))
                 },
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -97,6 +105,7 @@ fun AppNavigation(
             SaleDetailScreen(
                 saleId = saleId,
                 onNavigateBack = { navController.popBackStack() },
+                viewModelFactory = viewModelFactory,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -104,6 +113,7 @@ fun AppNavigation(
         composable(Screen.Purchases.route) {
             PurchasesScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -111,6 +121,7 @@ fun AppNavigation(
         composable(Screen.Suppliers.route) {
             SuppliersScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -118,6 +129,7 @@ fun AppNavigation(
         composable(Screen.Expenses.route) {
             ExpensesScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -125,6 +137,7 @@ fun AppNavigation(
         composable(Screen.Receivables.route) {
             ReceivablesScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -132,6 +145,7 @@ fun AppNavigation(
         composable(Screen.Payables.route) {
             PayablesScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -139,6 +153,45 @@ fun AppNavigation(
         composable(Screen.DigitalTransaction.route) {
             DigitalTransactionScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToHistory = { navController.navigate(Screen.DigitalReports.route) },
+                onOpenDrawer = onOpenDrawer,
+                viewModelFactory = viewModelFactory,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
+
+        composable(Screen.DigitalReports.route) {
+            DigitalReportsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDetail = { reportId ->
+                    navController.navigate(Screen.DigitalReportDetail.createRoute(reportId))
+                },
+                onOpenDrawer = onOpenDrawer,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
+
+        composable(
+            route = Screen.DigitalReportDetail.route,
+            arguments = listOf(
+                navArgument("reportId") {
+                    type = NavType.LongType
+                }
+            )
+        ) { backStackEntry ->
+            val reportId = backStackEntry.arguments?.getLong("reportId") ?: 0L
+            DigitalReportDetailScreen(
+                reportId = reportId,
+                onNavigateBack = { navController.popBackStack() },
+                viewModelFactory = viewModelFactory,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
+
+        composable(Screen.DigitalManagement.route) {
+            DigitalManagementScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -146,6 +199,7 @@ fun AppNavigation(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
@@ -159,13 +213,22 @@ fun AppNavigation(
         
         composable(Screen.Reports.route) {
             ReportsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer
             )
         }
         
         composable(Screen.ProfitLoss.route) {
             ProfitLossScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer
+            )
+        }
+
+        composable(Screen.Backup.route) {
+            BackupScreen(
+                onOpenDrawer = onOpenDrawer,
+                viewModel = viewModel(factory = viewModelFactory)
             )
         }
     }

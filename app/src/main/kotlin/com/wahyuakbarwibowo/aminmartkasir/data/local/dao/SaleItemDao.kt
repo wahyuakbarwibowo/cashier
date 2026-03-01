@@ -9,6 +9,9 @@ interface SaleItemDao {
     @Query("SELECT * FROM sales_items WHERE saleId = :saleId ORDER BY id ASC")
     fun getSaleItemsBySaleId(saleId: Long): Flow<List<SaleItemEntity>>
 
+    @Query("SELECT * FROM sales_items ORDER BY id ASC")
+    fun getAllSaleItemsForBackup(): Flow<List<SaleItemEntity>>
+
     @Query("SELECT * FROM sales_items WHERE saleId = :saleId ORDER BY id ASC")
     suspend fun getSaleItemsBySaleIdOnce(saleId: Long): List<SaleItemEntity>
 

@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.rememberNavController
 import com.wahyuakbarwibowo.aminmartkasir.data.local.AppDatabase
-import com.wahyuakbarwibowo.aminmartkasir.ui.navigation.AppNavigation
+import com.wahyuakbarwibowo.aminmartkasir.ui.MainAppContainer
 import com.wahyuakbarwibowo.aminmartkasir.ui.theme.AminmartKasirTheme
 
 class MainActivity : ComponentActivity() {
@@ -31,12 +31,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val navController = rememberNavController()
                     val viewModelFactory = AppDatabase.getViewModelFactory(applicationContext)
-                    AppNavigation(
-                        navController = navController,
-                        viewModelFactory = viewModelFactory
-                    )
+                    MainAppContainer(viewModelFactory = viewModelFactory)
                 }
             }
         }

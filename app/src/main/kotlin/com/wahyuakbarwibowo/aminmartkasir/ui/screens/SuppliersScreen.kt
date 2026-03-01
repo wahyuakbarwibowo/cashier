@@ -20,6 +20,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SupplierViewModel
 @Composable
 fun SuppliersScreen(
     onNavigateBack: () -> Unit,
+    onOpenDrawer: () -> Unit,
     viewModel: SupplierViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -30,8 +31,8 @@ fun SuppliersScreen(
             TopAppBar(
                 title = { Text("Supplier") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
                 actions = {
