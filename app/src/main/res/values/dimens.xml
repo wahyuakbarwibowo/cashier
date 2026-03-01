@@ -1,0 +1,5 @@
+<resources>
+    <!-- Smaller scan box for cleaner barcode targeting -->
+    <dimen name="zxing_framing_rect_width">260dp</dimen>
+    <dimen name="zxing_framing_rect_height">120dp</dimen>
+</resources>

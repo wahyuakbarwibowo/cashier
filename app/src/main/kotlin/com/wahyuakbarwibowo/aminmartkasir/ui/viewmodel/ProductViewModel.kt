@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 data class ProductUiState(
     val products: List<ProductEntity> = emptyList(),
     val lowStockProducts: List<ProductEntity> = emptyList(),
+    val editingProduct: ProductEntity? = null,
     val searchQuery: String = "",
     val isLoading: Boolean = true,
     val error: String? = null
@@ -81,6 +82,17 @@ class ProductViewModel(
         viewModelScope.launch {
             try {
                 productRepository.update(product)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    fun loadProductById(productId: Long) {
+        viewModelScope.launch {
+            try {
+                val product = productRepository.getProductById(productId)
+                _uiState.update { it.copy(editingProduct = product, error = null) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
