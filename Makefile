@@ -1,7 +1,7 @@
 # Aminmart Cashier - Makefile
 # Android Kotlin Project Build & Development Commands
 
-.PHONY: help clean build debug release install run devices sync deps test lint logs logs-all logs-clear logs-crash
+.PHONY: help clean build debug release release-signed bundle bundle-signed install run devices sync deps test lint logs logs-all logs-clear logs-crash
 
 # Default target
 help:
@@ -18,8 +18,10 @@ help:
 	@echo "  make dev        - Full dev cycle: clean + build + install + run"
 	@echo ""
 	@echo "Release:"
-	@echo "  make release    - Build release APK (unsigned)"
-	@echo "  make bundle     - Build Android App Bundle (.aab)"
+	@echo "  make release        - Build release APK (unsigned)"
+	@echo "  make release-signed - Build signed release APK (uses signing.properties)"
+	@echo "  make bundle         - Build unsigned release AAB"
+	@echo "  make bundle-signed  - Build signed release AAB (uses signing.properties)"
 	@echo ""
 	@echo "Device Management:"
 	@echo "  make devices    - List connected Android devices"
@@ -45,7 +47,8 @@ GRADLE = ./gradlew
 ADB = adb
 PACKAGE = com.wahyuakbarwibowo.aminmartkasir
 APK_DEBUG = app/build/outputs/apk/debug/app-debug.apk
-APK_RELEASE = app/build/outputs/apk/release/app-release-unsigned.apk
+APK_RELEASE_UNSIGNED = app/build/outputs/apk/release/app-release-unsigned.apk
+APK_RELEASE_SIGNED = app/build/outputs/apk/release/app-release.apk
 AAB_RELEASE = app/build/outputs/bundle/release/app-release.aab
 
 # Sync Gradle
@@ -71,16 +74,35 @@ debug: build install
 
 # Build release APK (unsigned)
 release:
+	$(GRADLE) assembleRelease -PunsignedRelease=true
+	@echo ""
+	@echo "✓ Unsigned release APK ready: $(APK_RELEASE_UNSIGNED)"
+
+# Build signed release APK
+release-signed:
+	@if [ ! -f signing.properties ]; then \
+		echo "✗ signing.properties tidak ditemukan di root project"; \
+		exit 1; \
+	fi
 	$(GRADLE) assembleRelease
 	@echo ""
-	@echo "✓ Release APK ready: $(APK_RELEASE)"
-	@echo "⚠ Note: APK is unsigned. Sign it for distribution."
+	@echo "✓ Signed release APK ready: $(APK_RELEASE_SIGNED)"
 
-# Build Android App Bundle
+# Build Android App Bundle (unsigned)
 bundle:
+	$(GRADLE) bundleRelease -PunsignedRelease=true
+	@echo ""
+	@echo "✓ Unsigned AAB ready: $(AAB_RELEASE)"
+
+# Build signed Android App Bundle
+bundle-signed:
+	@if [ ! -f signing.properties ]; then \
+		echo "✗ signing.properties tidak ditemukan di root project"; \
+		exit 1; \
+	fi
 	$(GRADLE) bundleRelease
 	@echo ""
-	@echo "✓ AAB ready: $(AAB_RELEASE)"
+	@echo "✓ Signed AAB ready: $(AAB_RELEASE)"
 
 # Install APK on device
 install:

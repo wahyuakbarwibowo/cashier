@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -8,6 +10,16 @@ plugins {
 repositories {
     google()
     mavenCentral()
+}
+
+def signingProperties = new Properties()
+def signingPropertiesFile = rootProject.file("signing.properties")
+def hasReleaseSigning = signingPropertiesFile.exists()
+def forceUnsignedRelease = project.hasProperty("unsignedRelease") &&
+        project.property("unsignedRelease").toString().toBoolean()
+
+if (hasReleaseSigning) {
+    signingPropertiesFile.withInputStream { signingProperties.load(it) }
 }
 
 android {
@@ -34,13 +46,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(signingProperties['MYAPP_UPLOAD_STORE_FILE'])
+                storePassword signingProperties['MYAPP_UPLOAD_STORE_PASSWORD']
+                keyAlias signingProperties['MYAPP_UPLOAD_KEY_ALIAS']
+                keyPassword signingProperties['MYAPP_UPLOAD_KEY_PASSWORD']
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            if (!forceUnsignedRelease && hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
         debug {
             signingConfig signingConfigs.debug
