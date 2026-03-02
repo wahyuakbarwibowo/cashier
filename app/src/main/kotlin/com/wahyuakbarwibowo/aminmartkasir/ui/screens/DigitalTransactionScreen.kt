@@ -29,6 +29,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalCategoryEntit
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import java.math.BigDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +42,10 @@ fun DigitalTransactionScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedProductForPayment by remember { mutableStateOf<DigitalProductEntity?>(null) }
+    var productToEdit by remember { mutableStateOf<DigitalProductEntity?>(null) }
+    var productToDelete by remember { mutableStateOf<DigitalProductEntity?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -173,7 +178,7 @@ fun DigitalTransactionScreen(
             } else {
                 ProductsGrid(
                     products = filteredProducts,
-                    onProductClick = { 
+                    onProductClick = {
                         if (uiState.targetNumber.isBlank()) {
                             viewModel.setTargetNumber("") // To trigger error if blank
                             viewModel.processTransaction(it, it.sellingPrice) // Will trigger error in VM
@@ -181,6 +186,14 @@ fun DigitalTransactionScreen(
                             selectedProductForPayment = it
                             viewModel.setPaidAmount(it.sellingPrice.toInt().toString())
                         }
+                    },
+                    onEditProduct = {
+                        productToEdit = it
+                        showEditDialog = true
+                    },
+                    onDeleteProduct = {
+                        productToDelete = it
+                        showDeleteConfirmation = true
                     }
                 )
             }
@@ -201,15 +214,15 @@ fun DigitalTransactionScreen(
                     Column {
                         Text(product.name, fontWeight = FontWeight.Bold)
                         Text(product.provider, style = MaterialTheme.typography.bodySmall)
-                        Text(formatCurrency(product.sellingPrice), 
+                        Text(formatCurrency(product.sellingPrice),
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.ExtraBold
                         )
                     }
-                    
+
                     HorizontalDivider()
-                    
+
                     OutlinedTextField(
                         value = uiState.paidAmount,
                         onValueChange = { viewModel.setPaidAmount(it) },
@@ -219,7 +232,7 @@ fun DigitalTransactionScreen(
                         singleLine = true,
                         prefix = { Text("Rp ") }
                     )
-                    
+
                     if (paidVal > 0) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -249,6 +262,57 @@ fun DigitalTransactionScreen(
             dismissButton = {
                 TextButton(onClick = { selectedProductForPayment = null }) {
                     Text("Batal")
+                }
+            }
+        )
+    }
+
+    // Edit Product Dialog
+    if (showEditDialog && productToEdit != null) {
+        EditDigitalProductDialog(
+            product = productToEdit!!,
+            onDismiss = {
+                showEditDialog = false
+                productToEdit = null
+            },
+            onProductUpdated = { updatedProduct ->
+                viewModel.updateProduct(updatedProduct)
+                showEditDialog = false
+                productToEdit = null
+            }
+        )
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteConfirmation && productToDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmation = false
+                productToDelete = null
+            },
+            title = { Text("Hapus Produk") },
+            text = {
+                Text("Apakah Anda yakin ingin menghapus produk \"${productToDelete!!.name}\"?")
+            },
+            confirmButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteProduct(productToDelete!!)
+                            showDeleteConfirmation = false
+                            productToDelete = null
+                        }
+                    ) {
+                        Text("Hapus", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = {
+                        showDeleteConfirmation = false
+                        productToDelete = null
+                    }) {
+                        Text("Batal")
+                    }
                 }
             }
         )
@@ -383,7 +447,9 @@ fun ProviderTabsSection(
 @Composable
 fun ProductsGrid(
     products: List<DigitalProductEntity>,
-    onProductClick: (DigitalProductEntity) -> Unit
+    onProductClick: (DigitalProductEntity) -> Unit,
+    onEditProduct: (DigitalProductEntity) -> Unit,
+    onDeleteProduct: (DigitalProductEntity) -> Unit
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -395,7 +461,12 @@ fun ProductsGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(products) { product ->
-            ProductCard(product, onProductClick)
+            ProductCard(
+                product = product,
+                onClick = { onProductClick(product) },
+                onEdit = { onEditProduct(product) },
+                onDelete = { onDeleteProduct(product) }
+            )
         }
     }
 }
@@ -403,7 +474,9 @@ fun ProductsGrid(
 @Composable
 fun ProductCard(
     product: DigitalProductEntity,
-    onClick: (DigitalProductEntity) -> Unit
+    onClick: (DigitalProductEntity) -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -414,31 +487,48 @@ fun ProductCard(
             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+                .padding(12.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = product.name,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    minLines = 2
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = product.provider,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Row {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Hapus",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = product.provider,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = formatCurrency(product.sellingPrice),
                 style = MaterialTheme.typography.titleMedium,
@@ -471,4 +561,118 @@ fun EmptyProductsSection(category: String) {
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditDigitalProductDialog(
+    product: DigitalProductEntity,
+    onDismiss: () -> Unit,
+    onProductUpdated: (DigitalProductEntity) -> Unit
+) {
+    var name by remember { mutableStateOf(product.name) }
+    var category by remember { mutableStateOf(product.category) }
+    var provider by remember { mutableStateOf(product.provider) }
+    var nominal by remember { mutableStateOf(formatNumberForInput(product.nominal)) }
+    var costPrice by remember { mutableStateOf(formatNumberForInput(product.costPrice)) }
+    var sellingPrice by remember { mutableStateOf(formatNumberForInput(product.sellingPrice)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Produk Digital") },
+        text = {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Nama Produk") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        label = { Text("Kategori") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = provider,
+                        onValueChange = { provider = it },
+                        label = { Text("Provider") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = nominal,
+                        onValueChange = { nominal = it },
+                        label = { Text("Nominal") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = costPrice,
+                        onValueChange = { costPrice = it },
+                        label = { Text("Harga Modal") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = sellingPrice,
+                        onValueChange = { sellingPrice = it },
+                        label = { Text("Harga Jual") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        val updatedProduct = product.copy(
+                            name = name,
+                            category = category,
+                            provider = provider,
+                            nominal = nominal.toDoubleOrNull() ?: 0.0,
+                            costPrice = costPrice.toDoubleOrNull() ?: 0.0,
+                            sellingPrice = sellingPrice.toDoubleOrNull() ?: 0.0
+                        )
+                        onProductUpdated(updatedProduct)
+                    }
+                ) {
+                    Text("Simpan")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Batal")
+                }
+            }
+        }
+    )
+}
+
+private fun formatNumberForInput(value: Double): String {
+    return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
 }

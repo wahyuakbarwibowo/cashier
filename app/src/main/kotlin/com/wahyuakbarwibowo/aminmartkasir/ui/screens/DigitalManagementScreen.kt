@@ -13,8 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalCategoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalProductEntity
@@ -340,7 +343,7 @@ fun DigitalProductFormDialog(
                         readOnly = true,
                         label = { Text("Kategori") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
                     )
                     ExposedDropdownMenu(
                         expanded = categoryExpanded,

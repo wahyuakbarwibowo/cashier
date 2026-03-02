@@ -38,6 +38,8 @@ fun SalesTransactionScreen(
     var showPaymentMethodSelector by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showPrinterDialog by remember { mutableStateOf(false) }
+    var showEditProductDialog by remember { mutableStateOf(false) }
+    var productToEdit by remember { mutableStateOf<ProductEntity?>(null) }
     var lastTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
     var successTransactionId by remember { mutableStateOf<String?>(null) }
     var successTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
@@ -107,7 +109,11 @@ fun SalesTransactionScreen(
                             item = item,
                             onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
                             onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
-                            onRemove = { viewModel.removeFromCart(item.product.id) }
+                            onRemove = { viewModel.removeFromCart(item.product.id) },
+                            onEdit = {
+                                productToEdit = item.product
+                                showEditProductDialog = true
+                            }
                         )
                     }
                 }
@@ -273,6 +279,23 @@ fun SalesTransactionScreen(
         )
     }
 
+    if (showEditProductDialog && productToEdit != null) {
+        EditProductDialog(
+            product = productToEdit!!,
+            onDismiss = {
+                showEditProductDialog = false
+                productToEdit = null
+            },
+            onProductUpdated = { updatedProduct ->
+                // Remove old item and add updated product
+                viewModel.removeFromCart(productToEdit!!.id)
+                viewModel.addToCart(updatedProduct)
+                showEditProductDialog = false
+                productToEdit = null
+            }
+        )
+    }
+
     if (showSuccessDialog && successTransactionId != null && successTransactionData != null) {
         val transactionId = successTransactionId ?: return
         val transactionData = successTransactionData ?: return
@@ -331,7 +354,8 @@ fun CartItemCard(
     item: CartItem,
     onIncreaseQty: () -> Unit,
     onDecreaseQty: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onEdit: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -353,8 +377,13 @@ fun CartItemCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onRemove) {
-                    Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = onRemove) {
+                        Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
             
@@ -621,4 +650,140 @@ fun PaymentMethodSelectorDialog(
 private fun formatNumberForInput(value: Double): String {
     // Avoid showing "0.0" in numeric inputs; keep the raw number without trailing zeros.
     return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditProductDialog(
+    product: ProductEntity,
+    onDismiss: () -> Unit,
+    onProductUpdated: (ProductEntity) -> Unit
+) {
+    var name by remember { mutableStateOf(product.name) }
+    var code by remember { mutableStateOf(product.code ?: "") }
+    var sellingPrice by remember { mutableStateOf(formatNumberForInput(product.sellingPrice)) }
+    var stock by remember { mutableStateOf(product.stock.toString()) }
+    var purchasePrice by remember { mutableStateOf(formatNumberForInput(product.purchasePrice)) }
+    var packagePrice by remember { mutableStateOf(formatNumberForInput(product.packagePrice)) }
+    var packageQty by remember { mutableStateOf(product.packageQty.toString()) }
+    var discount by remember { mutableStateOf(formatNumberForInput(product.discount)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Produk") },
+        text = {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Nama Produk") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { code = it },
+                        label = { Text("Kode Produk") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = sellingPrice,
+                        onValueChange = { sellingPrice = it },
+                        label = { Text("Harga Jual") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = purchasePrice,
+                        onValueChange = { purchasePrice = it },
+                        label = { Text("Harga Beli") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = stock,
+                        onValueChange = { stock = it },
+                        label = { Text("Stok") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = packagePrice,
+                        onValueChange = { packagePrice = it },
+                        label = { Text("Harga Paket") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = packageQty,
+                        onValueChange = { packageQty = it },
+                        label = { Text("Jumlah Paket") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = discount,
+                        onValueChange = { discount = it },
+                        label = { Text("Diskon") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        val updatedProduct = product.copy(
+                            name = name,
+                            code = code.ifBlank { null },
+                            sellingPrice = sellingPrice.toDoubleOrNull() ?: 0.0,
+                            stock = stock.toIntOrNull() ?: 0,
+                            purchasePrice = purchasePrice.toDoubleOrNull() ?: 0.0,
+                            packagePrice = packagePrice.toDoubleOrNull() ?: 0.0,
+                            packageQty = packageQty.toIntOrNull() ?: 0,
+                            discount = discount.toDoubleOrNull() ?: 0.0
+                        )
+                        onProductUpdated(updatedProduct)
+                    }
+                ) {
+                    Text("Simpan")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Batal")
+                }
+            }
+        }
+    )
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -28,7 +29,7 @@ val drawerMenuItems = listOf(
     DrawerMenuItem(Screen.StockHistory.route, "Riwayat Stok", Icons.Default.History),
     DrawerMenuItem(Screen.Expenses.route, "Pengeluaran", Icons.Default.MoneyOff),
     DrawerMenuItem(Screen.Reports.route, "Laporan", Icons.Default.Assessment),
-    DrawerMenuItem(Screen.ProfitLoss.route, "Laba Rugi", Icons.Default.ShowChart),
+    DrawerMenuItem(Screen.ProfitLoss.route, "Laba Rugi", Icons.AutoMirrored.Filled.ShowChart),
     DrawerMenuItem(Screen.Backup.route, "Backup & Restore", Icons.Default.Backup),
     DrawerMenuItem(Screen.Settings.route, "Pengaturan", Icons.Default.Settings)
 )

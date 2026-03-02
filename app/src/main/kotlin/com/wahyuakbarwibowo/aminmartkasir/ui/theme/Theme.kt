@@ -14,26 +14,38 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = PinkPrimaryDark,
+    onPrimary = PinkOnPrimaryDark,
+    primaryContainer = PinkPrimaryContainerDark,
+    secondary = PinkSecondaryDark,
+    onSecondary = PinkOnSecondaryDark,
+    secondaryContainer = PinkSecondaryContainerDark,
+    background = PinkBackgroundDark,
+    onBackground = PinkOnBackgroundDark,
+    surface = PinkSurfaceDark,
+    onSurface = PinkOnSurfaceDark,
+    error = PinkErrorDark,
+    onError = PinkOnErrorDark,
+    outline = PinkOutlineDark
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Primary,
-    onPrimary = OnPrimary,
-    primaryContainer = PrimaryVariant,
-    secondary = Secondary,
-    onSecondary = OnSecondary,
-    secondaryContainer = SecondaryVariant,
-    background = Background,
-    onBackground = OnBackground,
-    surface = Surface,
-    onSurface = OnSurface,
-    error = Error,
-    onError = OnError
+    primary = PinkPrimaryLight,
+    onPrimary = PinkOnPrimaryLight,
+    primaryContainer = PinkPrimaryContainerLight,
+    secondary = PinkSecondaryLight,
+    onSecondary = PinkOnSecondaryLight,
+    secondaryContainer = PinkSecondaryContainerLight,
+    background = PinkBackgroundLight,
+    onBackground = PinkOnBackgroundLight,
+    surface = PinkSurfaceLight,
+    onSurface = PinkOnSurfaceLight,
+    error = PinkErrorLight,
+    onError = PinkOnErrorLight,
+    outline = PinkOutlineLight
 )
 
 @Composable
@@ -54,8 +66,10 @@ fun AminmartKasirTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            WindowInsetsControllerCompat(window, view).apply {
+                isAppearanceLightStatusBars = darkTheme
+            }
         }
     }
 

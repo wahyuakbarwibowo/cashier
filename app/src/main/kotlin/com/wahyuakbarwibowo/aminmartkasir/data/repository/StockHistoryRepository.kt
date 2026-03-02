@@ -11,8 +11,24 @@ class StockHistoryRepository(private val stockHistoryDao: StockHistoryDao) {
         return stockHistoryDao.getStockHistoryByProduct(productId)
     }
 
+    suspend fun getStockHistoryById(id: Long): StockHistoryEntity? {
+        return stockHistoryDao.getStockHistoryById(id)
+    }
+
     suspend fun insert(history: StockHistoryEntity): Long {
         return stockHistoryDao.insert(history)
+    }
+
+    suspend fun update(history: StockHistoryEntity) {
+        stockHistoryDao.update(history)
+    }
+
+    suspend fun delete(history: StockHistoryEntity) {
+        stockHistoryDao.delete(history)
+    }
+
+    suspend fun deleteByProductId(productId: Long) {
+        stockHistoryDao.deleteByProductId(productId)
     }
 }
 
