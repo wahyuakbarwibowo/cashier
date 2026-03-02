@@ -48,7 +48,8 @@ android {
         }
         if (hasReleaseSigning) {
             release {
-                storeFile file(signingProperties['MYAPP_UPLOAD_STORE_FILE'])
+                // Resolve relative paths from the project root (not :app module dir).
+                storeFile rootProject.file(signingProperties['MYAPP_UPLOAD_STORE_FILE'])
                 storePassword signingProperties['MYAPP_UPLOAD_STORE_PASSWORD']
                 keyAlias signingProperties['MYAPP_UPLOAD_KEY_ALIAS']
                 keyPassword signingProperties['MYAPP_UPLOAD_KEY_PASSWORD']
