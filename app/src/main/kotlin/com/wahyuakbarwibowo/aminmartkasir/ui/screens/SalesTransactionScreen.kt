@@ -19,6 +19,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.*
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
 import com.wahyuakbarwibowo.aminmartkasir.ui.screens.LastTransactionData
+import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.*
 
@@ -511,7 +512,7 @@ fun PaymentMethodSelectorDialog(
     totalAmount: Double,
     onDismiss: () -> Unit
 ) {
-    var paidAmount by remember { mutableStateOf(totalAmount.toString()) }
+    var paidAmount by remember(totalAmount) { mutableStateOf(formatNumberForInput(totalAmount)) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -615,4 +616,9 @@ fun PaymentMethodSelectorDialog(
             }
         }
     )
+}
+
+private fun formatNumberForInput(value: Double): String {
+    // Avoid showing "0.0" in numeric inputs; keep the raw number without trailing zeros.
+    return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
 }
