@@ -10,17 +10,14 @@ sealed class Screen(val route: String) {
             "product_form"
         }
     }
-    object Customers : Screen("customers")
+    object StockHistory : Screen("stock_history")
     object SalesTransaction : Screen("sales_transaction")
     object SalesHistory : Screen("sales_history")
     object SaleDetail : Screen("sale_detail/{saleId}") {
         fun createRoute(saleId: Long) = "sale_detail/$saleId"
     }
     object Purchases : Screen("purchases")
-    object Suppliers : Screen("suppliers")
     object Expenses : Screen("expenses")
-    object Receivables : Screen("receivables")
-    object Payables : Screen("payables")
     object DigitalTransaction : Screen("digital_transaction")
     object DigitalReports : Screen("digital_reports")
     object DigitalReportDetail : Screen("digital_report_detail/{reportId}") {

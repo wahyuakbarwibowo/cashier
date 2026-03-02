@@ -30,6 +30,8 @@ class BluetoothPrinterHelper(private val context: Context) {
         private val ALIGN_RIGHT = byteArrayOf(0x1B, 0x61, 0x02) // Align right
         private val BOLD_ON = byteArrayOf(0x1B, 0x45, 0x01) // Bold on
         private val BOLD_OFF = byteArrayOf(0x1B, 0x45, 0x00) // Bold off
+        private val FONT_A = byteArrayOf(0x1B, 0x4D, 0x00) // Normal font
+        private val FONT_B = byteArrayOf(0x1B, 0x4D, 0x01) // Small font
         private val DOUBLE_SIZE_ON = byteArrayOf(0x1D, 0x21, 0x11) // Double size
         private val DOUBLE_SIZE_OFF = byteArrayOf(0x1D, 0x21, 0x00) // Normal size
         private val UNDERLINE_ON = byteArrayOf(0x1B, 0x2D, 0x01) // Underline on
@@ -143,24 +145,17 @@ class BluetoothPrinterHelper(private val context: Context) {
             if (!shopPhone.isNullOrBlank()) {
                 printText("Telp: $shopPhone\n")
             }
-            printText("\n")
             
             // Transaction info
             sendCommand(ALIGN_LEFT)
             sendCommand(BOLD_ON)
             printText("--------------------------------\n")
             sendCommand(BOLD_OFF)
-            printText("No: $transactionId\n")
-            printText("Tgl: $date\n")
+            printText(formatInfoLine("No", transactionId))
+            printText(formatInfoLine("Tgl", date))
             if (!cashierName.isNullOrBlank()) {
-                printText("Kasir: $cashierName\n")
+                printText(formatInfoLine("Kasir", cashierName))
             }
-            printText("\n")
-            
-            // Items header
-            sendCommand(BOLD_ON)
-            printText("%-4s %-20s %5s %8s\n".format("Qty", "Item", "Harga", "Subtotal"))
-            sendCommand(BOLD_OFF)
             printText("--------------------------------\n")
             
             // Items
@@ -176,48 +171,36 @@ class BluetoothPrinterHelper(private val context: Context) {
                 )
             }
             
-            printText("\n")
-            sendCommand(BOLD_ON)
             printText("--------------------------------\n")
-            sendCommand(BOLD_OFF)
             
             // Summary
-            sendCommand(ALIGN_RIGHT)
-            printText("Subtotal:    %10s\n".format(formatCurrency(subtotal)))
+            sendCommand(ALIGN_LEFT)
+            printText(formatAmountLine("Subtotal", formatCurrency(subtotal)))
             if (discount > 0) {
-                printText("Diskon:      %10s\n".format(formatCurrency(discount)))
+                printText(formatAmountLine("Diskon", formatCurrency(discount)))
             }
-            sendCommand(BOLD_ON)
-            sendCommand(DOUBLE_SIZE_ON)
-            printText("TOTAL:       %10s\n".format(formatCurrency(total)))
-            sendCommand(DOUBLE_SIZE_OFF)
-            sendCommand(BOLD_OFF)
-            printText("Dibayar:     %10s\n".format(formatCurrency(paid)))
-            printText("Kembalian:   %10s\n".format(formatCurrency(change)))
+            printText(formatAmountLine("Total", formatCurrency(total)))
+            printText(formatAmountLine("Dibayar", formatCurrency(paid)))
+            printText(formatAmountLine("Kembalian", formatCurrency(change)))
             
             if (pointsEarned > 0) {
-                printText("\n")
                 printText("Poin Earned: %d\n".format(pointsEarned))
             }
             
-            printText("\n")
             sendCommand(ALIGN_CENTER)
-            sendCommand(BOLD_ON)
             printText("--------------------------------\n")
-            sendCommand(BOLD_OFF)
             
             // Footer
             if (!footerNote.isNullOrBlank()) {
                 printText("$footerNote\n")
             }
             printText("Terima kasih atas kunjungan Anda!\n")
-            printText("\n")
             
             // Cut paper
             sendCommand(CUT_PAPER)
             
             // Feed paper
-            for (i in 1..3) {
+            for (i in 1..1) {
                 sendCommand(LINE_FEED)
             }
             
@@ -263,7 +246,6 @@ class BluetoothPrinterHelper(private val context: Context) {
             if (!shopPhone.isNullOrBlank()) {
                 printText("Telp: $shopPhone\n")
             }
-            printText("\n")
             
             // Transaction title
             sendCommand(ALIGN_CENTER)
@@ -274,40 +256,42 @@ class BluetoothPrinterHelper(private val context: Context) {
             
             // Transaction info
             sendCommand(ALIGN_LEFT)
-            printText("No       : $transactionId\n")
-            printText("Tgl      : $date\n")
-            printText("Kategori : $category\n")
-            printText("Provider : $provider\n")
-            printText("Tujuan   : $targetNumber\n")
+            printText(formatInfoLine("No", transactionId))
+            printText(formatInfoLine("Tgl", date))
+            printText(formatInfoLine("Kategori", category))
+            printText(formatInfoLine("Provider", provider))
+            printText(formatInfoLine("Tujuan", targetNumber))
             printText("--------------------------------\n")
             
             // Product info
             sendCommand(BOLD_ON)
             printText("$productName\n")
             sendCommand(BOLD_OFF)
-            printText("Harga    :  %15s\n".format(formatCurrency(sellingPrice)))
+            printText(formatAmountLine("Harga", formatCurrency(sellingPrice)))
             
             if (!notes.isNullOrBlank()) {
                 printText("--------------------------------\n")
                 printText("SN / Token:\n")
+                sendCommand(ALIGN_LEFT)
                 sendCommand(BOLD_ON)
+                sendCommand(DOUBLE_SIZE_ON)
                 printText("$notes\n")
+                sendCommand(DOUBLE_SIZE_OFF)
                 sendCommand(BOLD_OFF)
             }
             
             printText("--------------------------------\n")
             
             // Payment info
-            sendCommand(ALIGN_RIGHT)
-            printText("TOTAL    :  %15s\n".format(formatCurrency(sellingPrice)))
-            printText("Bayar    :  %15s\n".format(formatCurrency(paid)))
-            printText("Kembali  :  %15s\n".format(formatCurrency(change)))
+            sendCommand(ALIGN_LEFT)
+            sendCommand(FONT_A)
+            printText(formatAmountLine("Subtotal", formatCurrency(sellingPrice)))
+            printText(formatAmountLine("Total", formatCurrency(sellingPrice)))
+            printText(formatAmountLine("Dibayar", formatCurrency(paid)))
+            printText(formatAmountLine("Kembalian", formatCurrency(change)))
             
-            printText("\n")
             sendCommand(ALIGN_CENTER)
-            sendCommand(BOLD_ON)
             printText("--------------------------------\n")
-            sendCommand(BOLD_OFF)
             
             // Footer
             if (!footerNote.isNullOrBlank()) {
@@ -316,13 +300,12 @@ class BluetoothPrinterHelper(private val context: Context) {
             printText("Terima kasih!\n")
             printText("Simpan struk ini sebagai\n")
             printText("bukti transaksi yang sah.\n")
-            printText("\n")
             
             // Cut paper
             sendCommand(CUT_PAPER)
             
             // Feed paper
-            for (i in 1..3) {
+            for (i in 1..1) {
                 sendCommand(LINE_FEED)
             }
             
@@ -335,6 +318,17 @@ class BluetoothPrinterHelper(private val context: Context) {
         return String.format(java.util.Locale("id", "ID"), "Rp %,d", amount.toLong())
             .replace("Rp", "")
             .trim()
+    }
+
+    private fun formatInfoLine(label: String, value: String): String {
+        return "%-8s: %s\n".format(label, value)
+    }
+
+    private fun formatAmountLine(label: String, value: String): String {
+        val left = "%-10s:".format(label)
+        val width = 32
+        val spaces = (width - left.length - value.length).coerceAtLeast(1)
+        return left + " ".repeat(spaces) + value + "\n"
     }
     
     data class ReceiptItem(

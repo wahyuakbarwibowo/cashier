@@ -28,9 +28,10 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         DigitalProductEntity::class,
         DigitalCategoryEntity::class,
         ExpenseEntity::class,
-        CustomerPointsHistoryEntity::class
+        CustomerPointsHistoryEntity::class,
+        StockHistoryEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -51,6 +52,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun digitalCategoryDao(): DigitalCategoryDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun customerPointsHistoryDao(): CustomerPointsHistoryDao
+    abstract fun stockHistoryDao(): StockHistoryDao
 
     companion object {
         @Volatile

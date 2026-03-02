@@ -30,6 +30,8 @@ fun DigitalReportDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val history = uiState.phoneHistory.find { it.id == reportId }
+    val productName = history?.let { parseDigitalProductName(it.notes) } ?: "Produk Digital"
+    val tokenNote = history?.let { parseDigitalNote(it.notes) }
     var showPrinterDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -91,12 +93,12 @@ fun DigitalReportDetailScreen(
                         
                         HorizontalDivider()
                         
-                        DetailRow("Produk", history.notes?.replace("TRX Digital: ", "") ?: "Produk Digital")
+                        DetailRow("Produk", productName)
                         DetailRow("Harga Jual", formatCurrency(history.sellingPrice), isBold = true)
                         DetailRow("Dibayar", formatCurrency(history.paid))
                         DetailRow("Kembalian", formatCurrency(history.paid - history.sellingPrice))
                         
-                        if (!history.notes.isNullOrBlank()) {
+                        if (!tokenNote.isNullOrBlank()) {
                             HorizontalDivider()
                             Text(
                                 text = "Keterangan / SN:",
@@ -104,7 +106,7 @@ fun DigitalReportDetailScreen(
                                 color = MaterialTheme.colorScheme.secondary
                             )
                             Text(
-                                text = history.notes!!,
+                                text = tokenNote,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -123,6 +125,28 @@ fun DigitalReportDetailScreen(
             viewModelFactory = viewModelFactory
         )
     }
+}
+
+private fun parseDigitalProductName(rawNotes: String?): String {
+    if (rawNotes.isNullOrBlank()) return "Produk Digital"
+    return rawNotes
+        .lineSequence()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith("TRX Digital: ") }
+        ?.removePrefix("TRX Digital: ")
+        ?.ifBlank { "Produk Digital" }
+        ?: "Produk Digital"
+}
+
+private fun parseDigitalNote(rawNotes: String?): String? {
+    if (rawNotes.isNullOrBlank()) return null
+    return rawNotes
+        .lineSequence()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith("NOTE: ") }
+        ?.removePrefix("NOTE: ")
+        ?.trim()
+        ?.ifBlank { null }
 }
 
 @Composable

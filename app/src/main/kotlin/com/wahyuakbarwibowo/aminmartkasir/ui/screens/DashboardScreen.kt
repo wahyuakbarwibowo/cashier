@@ -25,8 +25,6 @@ import java.util.*
 fun DashboardScreen(
     onNavigateToProducts: () -> Unit,
     onNavigateToSales: () -> Unit,
-    onNavigateToCustomers: () -> Unit,
-    onNavigateToSuppliers: () -> Unit,
     onNavigateToLowStock: () -> Unit,
     onNavigateToDigital: () -> Unit,
     onOpenDrawer: () -> Unit,
@@ -133,18 +131,6 @@ fun DashboardScreen(
                 onClick = onNavigateToProducts
             )
             
-            QuickActionButton(
-                text = "Data Pelanggan",
-                icon = Icons.Default.People,
-                onClick = onNavigateToCustomers
-            )
-            
-            QuickActionButton(
-                text = "Data Supplier",
-                icon = Icons.Default.LocalShipping,
-                onClick = onNavigateToSuppliers
-            )
-            
             // Low Stock Alert
             if (uiState.lowStockCount > 0) {
                 Card(
@@ -204,10 +190,6 @@ fun DashboardScreen(
                 value = uiState.totalSales.toString()
             )
             
-            StatRow(
-                label = "Total Supplier",
-                value = uiState.totalSuppliers.toString()
-            )
         }
     }
 }
@@ -315,5 +297,7 @@ fun StatRow(
 
 fun formatCurrency(amount: Double): String {
     val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+    format.minimumFractionDigits = 0
+    format.maximumFractionDigits = 0
     return format.format(amount)
 }

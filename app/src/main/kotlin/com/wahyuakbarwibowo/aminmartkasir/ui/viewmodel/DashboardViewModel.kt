@@ -2,19 +2,14 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleEntity
-import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 data class DashboardUiState(
     val totalProducts: Int = 0,
     val totalCustomers: Int = 0,
     val totalSales: Int = 0,
-    val totalSuppliers: Int = 0,
     val todaySales: Double = 0.0,
     val monthSales: Double = 0.0,
     val lowStockCount: Int = 0,
@@ -24,15 +19,11 @@ data class DashboardUiState(
 class DashboardViewModel(
     private val productRepository: ProductRepository,
     private val customerRepository: CustomerRepository,
-    private val saleRepository: SaleRepository,
-    private val expenseRepository: ExpenseRepository,
-    private val supplierRepository: SupplierRepository
+    private val saleRepository: SaleRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
-
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     init {
         loadDashboardData()
@@ -44,14 +35,12 @@ class DashboardViewModel(
                 productRepository.productCount,
                 customerRepository.customerCount,
                 saleRepository.saleCount,
-                supplierRepository.supplierCount,
                 productRepository.getLowStockProducts().map { it.size }
-            ) { products, customers, sales, suppliers, lowStock ->
+            ) { products, customers, sales, lowStock ->
                 DashboardUiState(
                     totalProducts = products,
                     totalCustomers = customers,
                     totalSales = sales,
-                    totalSuppliers = suppliers,
                     lowStockCount = lowStock,
                     isLoading = false
                 )

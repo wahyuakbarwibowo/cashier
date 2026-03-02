@@ -25,8 +25,6 @@ fun AppNavigation(
             DashboardScreen(
                 onNavigateToProducts = { navController.navigate(Screen.Products.route) },
                 onNavigateToSales = { navController.navigate(Screen.SalesTransaction.route) },
-                onNavigateToCustomers = { navController.navigate(Screen.Customers.route) },
-                onNavigateToSuppliers = { navController.navigate(Screen.Suppliers.route) },
                 onNavigateToLowStock = { navController.navigate(Screen.LowStock.route) },
                 onNavigateToDigital = { navController.navigate(Screen.DigitalTransaction.route) },
                 onOpenDrawer = onOpenDrawer,
@@ -39,7 +37,15 @@ fun AppNavigation(
                 onNavigateToProductForm = { productId ->
                     navController.navigate(Screen.ProductForm.createRoute(productId))
                 },
+                onNavigateToStockHistory = { navController.navigate(Screen.StockHistory.route) },
                 onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
+
+        composable(Screen.StockHistory.route) {
+            StockHistoryScreen(
                 onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
@@ -63,14 +69,6 @@ fun AppNavigation(
             )
         }
         
-        composable(Screen.Customers.route) {
-            CustomersScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onOpenDrawer = onOpenDrawer,
-                viewModel = viewModel(factory = viewModelFactory)
-            )
-        }
-
         composable(Screen.SalesTransaction.route) {
             SalesTransactionScreen(
                 onNavigateBack = { navController.popBackStack() },
@@ -118,32 +116,8 @@ fun AppNavigation(
             )
         }
 
-        composable(Screen.Suppliers.route) {
-            SuppliersScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onOpenDrawer = onOpenDrawer,
-                viewModel = viewModel(factory = viewModelFactory)
-            )
-        }
-
         composable(Screen.Expenses.route) {
             ExpensesScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onOpenDrawer = onOpenDrawer,
-                viewModel = viewModel(factory = viewModelFactory)
-            )
-        }
-
-        composable(Screen.Receivables.route) {
-            ReceivablesScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onOpenDrawer = onOpenDrawer,
-                viewModel = viewModel(factory = viewModelFactory)
-            )
-        }
-
-        composable(Screen.Payables.route) {
-            PayablesScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
@@ -214,14 +188,22 @@ fun AppNavigation(
         composable(Screen.Reports.route) {
             ReportsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onOpenDrawer = onOpenDrawer
+                onOpenDrawer = onOpenDrawer,
+                viewModelFactory = viewModelFactory,
+                salesHistoryViewModel = viewModel(factory = viewModelFactory),
+                expenseViewModel = viewModel(factory = viewModelFactory),
+                digitalTransactionViewModel = viewModel(factory = viewModelFactory)
             )
         }
         
         composable(Screen.ProfitLoss.route) {
             ProfitLossScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onOpenDrawer = onOpenDrawer
+                onOpenDrawer = onOpenDrawer,
+                viewModelFactory = viewModelFactory,
+                salesHistoryViewModel = viewModel(factory = viewModelFactory),
+                expenseViewModel = viewModel(factory = viewModelFactory),
+                digitalTransactionViewModel = viewModel(factory = viewModelFactory)
             )
         }
 

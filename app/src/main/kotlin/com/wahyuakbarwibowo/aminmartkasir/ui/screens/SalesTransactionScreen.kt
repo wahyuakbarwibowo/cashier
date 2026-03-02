@@ -34,7 +34,6 @@ fun SalesTransactionScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showProductSelector by remember { mutableStateOf(false) }
-    var showCustomerSelector by remember { mutableStateOf(false) }
     var showPaymentMethodSelector by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showPrinterDialog by remember { mutableStateOf(false) }
@@ -182,18 +181,6 @@ fun SalesTransactionScreen(
                 }
                 
                 OutlinedButton(
-                    onClick = { showCustomerSelector = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.People, contentDescription = null)
-                    Spacer(Modifier.size(4.dp))
-                    Text(
-                        text = uiState.selectedCustomer?.name ?: "Pelanggan",
-                        maxLines = 1
-                    )
-                }
-                
-                OutlinedButton(
                     onClick = { showPaymentMethodSelector = true },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -257,15 +244,6 @@ fun SalesTransactionScreen(
                 onNavigateToCreateProduct()
             },
             onDismiss = { showProductSelector = false }
-        )
-    }
-    
-    if (showCustomerSelector) {
-        CustomerSelectorDialog(
-            customers = uiState.customers,
-            selectedCustomer = uiState.selectedCustomer,
-            onCustomerSelected = { viewModel.setSelectedCustomer(it) },
-            onDismiss = { showCustomerSelector = false }
         )
     }
     
@@ -518,89 +496,6 @@ fun ProductSelectorDialog(
                 TextButton(onClick = onDismiss) {
                     Text("Tutup")
                 }
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CustomerSelectorDialog(
-    customers: List<CustomerEntity>,
-    selectedCustomer: CustomerEntity?,
-    onCustomerSelected: (CustomerEntity?) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Pilih Pelanggan") },
-        text = {
-            LazyColumn(
-                modifier = Modifier.heightIn(max = 400.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                item {
-                    Card(
-                        onClick = { onCustomerSelected(null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selectedCustomer == null) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            }
-                        )
-                    ) {
-                        Text(
-                            text = "Tanpa Pelanggan",
-                            modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-                
-                items(customers, key = { it.id }) { customer ->
-                    Card(
-                        onClick = { onCustomerSelected(customer) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selectedCustomer?.id == customer.id) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            }
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = customer.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (!customer.phone.isNullOrBlank()) {
-                                Text(
-                                    text = customer.phone.orEmpty(),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            Text(
-                                text = "${customer.points} Poin",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Tutup")
             }
         }
     )

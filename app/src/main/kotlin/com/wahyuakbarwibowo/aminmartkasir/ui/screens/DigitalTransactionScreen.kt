@@ -40,6 +40,7 @@ fun DigitalTransactionScreen(
     viewModel: DigitalTransactionViewModel = viewModel(factory = viewModelFactory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var selectedProductForPayment by remember { mutableStateOf<DigitalProductEntity?>(null) }
     
     Scaffold(
         topBar = {
@@ -80,6 +81,14 @@ fun DigitalTransactionScreen(
                 shape = RoundedCornerShape(12.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
+                val recentTargets = remember(uiState.phoneHistory) {
+                    uiState.phoneHistory
+                        .mapNotNull { it.phoneNumber?.trim() }
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .take(8)
+                }
+
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Input Nomor / ID Pelanggan",
@@ -103,6 +112,38 @@ fun DigitalTransactionScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(8.dp)
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.transactionNote,
+                        onValueChange = { viewModel.setTransactionNote(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Note / Token PLN") },
+                        placeholder = { Text("Contoh: 1234 5678 9012 3456") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    if (recentTargets.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Riwayat Input Terakhir",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(recentTargets) { target ->
+                                FilterChip(
+                                    selected = uiState.targetNumber == target,
+                                    onClick = { viewModel.setTargetNumber(target) },
+                                    label = { Text(target) }
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -132,10 +173,85 @@ fun DigitalTransactionScreen(
             } else {
                 ProductsGrid(
                     products = filteredProducts,
-                    onProductClick = { viewModel.processTransaction(it) }
+                    onProductClick = { 
+                        if (uiState.targetNumber.isBlank()) {
+                            viewModel.setTargetNumber("") // To trigger error if blank
+                            viewModel.processTransaction(it, it.sellingPrice) // Will trigger error in VM
+                        } else {
+                            selectedProductForPayment = it
+                            viewModel.setPaidAmount(it.sellingPrice.toInt().toString())
+                        }
+                    }
                 )
             }
         }
+    }
+
+    // Payment Confirmation Dialog
+    if (selectedProductForPayment != null) {
+        val product = selectedProductForPayment!!
+        val paidVal = uiState.paidAmount.toDoubleOrNull() ?: 0.0
+        val change = paidVal - product.sellingPrice
+
+        AlertDialog(
+            onDismissRequest = { selectedProductForPayment = null },
+            title = { Text("Konfirmasi Pembayaran") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column {
+                        Text(product.name, fontWeight = FontWeight.Bold)
+                        Text(product.provider, style = MaterialTheme.typography.bodySmall)
+                        Text(formatCurrency(product.sellingPrice), 
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    
+                    HorizontalDivider()
+                    
+                    OutlinedTextField(
+                        value = uiState.paidAmount,
+                        onValueChange = { viewModel.setPaidAmount(it) },
+                        label = { Text("Jumlah Bayar") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        prefix = { Text("Rp ") }
+                    )
+                    
+                    if (paidVal > 0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Kembalian:")
+                            Text(
+                                formatCurrency(change),
+                                color = if (change >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.processTransaction(product, paidVal)
+                        selectedProductForPayment = null
+                    },
+                    enabled = paidVal >= product.sellingPrice
+                ) {
+                    Text("Proses")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedProductForPayment = null }) {
+                    Text("Batal")
+                }
+            }
+        )
     }
 
     var showPrinterDialog by remember { mutableStateOf(false) }
@@ -298,29 +414,37 @@ fun ProductCard(
             containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
         )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
         ) {
-            Text(
-                text = product.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                minLines = 2
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = product.provider,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp)
+            ) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    minLines = 2
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = product.provider,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
             Text(
                 text = formatCurrency(product.sellingPrice),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.End
             )
         }
     }

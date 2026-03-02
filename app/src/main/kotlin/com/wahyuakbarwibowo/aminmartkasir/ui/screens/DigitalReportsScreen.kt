@@ -3,11 +3,11 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +28,25 @@ fun DigitalReportsScreen(
     viewModel: DigitalTransactionViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+
+    val categories = remember(uiState.phoneHistory) {
+        uiState.phoneHistory.map { it.category }.distinct()
+    }
+    val filteredHistory = remember(uiState.phoneHistory, selectedCategory, searchQuery) {
+        uiState.phoneHistory.filter { history ->
+            val categoryMatch = selectedCategory == null || history.category == selectedCategory
+            val query = searchQuery.trim()
+            val queryMatch = query.isBlank() ||
+                history.phoneNumber.orEmpty().contains(query, ignoreCase = true) ||
+                history.provider.orEmpty().contains(query, ignoreCase = true) ||
+                history.notes.orEmpty().contains(query, ignoreCase = true)
+            categoryMatch && queryMatch
+        }
+    }
+    val totalAmount = remember(filteredHistory) { filteredHistory.sumOf { it.sellingPrice } }
+    val totalProfit = remember(filteredHistory) { filteredHistory.sumOf { it.profit } }
     
     Scaffold(
         topBar = {
@@ -50,18 +69,97 @@ fun DigitalReportsScreen(
                 Text("Belum ada riwayat transaksi")
             }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(paddingValues)
             ) {
-                items(uiState.phoneHistory) { item ->
-                    DigitalHistoryItem(
-                        history = item,
-                        onClick = { onNavigateToDetail(item.id) }
-                    )
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    placeholder = { Text("Cari nomor tujuan / provider / note") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true
+                )
+
+                if (categories.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item {
+                            FilterChip(
+                                selected = selectedCategory == null,
+                                onClick = { selectedCategory = null },
+                                label = { Text("Semua") }
+                            )
+                        }
+                        items(categories) { category ->
+                            FilterChip(
+                                selected = selectedCategory == category,
+                                onClick = { selectedCategory = category },
+                                label = { Text(category) }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Card(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Total Nominal", style = MaterialTheme.typography.labelMedium)
+                            Text(
+                                text = formatCurrency(totalAmount),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Card(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Total Profit", style = MaterialTheme.typography.labelMedium)
+                            Text(
+                                text = formatCurrency(totalProfit),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (filteredHistory.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Data tidak ditemukan")
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredHistory, key = { it.id }) { item ->
+                            DigitalHistoryItem(
+                                history = item,
+                                onClick = { onNavigateToDetail(item.id) }
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -2,7 +2,8 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -86,11 +88,15 @@ fun DigitalManagementScreen(
                             editingProduct = it
                             showProductDialog = true 
                         },
-                        onDelete = { viewModel.deleteProduct(it) }
+                        onDelete = { viewModel.deleteProduct(it) },
+                        onMoveUp = { index -> viewModel.moveProduct(index, index - 1) },
+                        onMoveDown = { index -> viewModel.moveProduct(index, index + 1) }
                     )
                     1 -> CategoryListSection(
                         categories = uiState.categories,
-                        onDelete = { viewModel.deleteCategory(it) }
+                        onDelete = { viewModel.deleteCategory(it) },
+                        onMoveUp = { index -> viewModel.moveCategory(index, index - 1) },
+                        onMoveDown = { index -> viewModel.moveCategory(index, index + 1) }
                     )
                 }
             }
@@ -151,7 +157,9 @@ fun DigitalManagementScreen(
 fun ProductListSection(
     products: List<DigitalProductEntity>,
     onEdit: (DigitalProductEntity) -> Unit,
-    onDelete: (DigitalProductEntity) -> Unit
+    onDelete: (DigitalProductEntity) -> Unit,
+    onMoveUp: (Int) -> Unit,
+    onMoveDown: (Int) -> Unit
 ) {
     if (products.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -163,7 +171,7 @@ fun ProductListSection(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(products) { product ->
+            itemsIndexed(products, key = { _, product -> product.id }) { index, product ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -187,6 +195,12 @@ fun ProductListSection(
                             )
                         }
                         Row {
+                            ReorderDragHandle(
+                                canMoveUp = index > 0,
+                                canMoveDown = index < products.lastIndex,
+                                onMoveUp = { onMoveUp(index) },
+                                onMoveDown = { onMoveDown(index) }
+                            )
                             IconButton(onClick = { onEdit(product) }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
                             }
@@ -204,7 +218,9 @@ fun ProductListSection(
 @Composable
 fun CategoryListSection(
     categories: List<DigitalCategoryEntity>,
-    onDelete: (DigitalCategoryEntity) -> Unit
+    onDelete: (DigitalCategoryEntity) -> Unit,
+    onMoveUp: (Int) -> Unit,
+    onMoveDown: (Int) -> Unit
 ) {
     if (categories.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -216,7 +232,7 @@ fun CategoryListSection(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(categories) { category ->
+            itemsIndexed(categories, key = { _, category -> category.id }) { index, category ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -228,14 +244,58 @@ fun CategoryListSection(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        IconButton(onClick = { onDelete(category) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                        Row {
+                            ReorderDragHandle(
+                                canMoveUp = index > 0,
+                                canMoveDown = index < categories.lastIndex,
+                                onMoveUp = { onMoveUp(index) },
+                                onMoveDown = { onMoveDown(index) }
+                            )
+                            IconButton(onClick = { onDelete(category) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ReorderDragHandle(
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit
+) {
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+
+    Icon(
+        imageVector = Icons.Default.DragHandle,
+        contentDescription = "Seret untuk urutkan",
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+            .pointerInput(canMoveUp, canMoveDown) {
+                detectVerticalDragGestures(
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragOffset += dragAmount
+
+                        if (dragOffset <= -24f && canMoveUp) {
+                            onMoveUp()
+                            dragOffset = 0f
+                        } else if (dragOffset >= 24f && canMoveDown) {
+                            onMoveDown()
+                            dragOffset = 0f
+                        }
+                    },
+                    onDragEnd = { dragOffset = 0f },
+                    onDragCancel = { dragOffset = 0f }
+                )
+            }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -39,7 +39,7 @@ class SalesViewModel(
     private val customerRepository: CustomerRepository,
     private val paymentMethodRepository: PaymentMethodRepository,
     private val saleRepository: SaleRepository,
-    private val receivableRepository: ReceivableRepository,
+    private val stockHistoryRepository: StockHistoryRepository,
     private val customerPointsHistoryRepository: CustomerPointsHistoryRepository
 ) : ViewModel() {
 
@@ -219,19 +219,22 @@ class SalesViewModel(
 
                 // Update product stock
                 currentState.cartItems.forEach { item ->
+                    val currentProduct = productRepository.getProductById(item.product.id)
                     productRepository.decreaseStock(item.product.id, item.qty)
-                }
-
-                // Create receivable if unpaid
-                if (currentState.paid < currentState.total && currentState.selectedCustomer != null) {
-                    val receivable = ReceivableEntity(
-                        saleId = saleId,
-                        customerId = currentState.selectedCustomer.id,
-                        amount = currentState.total - currentState.paid,
-                        dueDate = dateFormat.format(Date()),
-                        status = "pending"
-                    )
-                    receivableRepository.insert(receivable)
+                    if (currentProduct != null) {
+                        val after = (currentProduct.stock - item.qty).coerceAtLeast(0)
+                        stockHistoryRepository.insert(
+                            StockHistoryEntity(
+                                productId = currentProduct.id,
+                                productName = currentProduct.name,
+                                changeQty = -item.qty,
+                                stockBefore = currentProduct.stock,
+                                stockAfter = after,
+                                reason = "Transaksi penjualan #$saleId",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
                 }
 
                 // Update customer points

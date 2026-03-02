@@ -97,15 +97,17 @@ fun BluetoothPrinterDialog(
                     pointsEarned = transactionData.pointsEarned
                 )
             } else if (digitalTransaction != null) {
+                val parsedProductName = parseDigitalProductName(digitalTransaction.notes)
+                val parsedNote = parseDigitalNote(digitalTransaction.notes)
                 viewModel.printDigitalReceipt(
                     transactionId = "TRX-DIG-${digitalTransaction.id}",
                     date = transactionDate,
                     category = digitalTransaction.category,
                     provider = digitalTransaction.provider ?: "-",
                     targetNumber = digitalTransaction.phoneNumber ?: "-",
-                    productName = digitalTransaction.notes?.replace("TRX Digital: ", "") ?: "Produk Digital",
+                    productName = parsedProductName,
                     sellingPrice = digitalTransaction.sellingPrice,
-                    notes = digitalTransaction.notes,
+                    notes = parsedNote,
                     paid = digitalTransaction.paid,
                     change = digitalTransaction.paid - digitalTransaction.sellingPrice
                 )
@@ -302,4 +304,26 @@ fun BluetoothPrinterDialog(
             }
         }
     )
+}
+
+private fun parseDigitalProductName(rawNotes: String?): String {
+    if (rawNotes.isNullOrBlank()) return "Produk Digital"
+    return rawNotes
+        .lineSequence()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith("TRX Digital: ") }
+        ?.removePrefix("TRX Digital: ")
+        ?.ifBlank { "Produk Digital" }
+        ?: "Produk Digital"
+}
+
+private fun parseDigitalNote(rawNotes: String?): String? {
+    if (rawNotes.isNullOrBlank()) return null
+    return rawNotes
+        .lineSequence()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith("NOTE: ") }
+        ?.removePrefix("NOTE: ")
+        ?.trim()
+        ?.ifBlank { null }
 }
