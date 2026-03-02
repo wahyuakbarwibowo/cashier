@@ -30,7 +30,8 @@ class BackupRepository(private val database: AppDatabase) {
             digitalProducts = database.digitalProductDao().getAllDigitalProducts().first(),
             digitalCategories = database.digitalCategoryDao().getAllDigitalCategories().first(),
             expenses = database.expenseDao().getAllExpenses().first(),
-            customerPointsHistory = database.customerPointsHistoryDao().getAllCustomerPointsHistory().first()
+            customerPointsHistory = database.customerPointsHistoryDao().getAllCustomerPointsHistory().first(),
+            stockHistory = database.stockHistoryDao().getAllStockHistory().first()
         )
         gson.toJson(backupData)
     }
@@ -89,6 +90,9 @@ class BackupRepository(private val database: AppDatabase) {
                 }
                 for (history in backupData.customerPointsHistory) {
                     database.customerPointsHistoryDao().insert(history)
+                }
+                for (history in backupData.stockHistory) {
+                    database.stockHistoryDao().insert(history)
                 }
             }.onFailure {
                 throw it

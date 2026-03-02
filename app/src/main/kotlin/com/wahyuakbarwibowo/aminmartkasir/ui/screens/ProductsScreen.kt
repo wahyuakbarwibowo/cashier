@@ -22,6 +22,7 @@ import java.util.*
 @Composable
 fun ProductsScreen(
     onNavigateToProductForm: (Long?) -> Unit,
+    onNavigateToStockHistory: () -> Unit,
     onNavigateBack: () -> Unit,
     onOpenDrawer: () -> Unit,
     viewModel: ProductViewModel = viewModel()
@@ -40,6 +41,9 @@ fun ProductsScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToStockHistory) {
+                        Icon(Icons.Default.History, contentDescription = "Riwayat Stok")
+                    }
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Tambah Produk")
                     }

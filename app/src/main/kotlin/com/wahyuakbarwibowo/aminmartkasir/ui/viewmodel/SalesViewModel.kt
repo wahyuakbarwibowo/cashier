@@ -39,7 +39,7 @@ class SalesViewModel(
     private val customerRepository: CustomerRepository,
     private val paymentMethodRepository: PaymentMethodRepository,
     private val saleRepository: SaleRepository,
-    private val receivableRepository: ReceivableRepository,
+    private val stockHistoryRepository: StockHistoryRepository,
     private val customerPointsHistoryRepository: CustomerPointsHistoryRepository
 ) : ViewModel() {
 
@@ -219,19 +219,22 @@ class SalesViewModel(
 
                 // Update product stock
                 currentState.cartItems.forEach { item ->
+                    val currentProduct = productRepository.getProductById(item.product.id)
                     productRepository.decreaseStock(item.product.id, item.qty)
-                }
-
-                // Create receivable if unpaid
-                if (currentState.paid < currentState.total && currentState.selectedCustomer != null) {
-                    val receivable = ReceivableEntity(
-                        saleId = saleId,
-                        customerId = currentState.selectedCustomer.id,
-                        amount = currentState.total - currentState.paid,
-                        dueDate = dateFormat.format(Date()),
-                        status = "pending"
-                    )
-                    receivableRepository.insert(receivable)
+                    if (currentProduct != null) {
+                        val after = (currentProduct.stock - item.qty).coerceAtLeast(0)
+                        stockHistoryRepository.insert(
+                            StockHistoryEntity(
+                                productId = currentProduct.id,
+                                productName = currentProduct.name,
+                                changeQty = -item.qty,
+                                stockBefore = currentProduct.stock,
+                                stockAfter = after,
+                                reason = "Transaksi penjualan #$saleId",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
                 }
 
                 // Update customer points
@@ -293,9 +296,160 @@ class SalesViewModel(
     fun calculatePoints() {
         val currentState = _uiState.value
         val pointsEarned = (currentState.total / 10000).toInt() // Asumsi 1 point per Rp 10.000
-        
-        _uiState.update { 
-            it.copy(pointsEarned = pointsEarned) 
+
+        _uiState.update {
+            it.copy(pointsEarned = pointsEarned)
+        }
+    }
+
+    fun updateTransaction(saleId: Long, onUpdateComplete: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val currentState = _uiState.value
+                if (currentState.cartItems.isEmpty()) {
+                    _uiState.update { it.copy(error = "Keranjang kosong") }
+                    return@launch
+                }
+
+                // Get existing sale
+                val existingSale = saleRepository.getSaleById(saleId)
+                if (existingSale == null) {
+                    _uiState.update { it.copy(error = "Transaksi tidak ditemukan") }
+                    return@launch
+                }
+
+                // Get existing sale items
+                val existingItems = saleRepository.getSaleItemsOnce(saleId)
+
+                // Restore stock for old items
+                existingItems.forEach { item ->
+                    val product = productRepository.getProductById(item.productId)
+                    if (product != null) {
+                        productRepository.increaseStock(item.productId, item.qty)
+                        stockHistoryRepository.insert(
+                            StockHistoryEntity(
+                                productId = product.id,
+                                productName = product.name,
+                                changeQty = item.qty,
+                                stockBefore = product.stock,
+                                stockAfter = product.stock + item.qty,
+                                reason = "Restock dari update transaksi #$saleId",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
+                }
+
+                // Reverse customer points from old transaction
+                if (existingSale.customerId != null) {
+                    if (existingSale.pointsEarned > 0) {
+                        customerRepository.deductPoints(existingSale.customerId, existingSale.pointsEarned)
+                        customerPointsHistoryRepository.insert(
+                            CustomerPointsHistoryEntity(
+                                customerId = existingSale.customerId,
+                                saleId = saleId,
+                                points = -existingSale.pointsEarned,
+                                type = "REVERSAL",
+                                notes = "Reversal poin dari update transaksi",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
+                    if (existingSale.pointsRedeemed > 0) {
+                        customerRepository.addPoints(existingSale.customerId, existingSale.pointsRedeemed)
+                        customerPointsHistoryRepository.insert(
+                            CustomerPointsHistoryEntity(
+                                customerId = existingSale.customerId,
+                                saleId = saleId,
+                                points = existingSale.pointsRedeemed,
+                                type = "REVERSAL",
+                                notes = "Reversal poin dari update transaksi",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
+                }
+
+                // Update sale entity
+                val updatedSale = existingSale.copy(
+                    customerId = currentState.selectedCustomer?.id,
+                    paymentMethodId = currentState.selectedPaymentMethod?.id,
+                    total = currentState.total,
+                    paid = currentState.paid,
+                    change = currentState.change,
+                    pointsEarned = currentState.pointsEarned,
+                    pointsRedeemed = currentState.pointsRedeemed
+                )
+
+                // Update sale with new items
+                val newSaleItems = currentState.cartItems.map { item ->
+                    SaleItemEntity(
+                        saleId = saleId,
+                        productId = item.product.id,
+                        qty = item.qty,
+                        price = item.price,
+                        subtotal = item.subtotal
+                    )
+                }
+
+                saleRepository.updateSaleWithItems(updatedSale, newSaleItems)
+
+                // Decrease stock for new items
+                currentState.cartItems.forEach { item ->
+                    val currentProduct = productRepository.getProductById(item.product.id)
+                    if (currentProduct != null) {
+                        productRepository.decreaseStock(item.product.id, item.qty)
+                        val after = (currentProduct.stock - item.qty).coerceAtLeast(0)
+                        stockHistoryRepository.insert(
+                            StockHistoryEntity(
+                                productId = currentProduct.id,
+                                productName = currentProduct.name,
+                                changeQty = -item.qty,
+                                stockBefore = currentProduct.stock,
+                                stockAfter = after,
+                                reason = "Transaksi penjualan update #$saleId",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
+                }
+
+                // Add new customer points
+                if (currentState.selectedCustomer != null) {
+                    if (currentState.pointsEarned > 0) {
+                        customerRepository.addPoints(currentState.selectedCustomer.id, currentState.pointsEarned)
+                        customerPointsHistoryRepository.insert(
+                            CustomerPointsHistoryEntity(
+                                customerId = currentState.selectedCustomer.id,
+                                saleId = saleId,
+                                points = currentState.pointsEarned,
+                                type = "EARNED",
+                                notes = "Poin dari update transaksi",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
+                    if (currentState.pointsRedeemed > 0) {
+                        customerRepository.deductPoints(currentState.selectedCustomer.id, currentState.pointsRedeemed)
+                        customerPointsHistoryRepository.insert(
+                            CustomerPointsHistoryEntity(
+                                customerId = currentState.selectedCustomer.id,
+                                saleId = saleId,
+                                points = -currentState.pointsRedeemed,
+                                type = "REDEEMED",
+                                notes = "Penukaran poin dari update transaksi",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
+                }
+
+                clearCart()
+                onUpdateComplete()
+
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
         }
     }
 }

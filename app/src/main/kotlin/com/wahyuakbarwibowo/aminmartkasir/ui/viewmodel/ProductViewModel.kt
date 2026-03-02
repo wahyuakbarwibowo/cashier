@@ -2,10 +2,15 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductRepository
+import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class ProductUiState(
     val products: List<ProductEntity> = emptyList(),
@@ -17,13 +22,15 @@ data class ProductUiState(
 )
 
 class ProductViewModel(
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val stockHistoryRepository: StockHistoryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProductUiState())
     val uiState: StateFlow<ProductUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     
     init {
         loadProducts()
@@ -71,7 +78,20 @@ class ProductViewModel(
     fun addProduct(product: ProductEntity) {
         viewModelScope.launch {
             try {
-                productRepository.insert(product)
+                val insertedId = productRepository.insert(product)
+                if (product.stock > 0) {
+                    stockHistoryRepository.insert(
+                        StockHistoryEntity(
+                            productId = insertedId,
+                            productName = product.name,
+                            changeQty = product.stock,
+                            stockBefore = 0,
+                            stockAfter = product.stock,
+                            reason = "Tambah produk baru",
+                            createdAt = dateFormat.format(Date())
+                        )
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
@@ -81,7 +101,24 @@ class ProductViewModel(
     fun updateProduct(product: ProductEntity) {
         viewModelScope.launch {
             try {
+                val previous = productRepository.getProductById(product.id)
                 productRepository.update(product)
+
+                if (previous != null && previous.stock != product.stock) {
+                    val delta = product.stock - previous.stock
+                    val reason = if (delta > 0) "Penambahan stok manual" else "Pengurangan stok manual"
+                    stockHistoryRepository.insert(
+                        StockHistoryEntity(
+                            productId = product.id,
+                            productName = product.name,
+                            changeQty = delta,
+                            stockBefore = previous.stock,
+                            stockAfter = product.stock,
+                            reason = reason,
+                            createdAt = dateFormat.format(Date())
+                        )
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }

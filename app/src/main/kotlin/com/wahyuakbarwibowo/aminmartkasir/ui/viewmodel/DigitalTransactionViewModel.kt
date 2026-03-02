@@ -21,9 +21,11 @@ data class DigitalTransactionUiState(
     val selectedCategory: String? = null,
     val selectedProvider: String? = null,
     val targetNumber: String = "",
+    val transactionNote: String = "",
     val searchQuery: String = "",
     val isLoading: Boolean = true,
     val isProcessing: Boolean = false,
+    val paidAmount: String = "",
     val lastProcessedTransaction: PhoneHistoryEntity? = null,
     val successMessage: String? = null,
     val error: String? = null
@@ -39,6 +41,8 @@ class DigitalTransactionViewModel(
     val uiState: StateFlow<DigitalTransactionUiState> = _uiState.asStateFlow()
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    private var categoryOrderIds: List<Long> = emptyList()
+    private var productOrderIds: List<Long> = emptyList()
 
     init {
         loadData()
@@ -61,14 +65,21 @@ class DigitalTransactionViewModel(
             ) { cats, history, allProds ->
                 Triple(cats, history, allProds)
             }.collect { (cats, history, allProds) ->
+                categoryOrderIds = reconcileOrderIds(categoryOrderIds, cats.map { it.id })
+                productOrderIds = reconcileOrderIds(productOrderIds, allProds.map { it.id })
+                val orderedCategories = applyCustomOrder(cats, categoryOrderIds) { it.id }
+                val orderedProducts = applyCustomOrder(allProds, productOrderIds) { it.id }
+
                 _uiState.update { state ->
                     state.copy(
-                        categories = cats,
+                        categories = orderedCategories,
                         phoneHistory = history,
-                        allProducts = allProds,
+                        allProducts = orderedProducts,
                         isLoading = false,
-                        // Select first category by default if none selected
-                        selectedCategory = state.selectedCategory ?: cats.firstOrNull()?.name
+                        selectedCategory = when {
+                            state.selectedCategory != null && orderedCategories.any { it.name == state.selectedCategory } -> state.selectedCategory
+                            else -> orderedCategories.firstOrNull()?.name
+                        }
                     )
                 }
                 // Refresh products for initial category
@@ -97,7 +108,8 @@ class DigitalTransactionViewModel(
     private fun loadProductsByCategory(category: String) {
         viewModelScope.launch {
             digitalProductRepository.getDigitalProductsByCategory(category).collect { products ->
-                _uiState.update { it.copy(products = products) }
+                val orderedProducts = applyCustomOrder(products, productOrderIds) { it.id }
+                _uiState.update { it.copy(products = orderedProducts) }
             }
         }
     }
@@ -108,6 +120,14 @@ class DigitalTransactionViewModel(
 
     fun setTargetNumber(number: String) {
         _uiState.update { it.copy(targetNumber = number) }
+    }
+
+    fun setTransactionNote(note: String) {
+        _uiState.update { it.copy(transactionNote = note) }
+    }
+
+    fun setPaidAmount(amount: String) {
+        _uiState.update { it.copy(paidAmount = amount) }
     }
 
     fun search(query: String) {
@@ -143,11 +163,19 @@ class DigitalTransactionViewModel(
         }
     }
 
-    fun processTransaction(product: DigitalProductEntity) {
-        val phoneNumber = _uiState.value.targetNumber
+    fun processTransaction(product: DigitalProductEntity, paid: Double) {
+        val currentState = _uiState.value
+        val phoneNumber = currentState.targetNumber
         if (phoneNumber.isBlank()) {
             _uiState.update { it.copy(error = "Nomor tujuan harus diisi") }
             return
+        }
+        val inputNote = currentState.transactionNote.trim().ifBlank { null }
+        val storedNotes = buildString {
+            append("TRX Digital: ${product.name}")
+            if (!inputNote.isNullOrBlank()) {
+                append("\nNOTE: $inputNote")
+            }
         }
 
         viewModelScope.launch {
@@ -162,8 +190,8 @@ class DigitalTransactionViewModel(
                     costPrice = product.costPrice,
                     sellingPrice = product.sellingPrice,
                     profit = product.sellingPrice - product.costPrice,
-                    notes = "TRX Digital: ${product.name}",
-                    paid = product.sellingPrice,
+                    notes = storedNotes,
+                    paid = paid,
                     createdAt = dateFormat.format(Date())
                 )
                 
@@ -175,7 +203,9 @@ class DigitalTransactionViewModel(
                         isProcessing = false, 
                         lastProcessedTransaction = insertedTransaction,
                         successMessage = "Transaksi ${product.name} ke $phoneNumber Berhasil!",
-                        targetNumber = "" 
+                        targetNumber = "",
+                        transactionNote = "",
+                        paidAmount = ""
                     )
                 }
             } catch (e: Exception) {
@@ -216,5 +246,57 @@ class DigitalTransactionViewModel(
                 _uiState.update { it.copy(error = e.message) }
             }
         }
+    }
+
+    fun moveCategory(fromIndex: Int, toIndex: Int) {
+        val categories = _uiState.value.categories
+        if (fromIndex !in categories.indices || toIndex !in categories.indices || fromIndex == toIndex) return
+
+        val mutable = categories.toMutableList()
+        val moved = mutable.removeAt(fromIndex)
+        mutable.add(toIndex, moved)
+        categoryOrderIds = mutable.map { it.id }
+
+        _uiState.update { state ->
+            state.copy(categories = mutable)
+        }
+    }
+
+    fun moveProduct(fromIndex: Int, toIndex: Int) {
+        val products = _uiState.value.allProducts
+        if (fromIndex !in products.indices || toIndex !in products.indices || fromIndex == toIndex) return
+
+        val mutable = products.toMutableList()
+        val moved = mutable.removeAt(fromIndex)
+        mutable.add(toIndex, moved)
+        productOrderIds = mutable.map { it.id }
+
+        val selectedCategory = _uiState.value.selectedCategory
+        val selectedProducts = if (selectedCategory.isNullOrBlank()) {
+            emptyList()
+        } else {
+            mutable.filter { it.category == selectedCategory }
+        }
+
+        _uiState.update { state ->
+            state.copy(
+                allProducts = mutable,
+                products = if (selectedCategory.isNullOrBlank()) state.products else selectedProducts
+            )
+        }
+    }
+
+    private fun reconcileOrderIds(currentOrder: List<Long>, currentIds: List<Long>): List<Long> {
+        val existing = currentOrder.filter { it in currentIds }
+        val newItems = currentIds.filterNot { it in existing }
+        return existing + newItems
+    }
+
+    private fun <T> applyCustomOrder(items: List<T>, orderIds: List<Long>, idSelector: (T) -> Long): List<T> {
+        if (items.isEmpty()) return items
+        val idToItem = items.associateBy(idSelector)
+        val orderedItems = orderIds.mapNotNull { idToItem[it] }
+        val remaining = items.filter { item -> idSelector(item) !in orderIds }
+        return orderedItems + remaining
     }
 }

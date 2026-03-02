@@ -19,6 +19,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.*
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
 import com.wahyuakbarwibowo.aminmartkasir.ui.screens.LastTransactionData
+import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.*
 
@@ -34,10 +35,11 @@ fun SalesTransactionScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showProductSelector by remember { mutableStateOf(false) }
-    var showCustomerSelector by remember { mutableStateOf(false) }
     var showPaymentMethodSelector by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showPrinterDialog by remember { mutableStateOf(false) }
+    var showEditProductDialog by remember { mutableStateOf(false) }
+    var productToEdit by remember { mutableStateOf<ProductEntity?>(null) }
     var lastTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
     var successTransactionId by remember { mutableStateOf<String?>(null) }
     var successTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
@@ -107,7 +109,11 @@ fun SalesTransactionScreen(
                             item = item,
                             onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
                             onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
-                            onRemove = { viewModel.removeFromCart(item.product.id) }
+                            onRemove = { viewModel.removeFromCart(item.product.id) },
+                            onEdit = {
+                                productToEdit = item.product
+                                showEditProductDialog = true
+                            }
                         )
                     }
                 }
@@ -182,18 +188,6 @@ fun SalesTransactionScreen(
                 }
                 
                 OutlinedButton(
-                    onClick = { showCustomerSelector = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.People, contentDescription = null)
-                    Spacer(Modifier.size(4.dp))
-                    Text(
-                        text = uiState.selectedCustomer?.name ?: "Pelanggan",
-                        maxLines = 1
-                    )
-                }
-                
-                OutlinedButton(
                     onClick = { showPaymentMethodSelector = true },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -260,15 +254,6 @@ fun SalesTransactionScreen(
         )
     }
     
-    if (showCustomerSelector) {
-        CustomerSelectorDialog(
-            customers = uiState.customers,
-            selectedCustomer = uiState.selectedCustomer,
-            onCustomerSelected = { viewModel.setSelectedCustomer(it) },
-            onDismiss = { showCustomerSelector = false }
-        )
-    }
-    
     if (showPaymentMethodSelector) {
         PaymentMethodSelectorDialog(
             paymentMethods = uiState.paymentMethods,
@@ -291,6 +276,23 @@ fun SalesTransactionScreen(
             },
             transactionData = lastTransactionData,
             viewModelFactory = viewModelFactory
+        )
+    }
+
+    if (showEditProductDialog && productToEdit != null) {
+        EditProductDialog(
+            product = productToEdit!!,
+            onDismiss = {
+                showEditProductDialog = false
+                productToEdit = null
+            },
+            onProductUpdated = { updatedProduct ->
+                // Remove old item and add updated product
+                viewModel.removeFromCart(productToEdit!!.id)
+                viewModel.addToCart(updatedProduct)
+                showEditProductDialog = false
+                productToEdit = null
+            }
         )
     }
 
@@ -352,7 +354,8 @@ fun CartItemCard(
     item: CartItem,
     onIncreaseQty: () -> Unit,
     onDecreaseQty: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onEdit: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -374,8 +377,13 @@ fun CartItemCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onRemove) {
-                    Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = onRemove) {
+                        Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
             
@@ -525,89 +533,6 @@ fun ProductSelectorDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerSelectorDialog(
-    customers: List<CustomerEntity>,
-    selectedCustomer: CustomerEntity?,
-    onCustomerSelected: (CustomerEntity?) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Pilih Pelanggan") },
-        text = {
-            LazyColumn(
-                modifier = Modifier.heightIn(max = 400.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                item {
-                    Card(
-                        onClick = { onCustomerSelected(null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selectedCustomer == null) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            }
-                        )
-                    ) {
-                        Text(
-                            text = "Tanpa Pelanggan",
-                            modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-                
-                items(customers, key = { it.id }) { customer ->
-                    Card(
-                        onClick = { onCustomerSelected(customer) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selectedCustomer?.id == customer.id) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            }
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = customer.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (!customer.phone.isNullOrBlank()) {
-                                Text(
-                                    text = customer.phone.orEmpty(),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            Text(
-                                text = "${customer.points} Poin",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Tutup")
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun PaymentMethodSelectorDialog(
     paymentMethods: List<PaymentMethodEntity>,
     selectedPaymentMethod: PaymentMethodEntity?,
@@ -616,7 +541,7 @@ fun PaymentMethodSelectorDialog(
     totalAmount: Double,
     onDismiss: () -> Unit
 ) {
-    var paidAmount by remember { mutableStateOf(totalAmount.toString()) }
+    var paidAmount by remember(totalAmount) { mutableStateOf(formatNumberForInput(totalAmount)) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -717,6 +642,147 @@ fun PaymentMethodSelectorDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Tutup")
+            }
+        }
+    )
+}
+
+private fun formatNumberForInput(value: Double): String {
+    // Avoid showing "0.0" in numeric inputs; keep the raw number without trailing zeros.
+    return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditProductDialog(
+    product: ProductEntity,
+    onDismiss: () -> Unit,
+    onProductUpdated: (ProductEntity) -> Unit
+) {
+    var name by remember { mutableStateOf(product.name) }
+    var code by remember { mutableStateOf(product.code ?: "") }
+    var sellingPrice by remember { mutableStateOf(formatNumberForInput(product.sellingPrice)) }
+    var stock by remember { mutableStateOf(product.stock.toString()) }
+    var purchasePrice by remember { mutableStateOf(formatNumberForInput(product.purchasePrice)) }
+    var packagePrice by remember { mutableStateOf(formatNumberForInput(product.packagePrice)) }
+    var packageQty by remember { mutableStateOf(product.packageQty.toString()) }
+    var discount by remember { mutableStateOf(formatNumberForInput(product.discount)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Produk") },
+        text = {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Nama Produk") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { code = it },
+                        label = { Text("Kode Produk") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = sellingPrice,
+                        onValueChange = { sellingPrice = it },
+                        label = { Text("Harga Jual") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = purchasePrice,
+                        onValueChange = { purchasePrice = it },
+                        label = { Text("Harga Beli") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = stock,
+                        onValueChange = { stock = it },
+                        label = { Text("Stok") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = packagePrice,
+                        onValueChange = { packagePrice = it },
+                        label = { Text("Harga Paket") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = packageQty,
+                        onValueChange = { packageQty = it },
+                        label = { Text("Jumlah Paket") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = discount,
+                        onValueChange = { discount = it },
+                        label = { Text("Diskon") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        leadingIcon = { Text("Rp") }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        val updatedProduct = product.copy(
+                            name = name,
+                            code = code.ifBlank { null },
+                            sellingPrice = sellingPrice.toDoubleOrNull() ?: 0.0,
+                            stock = stock.toIntOrNull() ?: 0,
+                            purchasePrice = purchasePrice.toDoubleOrNull() ?: 0.0,
+                            packagePrice = packagePrice.toDoubleOrNull() ?: 0.0,
+                            packageQty = packageQty.toIntOrNull() ?: 0,
+                            discount = discount.toDoubleOrNull() ?: 0.0
+                        )
+                        onProductUpdated(updatedProduct)
+                    }
+                ) {
+                    Text("Simpan")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Batal")
+                }
             }
         }
     )
