@@ -33,7 +33,7 @@
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -dontwarn kotlinx.coroutines.**
 
-# Kotlin
+# Kotlin - Metadata compatibility with R8
 -dontwarn kotlin.**
 -keep class kotlin.** { *; }
 -keep class kotlin.Metadata { *; }
@@ -45,10 +45,15 @@
     public <methods>;
 }
 
+# Kotlinx Metadata (for R8 compatibility with newer Kotlin versions)
+-keep class kotlin.Metadata { *; }
+-keep class kotlin.jvm.internal.** { *; }
+-keep class kotlin.reflect.** { *; }
+-dontwarn kotlin.reflect.**
+
 # Keep generic signature of Call, Response (R8 full mode strips signatures from non-kept items)
 -keep,allowobfuscation,allowshrinking interface retrofit2.Call
 -keep,allowobfuscation,allowshrinking class retrofit2.Response
 
 # With R8 full mode, it is no longer possible to keep the line numbers
 -dontoptimize
-

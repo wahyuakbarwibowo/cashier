@@ -214,17 +214,21 @@ fun ProductFormScreen(
                     value = purchasePackagePrice,
                     onValueChange = { purchasePackagePrice = it },
                     label = { Text("Harga Beli Paket") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 56.dp),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     leadingIcon = { Text("Rp") }
                 )
-                
+
                 OutlinedTextField(
                     value = purchasePackageQty,
                     onValueChange = { purchasePackageQty = it },
                     label = { Text("Isi Paket") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 56.dp),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                 )
@@ -256,17 +260,21 @@ fun ProductFormScreen(
                     value = packagePrice,
                     onValueChange = { packagePrice = it },
                     label = { Text("Harga Jual Paket") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 56.dp),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     leadingIcon = { Text("Rp") }
                 )
-                
+
                 OutlinedTextField(
                     value = packageQty,
                     onValueChange = { packageQty = it },
                     label = { Text("Isi Paket") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 56.dp),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                 )
