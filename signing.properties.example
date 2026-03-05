@@ -1,0 +1,15 @@
+# Release Signing Configuration
+# Copy this file to signing.properties and fill in your actual values
+# NEVER commit signing.properties with real credentials to version control
+
+# Path to your keystore file (relative to project root)
+MYAPP_UPLOAD_STORE_FILE=your-keystore-file.jks
+
+# Your key alias
+MYAPP_UPLOAD_KEY_ALIAS=your-key-alias
+
+# Your keystore password
+MYAPP_UPLOAD_STORE_PASSWORD=your-keystore-password
+
+# Your key password
+MYAPP_UPLOAD_KEY_PASSWORD=your-key-password

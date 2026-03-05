@@ -1,7 +1,7 @@
 <resources>
   <color name="splashscreen_background">#ffffff</color>
   <color name="iconBackground">#FFC0CB</color>
-  <color name="colorPrimary">#1976D2</color>
-  <color name="colorPrimaryDark">#1565C0</color>
-  <color name="colorAccent">#4CAF50</color>
+  <color name="colorPrimary">#E91E8B</color>
+  <color name="colorPrimaryDark">#800020</color>
+  <color name="colorAccent">#E91E8B</color>
 </resources>
