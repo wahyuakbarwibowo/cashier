@@ -61,7 +61,7 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'r8-rules.pro'
             if (!forceUnsignedRelease && hasReleaseSigning) {
                 signingConfig signingConfigs.release
             }
