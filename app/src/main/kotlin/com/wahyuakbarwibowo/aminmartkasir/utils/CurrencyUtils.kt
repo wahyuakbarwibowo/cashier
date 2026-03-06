@@ -8,6 +8,13 @@ object CurrencyUtils {
         val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
         format.minimumFractionDigits = 0
         format.maximumFractionDigits = 0
+        return format.format(amount.toLong())
+    }
+    
+    fun formatCurrency(amount: Long): String {
+        val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        format.minimumFractionDigits = 0
+        format.maximumFractionDigits = 0
         return format.format(amount)
     }
 }
