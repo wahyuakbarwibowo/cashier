@@ -44,12 +44,15 @@ fun DigitalManagementScreen(
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Produk", "Kategori")
-    
+
     var showProductDialog by remember { mutableStateOf(false) }
     var editingProduct by remember { mutableStateOf<DigitalProductEntity?>(null) }
-    
+
     var showCategoryDialog by remember { mutableStateOf(false) }
     var categoryNameInput by remember { mutableStateOf("") }
+
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedFilterCategory by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -81,12 +84,16 @@ fun DigitalManagementScreen(
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        onClick = { 
+                            selectedTab = index
+                            searchQuery = ""
+                            selectedFilterCategory = null
+                        },
                         text = { Text(title) }
                     )
                 }
             }
-            
+
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -95,6 +102,11 @@ fun DigitalManagementScreen(
                 when (selectedTab) {
                     0 -> ProductListSection(
                         products = uiState.allProducts,
+                        categories = uiState.categories,
+                        searchQuery = searchQuery,
+                        selectedFilterCategory = selectedFilterCategory,
+                        onSearchQueryChange = { searchQuery = it },
+                        onFilterCategoryChange = { selectedFilterCategory = it },
                         onEdit = {
                             editingProduct = it
                             showProductDialog = true
@@ -166,6 +178,11 @@ fun DigitalManagementScreen(
 @Composable
 fun ProductListSection(
     products: List<DigitalProductEntity>,
+    categories: List<DigitalCategoryEntity>,
+    searchQuery: String,
+    selectedFilterCategory: String?,
+    onSearchQueryChange: (String) -> Unit,
+    onFilterCategoryChange: (String?) -> Unit,
     onEdit: (DigitalProductEntity) -> Unit,
     onDelete: (DigitalProductEntity) -> Unit,
     onReorder: (Int, Int) -> Unit
@@ -174,48 +191,148 @@ fun ProductListSection(
     var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableStateOf(0f) }
 
+    // Filter products based on search query and category
+    val filteredProducts = remember(products, searchQuery, selectedFilterCategory) {
+        products.filter { product ->
+            val matchesSearch = searchQuery.isBlank() ||
+                    product.name.contains(searchQuery, ignoreCase = true) ||
+                    product.provider.contains(searchQuery, ignoreCase = true) ||
+                    product.category.contains(searchQuery, ignoreCase = true)
+            val matchesCategory = selectedFilterCategory == null ||
+                    product.category == selectedFilterCategory
+            matchesSearch && matchesCategory
+        }
+    }
+
     if (products.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Belum ada produk digital")
         }
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            state = listState
-        ) {
-            itemsIndexed(products, key = { _, product -> product.id }) { index, product ->
-                val isDragging = draggedItemIndex == index
-                val elevation by animateDpAsState(
-                    targetValue = if (isDragging) 8.dp else 1.dp,
-                    animationSpec = tween(150),
-                    label = "elevation"
-                )
-
-                DraggableProductCard(
-                    product = product,
-                    index = index,
-                    isDragging = isDragging,
-                    elevation = elevation,
-                    onDragStart = { draggedItemIndex = index },
-                    onDrag = { delta ->
-                        dragOffset += delta
-                        if (dragOffset > 100f && index < products.lastIndex) {
-                            onReorder(index, index + 1)
-                            dragOffset = 0f
-                        } else if (dragOffset < -100f && index > 0) {
-                            onReorder(index, index - 1)
-                            dragOffset = 0f
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                label = { Text("Cari produk...") },
+                placeholder = { Text("Nama, provider, atau kategori") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
                         }
-                    },
-                    onDragEnd = {
-                        draggedItemIndex = null
-                        dragOffset = 0f
-                    },
-                    onEdit = { onEdit(product) },
-                    onDelete = { onDelete(product) }
-                )
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            // Category filter chips
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                state = listState
+            ) {
+                // Filter chips row
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // All categories chip
+                        FilterChip(
+                            selected = selectedFilterCategory == null,
+                            onClick = { onFilterCategoryChange(null) },
+                            label = { Text("Semua") },
+                            modifier = Modifier.height(36.dp)
+                        )
+                        // Category chips
+                        categories.forEach { category ->
+                            FilterChip(
+                                selected = selectedFilterCategory == category.name,
+                                onClick = { onFilterCategoryChange(category.name) },
+                                label = { Text(category.name) },
+                                modifier = Modifier.height(36.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Products list
+                itemsIndexed(filteredProducts, key = { _, product -> product.id }) { index, product ->
+                    val isDragging = draggedItemIndex == index
+                    val elevation by animateDpAsState(
+                        targetValue = if (isDragging) 8.dp else 1.dp,
+                        animationSpec = tween(150),
+                        label = "elevation"
+                    )
+
+                    DraggableProductCard(
+                        product = product,
+                        index = index,
+                        isDragging = isDragging,
+                        elevation = elevation,
+                        onDragStart = { draggedItemIndex = index },
+                        onDrag = { delta ->
+                            dragOffset += delta
+                            if (dragOffset > 100f && index < filteredProducts.lastIndex) {
+                                onReorder(index, index + 1)
+                                dragOffset = 0f
+                            } else if (dragOffset < -100f && index > 0) {
+                                onReorder(index, index - 1)
+                                dragOffset = 0f
+                            }
+                        },
+                        onDragEnd = {
+                            draggedItemIndex = null
+                            dragOffset = 0f
+                        },
+                        onEdit = { onEdit(product) },
+                        onDelete = { onDelete(product) }
+                    )
+                }
+
+                // Show empty state if filtered results are empty
+                if (filteredProducts.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "Tidak ada produk yang ditemukan",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (searchQuery.isNotEmpty() || selectedFilterCategory != null) {
+                                    Text(
+                                        "Coba ubah kata kunci atau filter kategori",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -466,9 +583,9 @@ fun DigitalProductFormDialog(
     var name by remember { mutableStateOf(product?.name ?: "") }
     var category by remember { mutableStateOf(product?.category ?: categories.firstOrNull()?.name ?: "") }
     var provider by remember { mutableStateOf(product?.provider ?: "") }
-    var nominal by remember { mutableStateOf(product?.nominal?.toString() ?: "") }
-    var costPrice by remember { mutableStateOf(product?.costPrice?.toString() ?: "") }
-    var sellingPrice by remember { mutableStateOf(product?.sellingPrice?.toString() ?: "") }
+    var nominal by remember { mutableStateOf(product?.nominal?.toLong()?.toString() ?: "") }
+    var costPrice by remember { mutableStateOf(product?.costPrice?.toLong()?.toString() ?: "") }
+    var sellingPrice by remember { mutableStateOf(product?.sellingPrice?.toLong()?.toString() ?: "") }
     
     var categoryExpanded by remember { mutableStateOf(false) }
 

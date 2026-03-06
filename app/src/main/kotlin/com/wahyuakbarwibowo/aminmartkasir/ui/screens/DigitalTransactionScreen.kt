@@ -674,5 +674,5 @@ fun EditDigitalProductDialog(
 }
 
 private fun formatNumberForInput(value: Double): String {
-    return BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
+    return value.toLong().toString()
 }
