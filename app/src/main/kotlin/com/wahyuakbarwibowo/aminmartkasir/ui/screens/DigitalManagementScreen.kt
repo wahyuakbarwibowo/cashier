@@ -60,7 +60,7 @@ fun DigitalManagementScreen(
                 title = { Text("Kelola Produk Digital") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 }
             )

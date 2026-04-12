@@ -136,7 +136,6 @@ fun AppNavigation(
 
         composable(Screen.DigitalReports.route) {
             DigitalReportsScreen(
-                onNavigateBack = { navController.popBackStack() },
                 onNavigateToDetail = { reportId ->
                     navController.navigate(Screen.DigitalReportDetail.createRoute(reportId))
                 },

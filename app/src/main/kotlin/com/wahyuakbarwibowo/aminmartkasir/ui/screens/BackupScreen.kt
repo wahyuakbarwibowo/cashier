@@ -66,7 +66,7 @@ fun BackupScreen(
                 title = { Text("Backup & Restore") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 }
             )
