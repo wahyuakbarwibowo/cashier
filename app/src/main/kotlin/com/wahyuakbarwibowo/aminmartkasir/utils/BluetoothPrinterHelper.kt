@@ -186,18 +186,15 @@ class BluetoothPrinterHelper(private val context: Context) {
             printText(formatAmountLine("Dibayar", formatCurrency(paid)))
             printText(formatAmountLine("Kembalian", formatCurrency(change)))
             
-            if (pointsEarned > 0) {
-                printText("Poin Earned: %d\n".format(pointsEarned))
-            }
-            
             sendCommand(ALIGN_CENTER)
             printText("--------------------------------\n")
             
             // Footer
             if (!footerNote.isNullOrBlank()) {
                 printText("$footerNote\n")
+            } else {
+                printText("Terima kasih atas kunjungan Anda!\n")
             }
-            printText("Terima kasih atas kunjungan Anda!\n")
             
             // Cut paper
             sendCommand(CUT_PAPER)
