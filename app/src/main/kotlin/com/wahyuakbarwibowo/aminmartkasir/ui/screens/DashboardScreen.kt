@@ -41,6 +41,7 @@ fun DashboardScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 },
+                windowInsets = WindowInsets.statusBars,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
