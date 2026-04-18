@@ -111,7 +111,8 @@ fun BluetoothPrinterDialog(
                     total = transactionData.total,
                     paid = transactionData.paid,
                     change = transactionData.change,
-                    pointsEarned = transactionData.pointsEarned
+                    pointsEarned = transactionData.pointsEarned,
+                    autoDisconnect = true
                 )
             } else if (digitalTransaction != null) {
                 val parsedProductName = parseDigitalProductName(digitalTransaction.notes)
@@ -126,7 +127,8 @@ fun BluetoothPrinterDialog(
                     sellingPrice = digitalTransaction.sellingPrice,
                     notes = parsedNote,
                     paid = digitalTransaction.paid,
-                    change = digitalTransaction.paid - digitalTransaction.sellingPrice
+                    change = digitalTransaction.paid - digitalTransaction.sellingPrice,
+                    autoDisconnect = true
                 )
             }
         }

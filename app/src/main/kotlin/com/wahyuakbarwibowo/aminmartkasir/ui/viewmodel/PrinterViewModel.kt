@@ -101,7 +101,8 @@ class PrinterViewModel(
         total: Double,
         paid: Double,
         change: Double,
-        pointsEarned: Int = 0
+        pointsEarned: Int = 0,
+        autoDisconnect: Boolean = false
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isPrinting = true) }
@@ -126,6 +127,10 @@ class PrinterViewModel(
                     footerNote = profile?.footerNote
                 )
                 
+                if (autoDisconnect) {
+                    disconnectDevice()
+                }
+
                 _uiState.update { 
                     it.copy(
                         isPrinting = false,
@@ -153,7 +158,8 @@ class PrinterViewModel(
         sellingPrice: Double,
         notes: String?,
         paid: Double,
-        change: Double
+        change: Double,
+        autoDisconnect: Boolean = false
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isPrinting = true) }
@@ -178,6 +184,10 @@ class PrinterViewModel(
                     footerNote = profile?.footerNote
                 )
                 
+                if (autoDisconnect) {
+                    disconnectDevice()
+                }
+
                 _uiState.update { 
                     it.copy(
                         isPrinting = false,
