@@ -296,8 +296,9 @@ class BluetoothPrinterHelper(private val context: Context) {
             // Footer
             if (!footerNote.isNullOrBlank()) {
                 printText("$footerNote\n")
+            } else {
+                printText("Terima kasih atas kunjungan Anda!\n")
             }
-            printText("Terima kasih!\n")
             printText("Simpan struk ini sebagai\n")
             printText("bukti transaksi yang sah.\n")
             
