@@ -36,7 +36,6 @@ import java.util.*
 fun SalesTransactionScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCreateProduct: () -> Unit,
-    onTransactionSuccess: () -> Unit,
     onOpenDrawer: () -> Unit,
     viewModelFactory: Factory? = null,
     viewModel: SalesViewModel = viewModel(factory = viewModelFactory)
@@ -314,8 +313,6 @@ fun SalesTransactionScreen(
                 showSuccessDialog = false
                 successTransactionId = null
                 successTransactionData = null
-                viewModel.clearCart()
-                onTransactionSuccess()
             },
             title = { Text("Transaksi Berhasil") },
             text = {
@@ -345,8 +342,6 @@ fun SalesTransactionScreen(
                             showSuccessDialog = false
                             successTransactionId = null
                             successTransactionData = null
-                            viewModel.clearCart()
-                            onTransactionSuccess()
                         }
                     ) {
                         Text("Selesai")

@@ -73,7 +73,6 @@ fun AppNavigation(
             SalesTransactionScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCreateProduct = { navController.navigate(Screen.ProductForm.createRoute()) },
-                onTransactionSuccess = { navController.navigate(Screen.SalesHistory.route) },
                 onOpenDrawer = onOpenDrawer,
                 viewModelFactory = viewModelFactory,
                 viewModel = viewModel(factory = viewModelFactory)

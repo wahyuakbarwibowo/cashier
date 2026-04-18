@@ -1,5 +1,6 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -34,8 +36,10 @@ fun ExpensesScreen(
     viewModel: ExpenseViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingExpense by remember { mutableStateOf<ExpenseEntity?>(null) }
+    var showDateFilterDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredExpenses = remember(uiState.expenses, searchQuery) {
@@ -47,8 +51,31 @@ fun ExpensesScreen(
         }
     }
     val filteredTotal = remember(filteredExpenses) { filteredExpenses.sumOf { it.amount } }
+    val expenseByCategory = remember(filteredExpenses) {
+        filteredExpenses
+            .groupBy { it.category }
+            .mapValues { (_, expenses) -> expenses.sumOf { it.amount } }
+            .toList()
+            .sortedByDescending { it.second }
+            .take(3)
+    }
+    val activeFilterLabel = remember(uiState.startDate, uiState.endDate) {
+        when {
+            uiState.startDate.isBlank() || uiState.endDate.isBlank() -> "Semua tanggal"
+            uiState.startDate == uiState.endDate -> uiState.startDate
+            else -> "${uiState.startDate} s/d ${uiState.endDate}"
+        }
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearError()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Pengeluaran") },
@@ -81,6 +108,15 @@ fun ExpensesScreen(
                 singleLine = true
             )
 
+            ExpenseFilterSection(
+                activeFilterLabel = activeFilterLabel,
+                onTodayClick = { viewModel.loadTodayExpenses() },
+                onMonthClick = { viewModel.loadCurrentMonthExpenses() },
+                onCustomClick = { showDateFilterDialog = true },
+                onResetClick = { viewModel.clearDateFilter() },
+                hasActiveFilter = uiState.startDate.isNotBlank() || uiState.endDate.isNotBlank()
+            )
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,6 +135,11 @@ fun ExpensesScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
+                            text = activeFilterLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
                             text = formatCurrency(filteredTotal),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
@@ -112,7 +153,42 @@ fun ExpensesScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            if (expenseByCategory.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Kategori Teratas",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        expenseByCategory.forEach { (category, amount) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = category,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = formatCurrency(amount),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(10.dp))
+            }
 
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -160,6 +236,18 @@ fun ExpensesScreen(
         )
     }
 
+    if (showDateFilterDialog) {
+        DateRangeFilterDialog(
+            initialStartDate = uiState.startDate,
+            initialEndDate = uiState.endDate,
+            onDismiss = { showDateFilterDialog = false },
+            onApply = { startDate, endDate ->
+                viewModel.loadExpensesByDateRange(startDate, endDate)
+                showDateFilterDialog = false
+            }
+        )
+    }
+
     if (editingExpense != null) {
         val expense = editingExpense ?: return
         ExpenseFormDialog(
@@ -177,6 +265,61 @@ fun ExpensesScreen(
                 editingExpense = null
             }
         )
+    }
+}
+
+@Composable
+private fun ExpenseFilterSection(
+    activeFilterLabel: String,
+    hasActiveFilter: Boolean,
+    onTodayClick: () -> Unit,
+    onMonthClick: () -> Unit,
+    onCustomClick: () -> Unit,
+    onResetClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = false,
+                onClick = onTodayClick,
+                label = { Text("Hari Ini") }
+            )
+            FilterChip(
+                selected = false,
+                onClick = onMonthClick,
+                label = { Text("Bulan Ini") }
+            )
+            FilterChip(
+                selected = hasActiveFilter,
+                onClick = onCustomClick,
+                label = { Text("Rentang") },
+                leadingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) }
+            )
+        }
+        AnimatedVisibility(visible = hasActiveFilter) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = activeFilterLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TextButton(onClick = onResetClick) {
+                    Text("Reset")
+                }
+            }
+        }
     }
 }
 
@@ -264,6 +407,59 @@ private fun ExpenseCard(
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateRangeFilterDialog(
+    initialStartDate: String,
+    initialEndDate: String,
+    onDismiss: () -> Unit,
+    onApply: (String, String) -> Unit
+) {
+    var startDate by remember(initialStartDate) { mutableStateOf(initialStartDate) }
+    var endDate by remember(initialEndDate) { mutableStateOf(initialEndDate) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Filter Tanggal") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Masukkan format tanggal `yyyy-MM-dd`.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = startDate,
+                    onValueChange = { startDate = it },
+                    label = { Text("Tanggal Mulai") },
+                    placeholder = { Text("2026-04-01") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = endDate,
+                    onValueChange = { endDate = it },
+                    label = { Text("Tanggal Akhir") },
+                    placeholder = { Text("2026-04-30") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onApply(startDate.trim(), endDate.trim()) },
+                enabled = startDate.isNotBlank() && endDate.isNotBlank()
+            ) {
+                Text("Terapkan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Batal") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

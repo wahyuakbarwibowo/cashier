@@ -183,7 +183,6 @@ fun DigitalTransactionScreen(
                     products = filteredProducts,
                     onProductClick = {
                         if (uiState.targetNumber.isBlank()) {
-                            viewModel.setTargetNumber("") // To trigger error if blank
                             viewModel.processTransaction(it, it.sellingPrice) // Will trigger error in VM
                         } else {
                             selectedProductForPayment = it
