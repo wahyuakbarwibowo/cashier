@@ -196,14 +196,13 @@ class BluetoothPrinterHelper(private val context: Context) {
                 printText("Terima kasih atas kunjungan Anda!\n")
             }
             
-            // Cut paper
-            sendCommand(CUT_PAPER)
-            
             // Feed paper
-            for (i in 1..1) {
+            for (i in 1..3) {
                 sendCommand(LINE_FEED)
             }
             
+            // Cut paper
+            sendCommand(CUT_PAPER)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -302,14 +301,13 @@ class BluetoothPrinterHelper(private val context: Context) {
             printText("Simpan struk ini sebagai\n")
             printText("bukti transaksi yang sah.\n")
             
-            // Cut paper
-            sendCommand(CUT_PAPER)
-            
             // Feed paper
-            for (i in 1..1) {
+            for (i in 1..3) {
                 sendCommand(LINE_FEED)
             }
             
+            // Cut paper
+            sendCommand(CUT_PAPER)
         } catch (e: Exception) {
             e.printStackTrace()
         }

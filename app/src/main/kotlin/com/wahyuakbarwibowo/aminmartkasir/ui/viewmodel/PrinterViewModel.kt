@@ -128,6 +128,7 @@ class PrinterViewModel(
                 )
                 
                 if (autoDisconnect) {
+                    kotlinx.coroutines.delay(500)
                     disconnectDevice()
                 }
 
@@ -185,6 +186,7 @@ class PrinterViewModel(
                 )
                 
                 if (autoDisconnect) {
+                    kotlinx.coroutines.delay(500)
                     disconnectDevice()
                 }
 
