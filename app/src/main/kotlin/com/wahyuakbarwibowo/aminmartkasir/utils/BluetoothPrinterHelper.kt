@@ -160,8 +160,10 @@ class BluetoothPrinterHelper(private val context: Context) {
             
             // Items
             items.forEach { item ->
-                // 1. Item Name (could span whole width)
+                // 1. Item Name (Bold)
+                sendCommand(BOLD_ON)
                 printText("${item.name}\n")
+                sendCommand(BOLD_OFF)
                 
                 // 2. Qty and Unit Price (e.g., 3 x 5.000)
                 val priceInfo = "${item.qty} x ${formatCurrency(item.price)}"
