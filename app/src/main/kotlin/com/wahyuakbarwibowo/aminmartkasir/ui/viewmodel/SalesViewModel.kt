@@ -71,6 +71,17 @@ class SalesViewModel(
         }
     }
 
+    private fun calculateSubtotal(product: ProductEntity, qty: Int): Double {
+        val totalDiscount = product.discount * qty
+        return if (product.packageQty > 0 && product.packagePrice > 0) {
+            val packages = qty / product.packageQty
+            val remainder = qty % product.packageQty
+            (packages * product.packagePrice) + (remainder * product.sellingPrice) - totalDiscount
+        } else {
+            (qty * product.sellingPrice) - totalDiscount
+        }
+    }
+
     fun addToCart(product: ProductEntity) {
         val currentState = _uiState.value
         val existingItem = currentState.cartItems.find { it.product.id == product.id }
@@ -78,7 +89,8 @@ class SalesViewModel(
         val newCartItems = if (existingItem != null) {
             currentState.cartItems.map {
                 if (it.product.id == product.id) {
-                    it.copy(qty = it.qty + 1, subtotal = (it.qty + 1) * it.price)
+                    val newQty = it.qty + 1
+                    it.copy(qty = newQty, subtotal = calculateSubtotal(product, newQty))
                 } else {
                     it
                 }
@@ -88,7 +100,7 @@ class SalesViewModel(
                 product = product,
                 qty = 1,
                 price = product.sellingPrice,
-                subtotal = product.sellingPrice
+                subtotal = calculateSubtotal(product, 1)
             )
         }
         
@@ -104,7 +116,7 @@ class SalesViewModel(
         
         val newCartItems = currentState.cartItems.map {
             if (it.product.id == productId) {
-                it.copy(qty = qty, subtotal = qty * it.price)
+                it.copy(qty = qty, subtotal = calculateSubtotal(it.product, qty))
             } else {
                 it
             }
@@ -137,18 +149,19 @@ class SalesViewModel(
 
     fun setDiscount(discount: Double) {
         val currentState = _uiState.value
-        val total = currentState.subtotal - discount
-        val change = currentState.paid - total
-        
+        val total = (currentState.subtotal - discount).coerceAtLeast(0.0)
+        val paid = if (currentState.paid < total) total else currentState.paid
+        val change = paid - total
+
         _uiState.update { 
             it.copy(
                 discount = discount,
                 total = total,
+                paid = paid,
                 change = change
             ) 
         }
     }
-
     fun setPaid(paid: Double) {
         val currentState = _uiState.value
         val change = paid - currentState.total

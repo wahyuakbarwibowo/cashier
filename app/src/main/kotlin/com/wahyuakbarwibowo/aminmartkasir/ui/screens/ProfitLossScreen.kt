@@ -18,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ExpenseViewModel
+import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProductViewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SalesHistoryViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 import java.text.SimpleDateFormat
@@ -32,11 +33,13 @@ fun ProfitLossScreen(
     viewModelFactory: ViewModelProvider.Factory? = null,
     salesHistoryViewModel: SalesHistoryViewModel = viewModel(factory = viewModelFactory),
     expenseViewModel: ExpenseViewModel = viewModel(factory = viewModelFactory),
-    digitalTransactionViewModel: DigitalTransactionViewModel = viewModel(factory = viewModelFactory)
+    digitalTransactionViewModel: DigitalTransactionViewModel = viewModel(factory = viewModelFactory),
+    productViewModel: ProductViewModel = viewModel(factory = viewModelFactory)
 ) {
     val salesState by salesHistoryViewModel.uiState.collectAsState()
     val expenseState by expenseViewModel.uiState.collectAsState()
     val digitalState by digitalTransactionViewModel.uiState.collectAsState()
+    val productState by productViewModel.uiState.collectAsState()
     var selectedPeriod by remember { mutableStateOf(ProfitLossPeriod.THIS_MONTH) }
 
     val todayPattern = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
@@ -54,6 +57,24 @@ fun ProfitLossScreen(
     val cashierRevenue = remember(salesState.sales, selectedPeriod) {
         salesState.sales.filter { isMatchPeriod(it.createdAt) }.sumOf { it.total }
     }
+    
+    val cashierProfit = remember(salesState.sales, salesState.saleItems, productState.products, selectedPeriod) {
+        val filteredSales = salesState.sales.filter { isMatchPeriod(it.createdAt) }
+        var totalProfit = 0.0
+        filteredSales.forEach { sale ->
+            val items = salesState.saleItems[sale.id] ?: emptyList()
+            var saleCost = 0.0
+            items.forEach { item ->
+                val product = productState.products.find { it.id == item.productId }
+                val costPrice = product?.purchasePrice ?: 0.0
+                saleCost += (costPrice * item.qty)
+            }
+            // Profit is revenue (sale.total) minus cost of goods sold
+            totalProfit += (sale.total - saleCost)
+        }
+        totalProfit
+    }
+
     val digitalRevenue = remember(digitalState.phoneHistory, selectedPeriod) {
         digitalState.phoneHistory.filter { isMatchPeriod(it.createdAt) }.sumOf { it.sellingPrice }
     }
@@ -65,7 +86,7 @@ fun ProfitLossScreen(
     }
 
     val estimatedCashFlow = cashierRevenue + digitalRevenue - totalExpense
-    val estimatedProfit = digitalProfit - totalExpense
+    val estimatedProfit = cashierProfit + digitalProfit - totalExpense
 
     val expenseByCategory = remember(expenseState.expenses, selectedPeriod) {
         expenseState.expenses
@@ -134,7 +155,7 @@ fun ProfitLossScreen(
                 ProfitLossMetricCard(
                     title = "Laba Bersih Estimasi",
                     value = formatCurrency(estimatedProfit),
-                    description = "Profit digital - pengeluaran",
+                    description = "Profit (Kasir + Digital) - Pengeluaran",
                     icon = Icons.Default.Calculate
                 )
             }
@@ -143,6 +164,9 @@ fun ProfitLossScreen(
 
             item {
                 SummaryLine(label = "Omzet Kasir", value = formatCurrency(cashierRevenue))
+            }
+            item {
+                SummaryLine(label = "Profit Kasir (Est)", value = formatCurrency(cashierProfit))
             }
             item {
                 SummaryLine(label = "Omzet Digital", value = formatCurrency(digitalRevenue))

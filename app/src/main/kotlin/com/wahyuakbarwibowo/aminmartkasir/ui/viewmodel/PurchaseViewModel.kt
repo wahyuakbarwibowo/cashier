@@ -5,6 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PurchaseEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PurchaseItemEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ExpenseEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.repository.ExpenseRepository
+import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PurchaseRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SupplierRepository
@@ -33,7 +37,9 @@ data class PurchaseCartItem(
 class PurchaseViewModel(
     private val supplierRepository: SupplierRepository,
     private val purchaseRepository: PurchaseRepository,
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val stockHistoryRepository: StockHistoryRepository,
+    private val expenseRepository: ExpenseRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PurchaseUiState())
@@ -153,6 +159,38 @@ class PurchaseViewModel(
 
                 // Insert purchase and update stock
                 purchaseRepository.insertPurchaseWithItems(purchase, purchaseItems)
+
+                // Add to StockHistory and record Expense
+                currentState.cartItems.forEach { item ->
+                    val currentProduct = productRepository.getProductById(item.product.id)
+                    if (currentProduct != null) {
+                        // The stock was just increased by the repository, so the stock before was currentProduct.stock - item.qty
+                        val stockAfter = currentProduct.stock
+                        val stockBefore = (stockAfter - item.qty).coerceAtLeast(0)
+                        
+                        stockHistoryRepository.insert(
+                            StockHistoryEntity(
+                                productId = currentProduct.id,
+                                productName = currentProduct.name,
+                                changeQty = item.qty,
+                                stockBefore = stockBefore,
+                                stockAfter = stockAfter,
+                                reason = "Pembelian dari supplier",
+                                createdAt = dateFormat.format(Date())
+                            )
+                        )
+                    }
+                }
+
+                // Record the total purchase cost as an Expense
+                expenseRepository.insert(
+                    ExpenseEntity(
+                        category = "Pembelian Stok",
+                        amount = currentState.total,
+                        notes = "Pembelian barang ke supplier ${currentState.selectedSupplier?.name ?: "Tanpa Nama"}",
+                        createdAt = dateFormat.format(Date())
+                    )
+                )
 
                 // Clear cart
                 clearCart()

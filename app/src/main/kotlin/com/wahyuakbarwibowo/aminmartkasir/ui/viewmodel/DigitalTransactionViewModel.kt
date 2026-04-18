@@ -10,6 +10,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.DigitalProductReposito
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PhoneHistoryRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,6 +44,7 @@ class DigitalTransactionViewModel(
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private var categoryOrderIds: List<Long> = emptyList()
     private var productOrderIds: List<Long> = emptyList()
+    private var searchJob: Job? = null
 
     init {
         loadData()
@@ -106,7 +108,8 @@ class DigitalTransactionViewModel(
     }
 
     private fun loadProductsByCategory(category: String) {
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             digitalProductRepository.getDigitalProductsByCategory(category).collect { products ->
                 val orderedProducts = applyCustomOrder(products, productOrderIds) { it.id }
                 _uiState.update { it.copy(products = orderedProducts) }
@@ -132,14 +135,15 @@ class DigitalTransactionViewModel(
 
     fun search(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        viewModelScope.launch {
-            if (query.isNotBlank()) {
+        searchJob?.cancel()
+        if (query.isNotBlank()) {
+            searchJob = viewModelScope.launch {
                 digitalProductRepository.searchDigitalProducts(query).collect { products ->
                     _uiState.update { it.copy(products = products) }
                 }
-            } else {
-                _uiState.value.selectedCategory?.let { loadProductsByCategory(it) }
             }
+        } else {
+            _uiState.value.selectedCategory?.let { loadProductsByCategory(it) }
         }
     }
 

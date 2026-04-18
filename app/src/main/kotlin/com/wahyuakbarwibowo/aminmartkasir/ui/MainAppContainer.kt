@@ -138,6 +138,7 @@ fun MainAppContainer(
         ) {
             MoreMenuSheet(
                 currentRoute = currentRoute,
+                settingsBadgeCount = moreMenuBadgeCount,
                 onNavigate = { route ->
                     navigateTo(route)
                     showMoreMenu = false
