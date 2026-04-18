@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.ViewModelProvider.Factory
@@ -600,7 +601,13 @@ fun PaymentMethodSelectorDialog(
     onDismiss: () -> Unit
 ) {
     var paidAmount by remember(totalAmount) { mutableStateOf(formatNumberForInput(totalAmount)) }
-    
+
+    fun onNumberChange(value: String, onValueChange: (String) -> Unit) {
+        if (value.isEmpty() || value.all { it.isDigit() }) {
+            onValueChange(value)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Pembayaran") },
@@ -613,7 +620,7 @@ fun PaymentMethodSelectorDialog(
                     text = "Metode Pembayaran",
                     style = MaterialTheme.typography.titleSmall
                 )
-                
+
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -636,7 +643,7 @@ fun PaymentMethodSelectorDialog(
                             )
                         }
                     }
-                    
+
                     items(paymentMethods, key = { it.id }) { method ->
                         Card(
                             onClick = { onPaymentMethodSelected(method) },
@@ -657,28 +664,29 @@ fun PaymentMethodSelectorDialog(
                         }
                     }
                 }
-                
+
                 HorizontalDivider()
-                
+
                 // Paid Amount Input
                 Text(
                     text = "Jumlah Bayar",
                     style = MaterialTheme.typography.titleSmall
                 )
-                
+
                 OutlinedTextField(
                     value = paidAmount,
                     onValueChange = {
-                        paidAmount = it
-                        onPaidAmountChanged(it.toDoubleOrNull() ?: 0.0)
+                        onNumberChange(it) { newValue ->
+                            paidAmount = newValue
+                            onPaidAmountChanged(newValue.toDoubleOrNull() ?: 0.0)
+                        }
                     },
                     label = { Text("Dibayar") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
                     leadingIcon = { Text("Rp") }
-                )
-                
+                )                
                 val change = (paidAmount.toDoubleOrNull() ?: 0.0) - totalAmount
                 if (change >= 0) {
                     Text(
@@ -726,6 +734,12 @@ fun EditProductDialog(
     var packageQty by remember { mutableStateOf(product.packageQty.toString()) }
     var discount by remember { mutableStateOf(formatNumberForInput(product.discount)) }
 
+    fun onNumberChange(value: String, onValueChange: (String) -> Unit) {
+        if (value.isEmpty() || value.all { it.isDigit() }) {
+            onValueChange(value)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit Produk") },
@@ -754,64 +768,64 @@ fun EditProductDialog(
                 item {
                     OutlinedTextField(
                         value = sellingPrice,
-                        onValueChange = { sellingPrice = it },
+                        onValueChange = { onNumberChange(it) { sellingPrice = it } },
                         label = { Text("Harga Jual") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         leadingIcon = { Text("Rp") }
                     )
                 }
                 item {
                     OutlinedTextField(
                         value = purchasePrice,
-                        onValueChange = { purchasePrice = it },
+                        onValueChange = { onNumberChange(it) { purchasePrice = it } },
                         label = { Text("Harga Beli") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         leadingIcon = { Text("Rp") }
                     )
                 }
                 item {
                     OutlinedTextField(
                         value = stock,
-                        onValueChange = { stock = it },
+                        onValueChange = { onNumberChange(it) { stock = it } },
                         label = { Text("Stok") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
                 item {
                     OutlinedTextField(
                         value = packagePrice,
-                        onValueChange = { packagePrice = it },
+                        onValueChange = { onNumberChange(it) { packagePrice = it } },
                         label = { Text("Harga Paket") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         leadingIcon = { Text("Rp") }
                     )
                 }
                 item {
                     OutlinedTextField(
                         value = packageQty,
-                        onValueChange = { packageQty = it },
+                        onValueChange = { onNumberChange(it) { packageQty = it } },
                         label = { Text("Jumlah Paket") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
                 item {
                     OutlinedTextField(
                         value = discount,
-                        onValueChange = { discount = it },
+                        onValueChange = { onNumberChange(it) { discount = it } },
                         label = { Text("Diskon") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         leadingIcon = { Text("Rp") }
                     )
                 }

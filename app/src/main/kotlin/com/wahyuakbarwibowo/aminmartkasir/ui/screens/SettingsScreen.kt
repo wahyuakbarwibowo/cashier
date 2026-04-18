@@ -100,10 +100,11 @@ fun SettingsScreen(
                     
                     OutlinedTextField(
                         value = phoneNumber,
-                        onValueChange = { phoneNumber = it },
+                        onValueChange = { if (it.isEmpty() || it.all { ch -> ch.isDigit() }) phoneNumber = it },
                         label = { Text("Nomor Telepon") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone)
                     )
                     
                     OutlinedTextField(

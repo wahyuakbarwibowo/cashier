@@ -76,6 +76,22 @@ fun ProductFormScreen(
     
     val isEdit = productId != null
     
+    // Helper to format double as integer string (remove .0)
+    fun formatDouble(value: Double): String {
+        return if (value == value.toLong().toDouble()) {
+            value.toLong().toString()
+        } else {
+            value.toString()
+        }
+    }
+
+    // Helper to filter only digits for input
+    fun onNumberChange(value: String, onValueChange: (String) -> Unit) {
+        if (value.isEmpty() || value.all { it.isDigit() }) {
+            onValueChange(value)
+        }
+    }
+
     LaunchedEffect(productId) {
         if (productId != null) {
             viewModel.loadProductById(productId)
@@ -87,14 +103,14 @@ fun ProductFormScreen(
         if (isEdit && !formInitialized && editingProduct != null && editingProduct.id == productId) {
             name = editingProduct.name
             code = editingProduct.code.orEmpty()
-            purchasePrice = editingProduct.purchasePrice.toString()
-            sellingPrice = editingProduct.sellingPrice.toString()
+            purchasePrice = formatDouble(editingProduct.purchasePrice)
+            sellingPrice = formatDouble(editingProduct.sellingPrice)
             stock = editingProduct.stock.toString()
-            purchasePackagePrice = editingProduct.purchasePackagePrice.toString()
+            purchasePackagePrice = formatDouble(editingProduct.purchasePackagePrice)
             purchasePackageQty = editingProduct.purchasePackageQty.toString()
-            packagePrice = editingProduct.packagePrice.toString()
+            packagePrice = formatDouble(editingProduct.packagePrice)
             packageQty = editingProduct.packageQty.toString()
-            discount = editingProduct.discount.toString()
+            discount = formatDouble(editingProduct.discount)
             formInitialized = true
         }
     }
@@ -181,7 +197,7 @@ fun ProductFormScreen(
             
             OutlinedTextField(
                 value = stock,
-                onValueChange = { stock = it },
+                onValueChange = { onNumberChange(it) { stock = it } },
                 label = { Text("Stok Awal") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -198,7 +214,7 @@ fun ProductFormScreen(
             
             OutlinedTextField(
                 value = purchasePrice,
-                onValueChange = { purchasePrice = it },
+                onValueChange = { onNumberChange(it) { purchasePrice = it } },
                 label = { Text("Harga Beli Satuan") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -212,7 +228,7 @@ fun ProductFormScreen(
             ) {
                 OutlinedTextField(
                     value = purchasePackagePrice,
-                    onValueChange = { purchasePackagePrice = it },
+                    onValueChange = { onNumberChange(it) { purchasePackagePrice = it } },
                     label = { Text("Harga Beli Paket") },
                     modifier = Modifier
                         .weight(1f)
@@ -224,7 +240,7 @@ fun ProductFormScreen(
 
                 OutlinedTextField(
                     value = purchasePackageQty,
-                    onValueChange = { purchasePackageQty = it },
+                    onValueChange = { onNumberChange(it) { purchasePackageQty = it } },
                     label = { Text("Isi Paket") },
                     modifier = Modifier
                         .weight(1f)
@@ -244,7 +260,7 @@ fun ProductFormScreen(
             
             OutlinedTextField(
                 value = sellingPrice,
-                onValueChange = { sellingPrice = it },
+                onValueChange = { onNumberChange(it) { sellingPrice = it } },
                 label = { Text("Harga Jual Satuan") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -258,7 +274,7 @@ fun ProductFormScreen(
             ) {
                 OutlinedTextField(
                     value = packagePrice,
-                    onValueChange = { packagePrice = it },
+                    onValueChange = { onNumberChange(it) { packagePrice = it } },
                     label = { Text("Harga Jual Paket") },
                     modifier = Modifier
                         .weight(1f)
@@ -270,7 +286,7 @@ fun ProductFormScreen(
 
                 OutlinedTextField(
                     value = packageQty,
-                    onValueChange = { packageQty = it },
+                    onValueChange = { onNumberChange(it) { packageQty = it } },
                     label = { Text("Isi Paket") },
                     modifier = Modifier
                         .weight(1f)
@@ -282,7 +298,7 @@ fun ProductFormScreen(
             
             OutlinedTextField(
                 value = discount,
-                onValueChange = { discount = it },
+                onValueChange = { onNumberChange(it) { discount = it } },
                 label = { Text("Diskon (%)") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,

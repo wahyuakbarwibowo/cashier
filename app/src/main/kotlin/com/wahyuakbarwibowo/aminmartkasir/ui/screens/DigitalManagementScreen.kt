@@ -608,6 +608,12 @@ fun DigitalProductFormDialog(
     
     var categoryExpanded by remember { mutableStateOf(false) }
 
+    fun onNumberChange(value: String, onValueChange: (String) -> Unit) {
+        if (value.isEmpty() || value.all { it.isDigit() }) {
+            onValueChange(value)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (product == null) "Tambah Produk Digital" else "Edit Produk Digital") },
@@ -660,23 +666,28 @@ fun DigitalProductFormDialog(
                 
                 OutlinedTextField(
                     value = nominal,
-                    onValueChange = { nominal = it },
+                    onValueChange = { onNumberChange(it) { nominal = it } },
                     label = { Text("Nominal (Angka)") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                 )
                 
                 OutlinedTextField(
                     value = costPrice,
-                    onValueChange = { costPrice = it },
+                    onValueChange = { onNumberChange(it) { costPrice = it } },
                     label = { Text("Harga Modal (HPP)") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    prefix = { Text("Rp ") }
                 )
                 
                 OutlinedTextField(
                     value = sellingPrice,
-                    onValueChange = { sellingPrice = it },
+                    onValueChange = { onNumberChange(it) { sellingPrice = it } },
                     label = { Text("Harga Jual") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    prefix = { Text("Rp ") }
                 )
             }
         },
