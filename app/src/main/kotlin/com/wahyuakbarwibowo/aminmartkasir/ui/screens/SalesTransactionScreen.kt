@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
@@ -72,18 +73,16 @@ fun SalesTransactionScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Cart Items
-            if (uiState.cartItems.isEmpty()) {
-                item {
+            // 1. Scrollable Cart Items Section
+            Box(modifier = Modifier.weight(1f)) {
+                if (uiState.cartItems.isEmpty()) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -104,143 +103,147 @@ fun SalesTransactionScreen(
                             )
                         }
                     }
-                }
-            } else {
-                items(uiState.cartItems, key = { it.product.id }) { item ->
-                    CartItemCard(
-                        item = item,
-                        onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
-                        onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
-                        onRemove = { viewModel.removeFromCart(item.product.id) },
-                        onEdit = {
-                            productToEdit = item.product
-                            showEditProductDialog = true
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(uiState.cartItems, key = { it.product.id }) { item ->
+                            CartItemCard(
+                                item = item,
+                                onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
+                                onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
+                                onRemove = { viewModel.removeFromCart(item.product.id) },
+                                onEdit = {
+                                    productToEdit = item.product
+                                    showEditProductDialog = true
+                                }
+                            )
                         }
-                    )
+                    }
                 }
             }
             
-            item {
-                // Summary Section
-                Card(
+            // 2. Fixed Bottom Section (Summary + Actions)
+            Surface(
+                tonalElevation = 4.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(bottom = 12.dp) // Small padding above bottom nav
                 ) {
-                    Column(
+                    // Summary Section
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        SummaryRow("Subtotal", formatCurrency(uiState.subtotal))
-                        if (uiState.discount > 0) {
-                            SummaryRow("Diskon", "- ${formatCurrency(uiState.discount)}")
-                        }
-                        if (uiState.pointsRedeemed > 0) {
-                            SummaryRow("Poin Digunakan", "- ${uiState.pointsRedeemed} poin")
-                        }
-                        HorizontalDivider()
-                        SummaryRow(
-                            "Total",
-                            formatCurrency(uiState.total),
-                            isBold = true,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        SummaryRow("Dibayar", formatCurrency(uiState.paid))
-                        SummaryRow(
-                            "Kembalian",
-                            formatCurrency(uiState.change),
-                            isBold = true
-                        )
-                        if (uiState.pointsEarned > 0) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
+                                Text("Total", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Text(
-                                    text = "Poin Earned:",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = "${uiState.pointsEarned} poin",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = formatCurrency(uiState.total),
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.secondary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
+                            }
+                            if (uiState.pointsEarned > 0) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Potensi Poin", style = MaterialTheme.typography.labelSmall)
+                                    Text(
+                                        text = "+${uiState.pointsEarned} poin",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            }
-            
-            item {
-                // Action Buttons
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { showProductSelector = true },
-                        modifier = Modifier.weight(1f)
+                    
+                    // Action Buttons (Produk & Pembayaran)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.size(4.dp))
-                        Text("Produk")
+                        OutlinedButton(
+                            onClick = { showProductSelector = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(Modifier.size(4.dp))
+                            Text("Produk")
+                        }
+                        
+                        OutlinedButton(
+                            onClick = { showPaymentMethodSelector = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Payment, contentDescription = null)
+                            Spacer(Modifier.size(4.dp))
+                            Text(
+                                text = uiState.selectedPaymentMethod?.name ?: "Pembayaran",
+                                maxLines = 1
+                            )
+                        }
                     }
                     
-                    OutlinedButton(
-                        onClick = { showPaymentMethodSelector = true },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Payment, contentDescription = null)
-                        Spacer(Modifier.size(4.dp))
-                        Text(
-                            text = uiState.selectedPaymentMethod?.name ?: "Pembayaran",
-                            maxLines = 1
-                        )
-                    }
-                }
-            }
-            
-            item {
-                Button(
-                    onClick = {
-                        val transactionId = "TRX-${System.currentTimeMillis()}"
-                        val transactionData = LastTransactionData(
-                            transactionId = transactionId,
-                            items = uiState.cartItems.map { cartItem ->
-                                BluetoothPrinterHelper.ReceiptItem(
-                                    name = cartItem.product.name,
-                                    qty = cartItem.qty,
-                                    price = cartItem.price,
-                                    subtotal = cartItem.subtotal
-                                )
-                            },
-                            subtotal = uiState.subtotal,
-                            discount = uiState.discount,
-                            total = uiState.total,
-                            paid = uiState.paid,
-                            change = uiState.change,
-                            pointsEarned = uiState.pointsEarned
-                        )
+                    // Main Process Button
+                    Button(
+                        onClick = {
+                            val transactionId = "TRX-${System.currentTimeMillis()}"
+                            val transactionData = LastTransactionData(
+                                transactionId = transactionId,
+                                items = uiState.cartItems.map { cartItem ->
+                                    BluetoothPrinterHelper.ReceiptItem(
+                                        name = cartItem.product.name,
+                                        qty = cartItem.qty,
+                                        price = cartItem.price,
+                                        subtotal = cartItem.subtotal
+                                    )
+                                },
+                                subtotal = uiState.subtotal,
+                                discount = uiState.discount,
+                                total = uiState.total,
+                                paid = uiState.paid,
+                                change = uiState.change,
+                                pointsEarned = uiState.pointsEarned
+                            )
 
-                        successTransactionId = transactionId
-                        successTransactionData = transactionData
-                        lastTransactionData = transactionData
-                        viewModel.processTransaction()
-                        showSuccessDialog = true
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), // Safe bottom padding
-                    enabled = uiState.cartItems.isNotEmpty() && uiState.paid >= uiState.total
-                ) {
-                    Icon(Icons.Default.Check, contentDescription = null)
-                    Spacer(Modifier.size(8.dp))
-                    Text("Proses Transaksi")
+                            successTransactionId = transactionId
+                            successTransactionData = transactionData
+                            lastTransactionData = transactionData
+                            viewModel.processTransaction()
+                            showSuccessDialog = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = uiState.cartItems.isNotEmpty() && uiState.paid >= uiState.total
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Spacer(Modifier.size(8.dp))
+                        Text("Proses Transaksi", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

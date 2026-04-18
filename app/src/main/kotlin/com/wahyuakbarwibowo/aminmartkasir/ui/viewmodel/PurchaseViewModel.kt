@@ -138,6 +138,23 @@ class PurchaseViewModel(
         _uiState.update { it.copy(selectedSupplier = supplier) }
     }
 
+    fun addSupplier(name: String, phoneNumber: String, address: String) {
+        viewModelScope.launch {
+            try {
+                val supplier = com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity(
+                    name = name,
+                    phone = phoneNumber,
+                    address = address
+                )
+                val id = supplierRepository.insert(supplier)
+                val newSupplier = supplier.copy(id = id)
+                _uiState.update { it.copy(selectedSupplier = newSupplier, successMessage = "Supplier $name berhasil ditambahkan") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
     fun processPurchase() {
         viewModelScope.launch {
             try {
