@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DigitalCategoryDao {
-    @Query("SELECT * FROM digital_categories ORDER BY name ASC")
+    @Query("SELECT * FROM digital_categories ORDER BY sortOrder ASC, name ASC")
     fun getAllDigitalCategories(): Flow<List<DigitalCategoryEntity>>
 
     @Query("SELECT * FROM digital_categories WHERE id = :id")

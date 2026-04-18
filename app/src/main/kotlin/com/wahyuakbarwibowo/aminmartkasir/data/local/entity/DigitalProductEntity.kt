@@ -13,5 +13,6 @@ data class DigitalProductEntity(
     val nominal: Double = 0.0,
     val costPrice: Double = 0.0,
     val sellingPrice: Double = 0.0,
+    val sortOrder: Int = 0,
     val createdAt: String? = null
 )

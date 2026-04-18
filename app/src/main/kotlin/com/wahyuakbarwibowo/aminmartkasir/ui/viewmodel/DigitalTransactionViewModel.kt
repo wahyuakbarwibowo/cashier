@@ -10,6 +10,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.DigitalProductReposito
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PhoneHistoryRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,8 +42,7 @@ class DigitalTransactionViewModel(
     val uiState: StateFlow<DigitalTransactionUiState> = _uiState.asStateFlow()
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    private var categoryOrderIds: List<Long> = emptyList()
-    private var productOrderIds: List<Long> = emptyList()
+    private var searchJob: Job? = null
 
     init {
         loadData()
@@ -65,20 +65,15 @@ class DigitalTransactionViewModel(
             ) { cats, history, allProds ->
                 Triple(cats, history, allProds)
             }.collect { (cats, history, allProds) ->
-                categoryOrderIds = reconcileOrderIds(categoryOrderIds, cats.map { it.id })
-                productOrderIds = reconcileOrderIds(productOrderIds, allProds.map { it.id })
-                val orderedCategories = applyCustomOrder(cats, categoryOrderIds) { it.id }
-                val orderedProducts = applyCustomOrder(allProds, productOrderIds) { it.id }
-
                 _uiState.update { state ->
                     state.copy(
-                        categories = orderedCategories,
+                        categories = cats,
                         phoneHistory = history,
-                        allProducts = orderedProducts,
+                        allProducts = allProds,
                         isLoading = false,
                         selectedCategory = when {
-                            state.selectedCategory != null && orderedCategories.any { it.name == state.selectedCategory } -> state.selectedCategory
-                            else -> orderedCategories.firstOrNull()?.name
+                            state.selectedCategory != null && cats.any { it.name == state.selectedCategory } -> state.selectedCategory
+                            else -> cats.firstOrNull()?.name
                         }
                     )
                 }
@@ -90,14 +85,16 @@ class DigitalTransactionViewModel(
 
     private suspend fun seedInitialData() {
         val cats = listOf("PULSA", "PLN", "E-WALLET", "PAKET DATA")
-        cats.forEach { digitalCategoryRepository.insert(DigitalCategoryEntity(name = it)) }
+        cats.forEachIndexed { index, name ->
+            digitalCategoryRepository.insert(DigitalCategoryEntity(name = name, sortOrder = index))
+        }
         
         // Add some example products
-        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Telkomsel", name = "Pulsa 10k", nominal = 10000.0, costPrice = 10200.0, sellingPrice = 12000.0))
-        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Telkomsel", name = "Pulsa 20k", nominal = 20000.0, costPrice = 20200.0, sellingPrice = 22000.0))
-        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Indosat", name = "Pulsa 10k", nominal = 10000.0, costPrice = 10100.0, sellingPrice = 12000.0))
-        digitalProductRepository.insert(DigitalProductEntity(category = "PLN", provider = "TOKEN", name = "PLN Token 20k", nominal = 20000.0, costPrice = 20000.0, sellingPrice = 22000.0))
-        digitalProductRepository.insert(DigitalProductEntity(category = "PLN", provider = "TOKEN", name = "PLN Token 50k", nominal = 50000.0, costPrice = 50000.0, sellingPrice = 52000.0))
+        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Telkomsel", name = "Pulsa 10k", nominal = 10000.0, costPrice = 10200.0, sellingPrice = 12000.0, sortOrder = 0))
+        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Telkomsel", name = "Pulsa 20k", nominal = 20000.0, costPrice = 20200.0, sellingPrice = 22000.0, sortOrder = 1))
+        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Indosat", name = "Pulsa 10k", nominal = 10000.0, costPrice = 10100.0, sellingPrice = 12000.0, sortOrder = 2))
+        digitalProductRepository.insert(DigitalProductEntity(category = "PLN", provider = "TOKEN", name = "PLN Token 20k", nominal = 20000.0, costPrice = 20000.0, sellingPrice = 22000.0, sortOrder = 0))
+        digitalProductRepository.insert(DigitalProductEntity(category = "PLN", provider = "TOKEN", name = "PLN Token 50k", nominal = 50000.0, costPrice = 50000.0, sellingPrice = 52000.0, sortOrder = 1))
     }
 
     fun setSelectedCategory(category: String) {
@@ -106,10 +103,10 @@ class DigitalTransactionViewModel(
     }
 
     private fun loadProductsByCategory(category: String) {
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             digitalProductRepository.getDigitalProductsByCategory(category).collect { products ->
-                val orderedProducts = applyCustomOrder(products, productOrderIds) { it.id }
-                _uiState.update { it.copy(products = orderedProducts) }
+                _uiState.update { it.copy(products = products) }
             }
         }
     }
@@ -132,21 +129,23 @@ class DigitalTransactionViewModel(
 
     fun search(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        viewModelScope.launch {
-            if (query.isNotBlank()) {
+        searchJob?.cancel()
+        if (query.isNotBlank()) {
+            searchJob = viewModelScope.launch {
                 digitalProductRepository.searchDigitalProducts(query).collect { products ->
                     _uiState.update { it.copy(products = products) }
                 }
-            } else {
-                _uiState.value.selectedCategory?.let { loadProductsByCategory(it) }
             }
+        } else {
+            _uiState.value.selectedCategory?.let { loadProductsByCategory(it) }
         }
     }
 
     fun addCategory(categoryName: String) {
         viewModelScope.launch {
             try {
-                digitalCategoryRepository.insert(DigitalCategoryEntity(name = categoryName))
+                val currentMaxOrder = _uiState.value.categories.maxOfOrNull { it.sortOrder } ?: -1
+                digitalCategoryRepository.insert(DigitalCategoryEntity(name = categoryName, sortOrder = currentMaxOrder + 1))
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
@@ -156,7 +155,10 @@ class DigitalTransactionViewModel(
     fun addProduct(product: DigitalProductEntity) {
         viewModelScope.launch {
             try {
-                digitalProductRepository.insert(product)
+                val currentMaxOrder = _uiState.value.allProducts
+                    .filter { it.category == product.category }
+                    .maxOfOrNull { it.sortOrder } ?: -1
+                digitalProductRepository.insert(product.copy(sortOrder = currentMaxOrder + 1))
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
@@ -255,10 +257,17 @@ class DigitalTransactionViewModel(
         val mutable = categories.toMutableList()
         val moved = mutable.removeAt(fromIndex)
         mutable.add(toIndex, moved)
-        categoryOrderIds = mutable.map { it.id }
+        
+        // Optimistic UI update
+        _uiState.update { it.copy(categories = mutable) }
 
-        _uiState.update { state ->
-            state.copy(categories = mutable)
+        // Persist to database
+        viewModelScope.launch {
+            mutable.forEachIndexed { index, category ->
+                if (category.sortOrder != index) {
+                    digitalCategoryRepository.update(category.copy(sortOrder = index))
+                }
+            }
         }
     }
 
@@ -269,8 +278,8 @@ class DigitalTransactionViewModel(
         val mutable = products.toMutableList()
         val moved = mutable.removeAt(fromIndex)
         mutable.add(toIndex, moved)
-        productOrderIds = mutable.map { it.id }
 
+        // Optimistic UI update
         val selectedCategory = _uiState.value.selectedCategory
         val selectedProducts = if (selectedCategory.isNullOrBlank()) {
             emptyList()
@@ -284,19 +293,14 @@ class DigitalTransactionViewModel(
                 products = if (selectedCategory.isNullOrBlank()) state.products else selectedProducts
             )
         }
-    }
 
-    private fun reconcileOrderIds(currentOrder: List<Long>, currentIds: List<Long>): List<Long> {
-        val existing = currentOrder.filter { it in currentIds }
-        val newItems = currentIds.filterNot { it in existing }
-        return existing + newItems
-    }
-
-    private fun <T> applyCustomOrder(items: List<T>, orderIds: List<Long>, idSelector: (T) -> Long): List<T> {
-        if (items.isEmpty()) return items
-        val idToItem = items.associateBy(idSelector)
-        val orderedItems = orderIds.mapNotNull { idToItem[it] }
-        val remaining = items.filter { item -> idSelector(item) !in orderIds }
-        return orderedItems + remaining
+        // Persist to database
+        viewModelScope.launch {
+            mutable.forEachIndexed { index, product ->
+                if (product.sortOrder != index) {
+                    digitalProductRepository.update(product.copy(sortOrder = index))
+                }
+            }
+        }
     }
 }

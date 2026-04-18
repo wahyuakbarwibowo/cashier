@@ -281,12 +281,15 @@ fun ProductListSection(
                         onDragStart = { draggedItemIndex = index },
                         onDrag = { delta ->
                             dragOffset += delta
-                            if (dragOffset > 100f && index < filteredProducts.lastIndex) {
-                                onReorder(index, index + 1)
-                                dragOffset = 0f
-                            } else if (dragOffset < -100f && index > 0) {
-                                onReorder(index, index - 1)
-                                dragOffset = 0f
+                            val currentDragIndex = draggedItemIndex ?: return@DraggableProductCard
+                            if (dragOffset > 100f && currentDragIndex < filteredProducts.lastIndex) {
+                                onReorder(currentDragIndex, currentDragIndex + 1)
+                                draggedItemIndex = currentDragIndex + 1
+                                dragOffset -= 100f
+                            } else if (dragOffset < -100f && currentDragIndex > 0) {
+                                onReorder(currentDragIndex, currentDragIndex - 1)
+                                draggedItemIndex = currentDragIndex - 1
+                                dragOffset += 100f
                             }
                         },
                         onDragEnd = {
@@ -472,12 +475,15 @@ fun CategoryListSection(
                     onDragStart = { draggedItemIndex = index },
                     onDrag = { delta ->
                         dragOffset += delta
-                        if (dragOffset > 100f && index < categories.lastIndex) {
-                            onReorder(index, index + 1)
-                            dragOffset = 0f
-                        } else if (dragOffset < -100f && index > 0) {
-                            onReorder(index, index - 1)
-                            dragOffset = 0f
+                        val currentDragIndex = draggedItemIndex ?: return@DraggableCategoryCard
+                        if (dragOffset > 100f && currentDragIndex < categories.lastIndex) {
+                            onReorder(currentDragIndex, currentDragIndex + 1)
+                            draggedItemIndex = currentDragIndex + 1
+                            dragOffset -= 100f
+                        } else if (dragOffset < -100f && currentDragIndex > 0) {
+                            onReorder(currentDragIndex, currentDragIndex - 1)
+                            draggedItemIndex = currentDragIndex - 1
+                            dragOffset += 100f
                         }
                     },
                     onDragEnd = {

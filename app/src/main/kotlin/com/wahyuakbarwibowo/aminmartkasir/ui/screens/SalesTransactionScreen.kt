@@ -15,6 +15,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import com.google.zxing.client.android.Intents
+import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.*
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
@@ -65,176 +73,176 @@ fun SalesTransactionScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
             // Cart Items
             if (uiState.cartItems.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text("Keranjang kosong")
-                        Text(
-                            text = "Klik tombol + untuk menambah produk",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.ShoppingCart,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text("Keranjang kosong")
+                            Text(
+                                text = "Klik tombol + untuk menambah produk",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(uiState.cartItems, key = { it.product.id }) { item ->
-                        CartItemCard(
-                            item = item,
-                            onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
-                            onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
-                            onRemove = { viewModel.removeFromCart(item.product.id) },
-                            onEdit = {
-                                productToEdit = item.product
-                                showEditProductDialog = true
-                            }
-                        )
-                    }
+                items(uiState.cartItems, key = { it.product.id }) { item ->
+                    CartItemCard(
+                        item = item,
+                        onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
+                        onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
+                        onRemove = { viewModel.removeFromCart(item.product.id) },
+                        onEdit = {
+                            productToEdit = item.product
+                            showEditProductDialog = true
+                        }
+                    )
                 }
             }
             
-            // Summary Section
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Column(
+            item {
+                // Summary Section
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(16.dp)
                 ) {
-                    SummaryRow("Subtotal", formatCurrency(uiState.subtotal))
-                    if (uiState.discount > 0) {
-                        SummaryRow("Diskon", "- ${formatCurrency(uiState.discount)}")
-                    }
-                    if (uiState.pointsRedeemed > 0) {
-                        SummaryRow("Poin Digunakan", "- ${uiState.pointsRedeemed} poin")
-                    }
-                    HorizontalDivider()
-                    SummaryRow(
-                        "Total",
-                        formatCurrency(uiState.total),
-                        isBold = true,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    SummaryRow("Dibayar", formatCurrency(uiState.paid))
-                    SummaryRow(
-                        "Kembalian",
-                        formatCurrency(uiState.change),
-                        isBold = true
-                    )
-                    if (uiState.pointsEarned > 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Poin Earned:",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = "${uiState.pointsEarned} poin",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SummaryRow("Subtotal", formatCurrency(uiState.subtotal))
+                        if (uiState.discount > 0) {
+                            SummaryRow("Diskon", "- ${formatCurrency(uiState.discount)}")
+                        }
+                        if (uiState.pointsRedeemed > 0) {
+                            SummaryRow("Poin Digunakan", "- ${uiState.pointsRedeemed} poin")
+                        }
+                        HorizontalDivider()
+                        SummaryRow(
+                            "Total",
+                            formatCurrency(uiState.total),
+                            isBold = true,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        SummaryRow("Dibayar", formatCurrency(uiState.paid))
+                        SummaryRow(
+                            "Kembalian",
+                            formatCurrency(uiState.change),
+                            isBold = true
+                        )
+                        if (uiState.pointsEarned > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Poin Earned:",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "${uiState.pointsEarned} poin",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
                         }
                     }
                 }
             }
             
-            // Action Buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { showProductSelector = true },
-                    modifier = Modifier.weight(1f)
+            item {
+                // Action Buttons
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.size(4.dp))
-                    Text("Produk")
-                }
-                
-                OutlinedButton(
-                    onClick = { showPaymentMethodSelector = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Payment, contentDescription = null)
-                    Spacer(Modifier.size(4.dp))
-                    Text(
-                        text = uiState.selectedPaymentMethod?.name ?: "Pembayaran",
-                        maxLines = 1
-                    )
+                    OutlinedButton(
+                        onClick = { showProductSelector = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.size(4.dp))
+                        Text("Produk")
+                    }
+                    
+                    OutlinedButton(
+                        onClick = { showPaymentMethodSelector = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Payment, contentDescription = null)
+                        Spacer(Modifier.size(4.dp))
+                        Text(
+                            text = uiState.selectedPaymentMethod?.name ?: "Pembayaran",
+                            maxLines = 1
+                        )
+                    }
                 }
             }
             
-            Button(
-                onClick = {
-                    val transactionId = "TRX-${System.currentTimeMillis()}"
-                    val transactionData = LastTransactionData(
-                        transactionId = transactionId,
-                        items = uiState.cartItems.map { cartItem ->
-                            BluetoothPrinterHelper.ReceiptItem(
-                                name = cartItem.product.name,
-                                qty = cartItem.qty,
-                                price = cartItem.price,
-                                subtotal = cartItem.subtotal
-                            )
-                        },
-                        subtotal = uiState.subtotal,
-                        discount = uiState.discount,
-                        total = uiState.total,
-                        paid = uiState.paid,
-                        change = uiState.change,
-                        pointsEarned = uiState.pointsEarned
-                    )
+            item {
+                Button(
+                    onClick = {
+                        val transactionId = "TRX-${System.currentTimeMillis()}"
+                        val transactionData = LastTransactionData(
+                            transactionId = transactionId,
+                            items = uiState.cartItems.map { cartItem ->
+                                BluetoothPrinterHelper.ReceiptItem(
+                                    name = cartItem.product.name,
+                                    qty = cartItem.qty,
+                                    price = cartItem.price,
+                                    subtotal = cartItem.subtotal
+                                )
+                            },
+                            subtotal = uiState.subtotal,
+                            discount = uiState.discount,
+                            total = uiState.total,
+                            paid = uiState.paid,
+                            change = uiState.change,
+                            pointsEarned = uiState.pointsEarned
+                        )
 
-                    successTransactionId = transactionId
-                    successTransactionData = transactionData
-                    lastTransactionData = transactionData
-                    viewModel.processTransaction()
-                    showSuccessDialog = true
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                enabled = uiState.cartItems.isNotEmpty() && uiState.paid >= uiState.total
-            ) {
-                Icon(Icons.Default.Check, contentDescription = null)
-                Spacer(Modifier.size(8.dp))
-                Text("Proses Transaksi")
+                        successTransactionId = transactionId
+                        successTransactionData = transactionData
+                        lastTransactionData = transactionData
+                        viewModel.processTransaction()
+                        showSuccessDialog = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), // Safe bottom padding
+                    enabled = uiState.cartItems.isNotEmpty() && uiState.paid >= uiState.total
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Proses Transaksi")
+                }
             }
         }
     }
@@ -452,6 +460,32 @@ fun ProductSelectorDialog(
     onDismiss: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    
+    val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        val scannedCode = result.contents
+        if (!scannedCode.isNullOrBlank()) {
+            searchQuery = scannedCode
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val options = ScanOptions().apply {
+                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
+                setPrompt("Scan barcode produk")
+                setBeepEnabled(true)
+                setOrientationLocked(true)
+                setCaptureActivity(BarcodeCaptureActivity::class.java)
+                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
+            }
+            barcodeLauncher.launch(options)
+        } else {
+            Toast.makeText(context, "Izin kamera diperlukan untuk scan barcode", Toast.LENGTH_SHORT).show()
+        }
+    }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -463,6 +497,13 @@ fun ProductSelectorDialog(
                     onValueChange = { searchQuery = it },
                     placeholder = { Text("Cari produk...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                        }) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )

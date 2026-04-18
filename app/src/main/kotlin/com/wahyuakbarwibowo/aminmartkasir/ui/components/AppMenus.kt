@@ -23,12 +23,12 @@ data class AppMenuItem(
 val primaryMenuItems = listOf(
     AppMenuItem(Screen.Dashboard.route, "Beranda", Icons.Default.Dashboard),
     AppMenuItem(Screen.SalesTransaction.route, "Kasir", Icons.Default.PointOfSale),
-    AppMenuItem(Screen.Products.route, "Produk", Icons.Default.Inventory2),
-    AppMenuItem(Screen.SalesHistory.route, "Riwayat", Icons.AutoMirrored.Filled.ReceiptLong),
-    AppMenuItem(Screen.DigitalTransaction.route, "Digital", Icons.Default.PhoneIphone)
+    AppMenuItem(Screen.DigitalTransaction.route, "Digital", Icons.Default.PhoneIphone),
+    AppMenuItem(Screen.Products.route, "Produk", Icons.Default.Inventory2)
 )
 
 val secondaryMenuItems = listOf(
+    AppMenuItem(Screen.SalesHistory.route, "Riwayat Penjualan", Icons.AutoMirrored.Filled.ReceiptLong),
     AppMenuItem(Screen.Reports.route, "Laporan", Icons.Default.Assessment),
     AppMenuItem(Screen.ProfitLoss.route, "Laba Rugi", Icons.AutoMirrored.Filled.ShowChart),
     AppMenuItem(Screen.Expenses.route, "Pengeluaran", Icons.Default.MoneyOff),
@@ -40,9 +40,11 @@ val secondaryMenuItems = listOf(
     AppMenuItem(Screen.Settings.route, "Pengaturan", Icons.Default.Settings)
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreMenuSheet(
     currentRoute: String?,
+    settingsBadgeCount: Int = 0,
     onNavigate: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -76,12 +78,19 @@ fun MoreMenuSheet(
                     headlineContent = { Text(item.title) },
                     leadingContent = { Icon(item.icon, contentDescription = null) },
                     trailingContent = {
-                        if (currentRoute == item.route) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            if (item.route == Screen.Settings.route && settingsBadgeCount > 0) {
+                                Badge(modifier = Modifier.padding(end = if (currentRoute == item.route) 8.dp else 0.dp)) {
+                                    Text(settingsBadgeCount.toString())
+                                }
+                            }
+                            if (currentRoute == item.route) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     },
                     colors = ListItemDefaults.colors(

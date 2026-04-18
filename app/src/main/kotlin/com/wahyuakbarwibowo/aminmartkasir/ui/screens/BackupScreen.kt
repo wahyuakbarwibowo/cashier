@@ -14,10 +14,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.BackupViewModel
-import java.io.BufferedReader
+import java.io.InputStream
 import java.io.InputStreamReader
+import java.io.BufferedReader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +79,8 @@ fun BackupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -105,7 +109,8 @@ fun BackupScreen(
                 Text(uiState.message ?: "Mohon tunggu...", style = MaterialTheme.typography.bodySmall)
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // Using empty Spacer as spacer, weight(1f) is removed because it's inside verticalScroll
+            Spacer(modifier = Modifier.height(24.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),

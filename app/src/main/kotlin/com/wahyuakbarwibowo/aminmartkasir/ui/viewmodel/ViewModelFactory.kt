@@ -52,7 +52,9 @@ class ViewModelFactory(
                         database.purchaseItemDao(),
                         database.productDao()
                     ),
-                    productRepository = ProductRepository(database.productDao())
+                    productRepository = ProductRepository(database.productDao()),
+                    stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao()),
+                    expenseRepository = ExpenseRepository(database.expenseDao())
                 ) as T
             }
             modelClass.isAssignableFrom(ExpenseViewModel::class.java) -> {

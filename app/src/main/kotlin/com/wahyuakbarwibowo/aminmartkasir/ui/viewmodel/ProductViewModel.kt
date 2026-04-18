@@ -8,6 +8,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -31,38 +32,56 @@ class ProductViewModel(
 
     private val _searchQuery = MutableStateFlow("")
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    
+    private var searchJob: Job? = null
+
     init {
         loadProducts()
         loadLowStockProducts()
-        
+
         viewModelScope.launch {
             _searchQuery.collect { query ->
+                searchJob?.cancel()
                 if (query.isNotBlank()) {
-                    productRepository.searchProducts(query).collect { products ->
-                        _uiState.update { it.copy(products = products, searchQuery = query) }
+                    searchJob = viewModelScope.launch {
+                        productRepository.searchProducts(query).collect { products ->
+                            _uiState.update { it.copy(products = products, searchQuery = query) }
+                        }
                     }
                 } else {
-                    loadProducts()
+                    searchJob = viewModelScope.launch {
+                        productRepository.allProducts.collect { products ->
+                            _uiState.update {
+                                it.copy(
+                                    products = products,
+                                    searchQuery = query,
+                                    isLoading = false,
+                                    error = null
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
     private fun loadProducts() {
-        viewModelScope.launch {
-            productRepository.allProducts.collect { products ->
-                _uiState.update { 
-                    it.copy(
-                        products = products,
-                        isLoading = false,
-                        error = null
-                    ) 
+        // Only load if search query is empty to avoid overriding search results
+        if (_searchQuery.value.isBlank()) {
+            searchJob?.cancel()
+            searchJob = viewModelScope.launch {
+                productRepository.allProducts.collect { products ->
+                    _uiState.update { 
+                        it.copy(
+                            products = products,
+                            isLoading = false,
+                            error = null
+                        ) 
+                    }
                 }
             }
         }
     }
-
     private fun loadLowStockProducts() {
         viewModelScope.launch {
             productRepository.getLowStockProducts().collect { products ->

@@ -8,5 +8,6 @@ data class DigitalCategoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
-    val icon: String? = null
+    val icon: String? = null,
+    val sortOrder: Int = 0
 )

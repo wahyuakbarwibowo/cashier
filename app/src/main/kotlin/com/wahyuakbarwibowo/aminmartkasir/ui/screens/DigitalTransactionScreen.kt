@@ -170,13 +170,16 @@ fun DigitalTransactionScreen(
             }
 
             if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else if (filteredProducts.isEmpty()) {
-                EmptyProductsSection(uiState.selectedCategory ?: "Kategori")
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    EmptyProductsSection(uiState.selectedCategory ?: "Kategori")
+                }
             } else {
                 ProductsGrid(
+                    modifier = Modifier.weight(1f),
                     products = filteredProducts,
                     onProductClick = {
                         if (uiState.targetNumber.isBlank()) {
@@ -446,6 +449,7 @@ fun ProviderTabsSection(
 
 @Composable
 fun ProductsGrid(
+    modifier: Modifier = Modifier,
     products: List<DigitalProductEntity>,
     onProductClick: (DigitalProductEntity) -> Unit,
     onEditProduct: (DigitalProductEntity) -> Unit,
@@ -453,8 +457,7 @@ fun ProductsGrid(
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .padding(horizontal = 12.dp),
         contentPadding = PaddingValues(vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
