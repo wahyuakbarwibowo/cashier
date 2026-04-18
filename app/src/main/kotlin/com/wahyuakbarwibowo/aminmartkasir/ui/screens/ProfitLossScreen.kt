@@ -69,7 +69,6 @@ fun ProfitLossScreen(
                 val costPrice = product?.purchasePrice ?: 0.0
                 saleCost += (costPrice * item.qty)
             }
-            // Profit is revenue (sale.total) minus cost of goods sold
             totalProfit += (sale.total - saleCost)
         }
         totalProfit
@@ -105,7 +104,8 @@ fun ProfitLossScreen(
                     IconButton(onClick = onOpenDrawer) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
-                }
+                },
+                windowInsets = WindowInsets.statusBars
             )
         }
     ) { paddingValues ->

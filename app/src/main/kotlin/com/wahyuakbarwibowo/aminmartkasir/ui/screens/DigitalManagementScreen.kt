@@ -4,7 +4,19 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -62,7 +74,8 @@ fun DigitalManagementScreen(
                     IconButton(onClick = onOpenDrawer) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
-                }
+                },
+                windowInsets = WindowInsets.statusBars
             )
         },
         floatingActionButton = {
@@ -595,6 +608,12 @@ fun DigitalProductFormDialog(
     
     var categoryExpanded by remember { mutableStateOf(false) }
 
+    fun onNumberChange(value: String, onValueChange: (String) -> Unit) {
+        if (value.isEmpty() || value.all { it.isDigit() }) {
+            onValueChange(value)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (product == null) "Tambah Produk Digital" else "Edit Produk Digital") },
@@ -647,23 +666,28 @@ fun DigitalProductFormDialog(
                 
                 OutlinedTextField(
                     value = nominal,
-                    onValueChange = { nominal = it },
+                    onValueChange = { onNumberChange(it) { nominal = it } },
                     label = { Text("Nominal (Angka)") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                 )
                 
                 OutlinedTextField(
                     value = costPrice,
-                    onValueChange = { costPrice = it },
+                    onValueChange = { onNumberChange(it) { costPrice = it } },
                     label = { Text("Harga Modal (HPP)") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    prefix = { Text("Rp ") }
                 )
                 
                 OutlinedTextField(
                     value = sellingPrice,
-                    onValueChange = { sellingPrice = it },
+                    onValueChange = { onNumberChange(it) { sellingPrice = it } },
                     label = { Text("Harga Jual") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    prefix = { Text("Rp ") }
                 )
             }
         },

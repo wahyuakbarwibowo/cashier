@@ -1,6 +1,18 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -51,7 +63,8 @@ fun SettingsScreen(
                     IconButton(onClick = onOpenDrawer) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
-                }
+                },
+                windowInsets = WindowInsets.statusBars
             )
         }
     ) { paddingValues ->
@@ -87,10 +100,11 @@ fun SettingsScreen(
                     
                     OutlinedTextField(
                         value = phoneNumber,
-                        onValueChange = { phoneNumber = it },
+                        onValueChange = { if (it.isEmpty() || it.all { ch -> ch.isDigit() }) phoneNumber = it },
                         label = { Text("Nomor Telepon") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone)
                     )
                     
                     OutlinedTextField(

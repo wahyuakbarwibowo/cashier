@@ -31,7 +31,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         CustomerPointsHistoryEntity::class,
         StockHistoryEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

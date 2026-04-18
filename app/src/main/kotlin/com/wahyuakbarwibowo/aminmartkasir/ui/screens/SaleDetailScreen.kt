@@ -2,7 +2,16 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Print
@@ -43,6 +52,7 @@ fun SaleDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
+                windowInsets = WindowInsets.statusBars,
                 actions = {
                     if (sale != null) {
                         IconButton(onClick = { showPrinterDialog = true }) {
@@ -130,25 +140,29 @@ fun SaleDetailScreen(
                     HorizontalDivider()
                     
                     items.forEach { item ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Product ID: ${item.productId}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = "Qty: ${item.qty} x ${formatCurrency(item.price)}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
+                        Column(modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                text = formatCurrency(item.subtotal),
+                                text = item.productName,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
                             )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${item.qty} x ${formatCurrency(item.price)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = formatCurrency(item.subtotal),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -161,7 +175,7 @@ fun SaleDetailScreen(
             transactionId = "TRX-${sale.id}",
             items = items.map { item ->
                 BluetoothPrinterHelper.ReceiptItem(
-                    name = "Product ${item.productId}", // Ideally we should have product name here
+                    name = item.productName,
                     qty = item.qty,
                     price = item.price,
                     subtotal = item.subtotal

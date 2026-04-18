@@ -35,6 +35,7 @@ fun PurchasesScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showAddItemDialog by remember { mutableStateOf(false) }
+    var showAddSupplierDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let { message ->
@@ -91,7 +92,8 @@ fun PurchasesScreen(
                 SupplierSelectorCard(
                     suppliers = uiState.suppliers,
                     selectedSupplier = uiState.selectedSupplier,
-                    onSelectSupplier = { viewModel.setSelectedSupplier(it) }
+                    onSelectSupplier = { viewModel.setSelectedSupplier(it) },
+                    onAddSupplier = { showAddSupplierDialog = true }
                 )
             }
 
@@ -157,6 +159,16 @@ fun PurchasesScreen(
             }
         )
     }
+
+    if (showAddSupplierDialog) {
+        AddSupplierDialog(
+            onDismiss = { showAddSupplierDialog = false },
+            onConfirm = { name, phone, address ->
+                viewModel.addSupplier(name, phone, address)
+                showAddSupplierDialog = false
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -164,7 +176,8 @@ fun PurchasesScreen(
 private fun SupplierSelectorCard(
     suppliers: List<SupplierEntity>,
     selectedSupplier: SupplierEntity?,
-    onSelectSupplier: (SupplierEntity?) -> Unit
+    onSelectSupplier: (SupplierEntity?) -> Unit,
+    onAddSupplier: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -175,7 +188,18 @@ private fun SupplierSelectorCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Supplier", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Supplier", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                TextButton(onClick = onAddSupplier) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Tambah Baru")
+                }
+            }
             ExposedDropdownMenuBox(
                 expanded = expanded,
                 onExpandedChange = { expanded = !expanded }
@@ -214,6 +238,60 @@ private fun SupplierSelectorCard(
             }
         }
     }
+}
+
+@Composable
+fun AddSupplierDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tambah Supplier") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nama Supplier") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Nomor Telepon") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("Alamat") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(name, phone, address) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Simpan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }
 
 @Composable

@@ -1,7 +1,10 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui
 
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.*
@@ -121,14 +124,18 @@ fun MainAppContainer(
                 }
             }
         }
-    ) {
-        AppNavigation(
-            navController = navController,
-            viewModelFactory = viewModelFactory,
-            onOpenDrawer = {
-                showMoreMenu = true
-            }
-        )
+    ) { innerPadding ->
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = innerPadding.calculateBottomPadding())) {
+            AppNavigation(
+                navController = navController,
+                viewModelFactory = viewModelFactory,
+                onOpenDrawer = {
+                    showMoreMenu = true
+                }
+            )
+        }
     }
 
     if (showMoreMenu) {

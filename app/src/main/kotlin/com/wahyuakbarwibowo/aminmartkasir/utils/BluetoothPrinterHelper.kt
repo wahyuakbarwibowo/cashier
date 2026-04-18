@@ -160,15 +160,18 @@ class BluetoothPrinterHelper(private val context: Context) {
             
             // Items
             items.forEach { item ->
-                val name = if (item.name.length > 20) item.name.substring(0, 17) + "..." else item.name
-                printText(
-                    "%-4d %-20s %5s %8s\n".format(
-                        item.qty,
-                        name,
-                        formatCurrency(item.price),
-                        formatCurrency(item.subtotal)
-                    )
-                )
+                // 1. Item Name (Bold)
+                sendCommand(BOLD_ON)
+                printText("${item.name}\n")
+                sendCommand(BOLD_OFF)
+                
+                // 2. Qty and Unit Price (e.g., 3 x 5.000)
+                val priceInfo = "${item.qty} x ${formatCurrency(item.price)}"
+                val subtotalStr = formatCurrency(item.subtotal)
+                
+                // 3. Align subtotal to right
+                val spaces = (32 - priceInfo.length - subtotalStr.length).coerceAtLeast(1)
+                printText(priceInfo + " ".repeat(spaces) + subtotalStr + "\n")
             }
             
             printText("--------------------------------\n")
@@ -183,27 +186,23 @@ class BluetoothPrinterHelper(private val context: Context) {
             printText(formatAmountLine("Dibayar", formatCurrency(paid)))
             printText(formatAmountLine("Kembalian", formatCurrency(change)))
             
-            if (pointsEarned > 0) {
-                printText("Poin Earned: %d\n".format(pointsEarned))
-            }
-            
             sendCommand(ALIGN_CENTER)
             printText("--------------------------------\n")
             
             // Footer
             if (!footerNote.isNullOrBlank()) {
                 printText("$footerNote\n")
+            } else {
+                printText("Terima kasih atas kunjungan Anda!\n")
             }
-            printText("Terima kasih atas kunjungan Anda!\n")
-            
-            // Cut paper
-            sendCommand(CUT_PAPER)
             
             // Feed paper
-            for (i in 1..1) {
+            for (i in 1..3) {
                 sendCommand(LINE_FEED)
             }
             
+            // Cut paper
+            sendCommand(CUT_PAPER)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -296,19 +295,19 @@ class BluetoothPrinterHelper(private val context: Context) {
             // Footer
             if (!footerNote.isNullOrBlank()) {
                 printText("$footerNote\n")
+            } else {
+                printText("Terima kasih atas kunjungan Anda!\n")
             }
-            printText("Terima kasih!\n")
             printText("Simpan struk ini sebagai\n")
             printText("bukti transaksi yang sah.\n")
             
-            // Cut paper
-            sendCommand(CUT_PAPER)
-            
             // Feed paper
-            for (i in 1..1) {
+            for (i in 1..3) {
                 sendCommand(LINE_FEED)
             }
             
+            // Cut paper
+            sendCommand(CUT_PAPER)
         } catch (e: Exception) {
             e.printStackTrace()
         }
