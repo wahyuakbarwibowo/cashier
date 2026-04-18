@@ -52,7 +52,13 @@ fun BluetoothPrinterDialog(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions.values.all { it }) {
-            viewModel.loadPairedDevices()
+            if (!viewModel.isBluetoothEnabled()) {
+                bluetoothEnableLauncher.launch(
+                    android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                )
+            } else {
+                viewModel.loadPairedDevices()
+            }
         } else {
             showPermissionRationale = true
         }
@@ -60,11 +66,9 @@ fun BluetoothPrinterDialog(
     
     LaunchedEffect(Unit) {
         viewModel.initialize(context)
-        if (!viewModel.isBluetoothEnabled()) {
-            bluetoothEnableLauncher.launch(
-                android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            )
-        } else if (!viewModel.checkBluetoothPermission(context)) {
+        
+        // 1. Check permissions first (Required for ACTION_REQUEST_ENABLE on API 31+)
+        if (!viewModel.checkBluetoothPermission(context)) {
             val neededPermissions = mutableListOf<String>()
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 neededPermissions.add(Manifest.permission.BLUETOOTH_CONNECT)
@@ -74,7 +78,15 @@ fun BluetoothPrinterDialog(
                 neededPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
             }
             permissionLauncher.launch(neededPermissions.toTypedArray())
-        } else {
+        } 
+        // 2. If permissions granted but bluetooth is OFF, request enable
+        else if (!viewModel.isBluetoothEnabled()) {
+            bluetoothEnableLauncher.launch(
+                android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            )
+        } 
+        // 3. Everything OK, load devices
+        else {
             viewModel.loadPairedDevices()
         }
     }
