@@ -49,7 +49,7 @@ fun SettingsScreen(
                 title = { Text("Pengaturan") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 }
             )

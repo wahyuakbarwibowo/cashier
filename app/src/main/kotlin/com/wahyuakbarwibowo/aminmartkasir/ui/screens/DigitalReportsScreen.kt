@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,7 +22,6 @@ import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DigitalReportsScreen(
-    onNavigateBack: () -> Unit,
     onNavigateToDetail: (Long) -> Unit,
     onOpenDrawer: () -> Unit,
     viewModel: DigitalTransactionViewModel = viewModel()
@@ -53,8 +52,8 @@ fun DigitalReportsScreen(
             TopAppBar(
                 title = { Text("Riwayat Transaksi Digital") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 }
             )

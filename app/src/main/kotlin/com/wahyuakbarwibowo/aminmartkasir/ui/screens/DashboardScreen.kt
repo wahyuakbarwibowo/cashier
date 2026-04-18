@@ -38,7 +38,7 @@ fun DashboardScreen(
                 title = { Text("Aminmart Kasir") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

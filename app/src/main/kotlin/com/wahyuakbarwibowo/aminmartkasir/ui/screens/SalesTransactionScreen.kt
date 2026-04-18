@@ -54,7 +54,7 @@ fun SalesTransactionScreen(
                 title = { Text("Transaksi Penjualan") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 },
                 actions = {

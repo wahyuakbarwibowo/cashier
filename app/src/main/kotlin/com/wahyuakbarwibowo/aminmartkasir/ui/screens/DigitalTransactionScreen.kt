@@ -53,7 +53,7 @@ fun DigitalTransactionScreen(
                 title = { Text("Transaksi Digital") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 },
                 actions = {
