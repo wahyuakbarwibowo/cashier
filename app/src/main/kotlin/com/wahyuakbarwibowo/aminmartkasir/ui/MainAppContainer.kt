@@ -2,6 +2,7 @@ package com.wahyuakbarwibowo.aminmartkasir.ui
 
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -124,7 +125,9 @@ fun MainAppContainer(
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = innerPadding.calculateBottomPadding())) {
             AppNavigation(
                 navController = navController,
                 viewModelFactory = viewModelFactory,
