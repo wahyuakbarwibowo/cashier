@@ -136,7 +136,7 @@ fun SaleDetailScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Product ID: ${item.productId}",
+                                    text = item.productName,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
@@ -161,7 +161,7 @@ fun SaleDetailScreen(
             transactionId = "TRX-${sale.id}",
             items = items.map { item ->
                 BluetoothPrinterHelper.ReceiptItem(
-                    name = "Product ${item.productId}", // Ideally we should have product name here
+                    name = item.productName,
                     qty = item.qty,
                     price = item.price,
                     subtotal = item.subtotal

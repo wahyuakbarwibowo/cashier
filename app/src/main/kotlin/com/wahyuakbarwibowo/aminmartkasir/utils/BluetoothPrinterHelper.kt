@@ -160,15 +160,16 @@ class BluetoothPrinterHelper(private val context: Context) {
             
             // Items
             items.forEach { item ->
-                val name = if (item.name.length > 20) item.name.substring(0, 17) + "..." else item.name
-                printText(
-                    "%-4d %-20s %5s %8s\n".format(
-                        item.qty,
-                        name,
-                        formatCurrency(item.price),
-                        formatCurrency(item.subtotal)
-                    )
-                )
+                // 1. Item Name (could span whole width)
+                printText("${item.name}\n")
+                
+                // 2. Qty and Unit Price (e.g., 3 x 5.000)
+                val priceInfo = "${item.qty} x ${formatCurrency(item.price)}"
+                val subtotalStr = formatCurrency(item.subtotal)
+                
+                // 3. Align subtotal to right
+                val spaces = (32 - priceInfo.length - subtotalStr.length).coerceAtLeast(1)
+                printText(priceInfo + " ".repeat(spaces) + subtotalStr + "\n")
             }
             
             printText("--------------------------------\n")
