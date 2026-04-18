@@ -81,9 +81,14 @@ fun BluetoothPrinterDialog(
         } 
         // 2. If permissions granted but bluetooth is OFF, request enable
         else if (!viewModel.isBluetoothEnabled()) {
-            bluetoothEnableLauncher.launch(
-                android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            )
+            try {
+                bluetoothEnableLauncher.launch(
+                    android.content.Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                )
+            } catch (e: Exception) {
+                // If it still fails, show error in UI instead of crashing
+                onDismiss()
+            }
         } 
         // 3. Everything OK, load devices
         else {

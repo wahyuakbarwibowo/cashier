@@ -46,7 +46,7 @@ class PrinterViewModel(
     }
     
     fun checkBluetoothPermission(context: Context): Boolean {
-        val permissions = mutableListOf(Manifest.permission.BLUETOOTH_CONNECT)
+        val permissions = mutableListOf<String>()
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
             permissions.add(Manifest.permission.BLUETOOTH_SCAN)
