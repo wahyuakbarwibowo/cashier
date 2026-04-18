@@ -24,6 +24,7 @@ data class PurchaseUiState(
     val selectedSupplier: com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity? = null,
     val total: Double = 0.0,
     val isLoading: Boolean = true,
+    val successMessage: String? = null,
     val error: String? = null
 )
 
@@ -57,13 +58,19 @@ class PurchaseViewModel(
                 supplierRepository.allSuppliers,
                 productRepository.allProducts
             ) { suppliers, products ->
-                PurchaseUiState(
-                    suppliers = suppliers,
-                    products = products,
-                    isLoading = false
-                )
-            }.collect { state ->
-                _uiState.value = state
+                suppliers to products
+            }.collect { (suppliers, products) ->
+                _uiState.update { current ->
+                    val selectedSupplier = current.selectedSupplier?.let { selected ->
+                        suppliers.find { it.id == selected.id }
+                    }
+                    current.copy(
+                        suppliers = suppliers,
+                        products = products,
+                        selectedSupplier = selectedSupplier,
+                        isLoading = false
+                    )
+                }
             }
         }
     }
@@ -194,6 +201,11 @@ class PurchaseViewModel(
 
                 // Clear cart
                 clearCart()
+                _uiState.update {
+                    it.copy(
+                        successMessage = "Pembelian berhasil disimpan"
+                    )
+                }
                 
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
@@ -208,6 +220,15 @@ class PurchaseViewModel(
                 total = 0.0,
                 selectedSupplier = null
             ) 
+        }
+    }
+
+    fun clearMessages() {
+        _uiState.update {
+            it.copy(
+                successMessage = null,
+                error = null
+            )
         }
     }
 }

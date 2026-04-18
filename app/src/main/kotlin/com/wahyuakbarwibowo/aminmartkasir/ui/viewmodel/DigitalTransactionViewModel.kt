@@ -204,15 +204,23 @@ class DigitalTransactionViewModel(
                     it.copy(
                         isProcessing = false, 
                         lastProcessedTransaction = insertedTransaction,
-                        successMessage = "Transaksi ${product.name} ke $phoneNumber Berhasil!",
-                        targetNumber = "",
-                        transactionNote = "",
-                        paidAmount = ""
+                        successMessage = "Transaksi ${product.name} ke $phoneNumber Berhasil!"
                     )
                 }
+                resetTransactionForm()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isProcessing = false, error = e.message) }
             }
+        }
+    }
+
+    private fun resetTransactionForm() {
+        _uiState.update {
+            it.copy(
+                targetNumber = "",
+                transactionNote = "",
+                paidAmount = ""
+            )
         }
     }
 

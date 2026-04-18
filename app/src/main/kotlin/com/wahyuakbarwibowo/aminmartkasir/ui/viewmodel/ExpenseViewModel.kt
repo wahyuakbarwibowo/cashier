@@ -25,6 +25,7 @@ class ExpenseViewModel(
 
     private val _uiState = MutableStateFlow(ExpenseUiState())
     val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
+    private var allExpenses: List<ExpenseEntity> = emptyList()
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val dateTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
@@ -36,47 +37,86 @@ class ExpenseViewModel(
     private fun loadExpenses() {
         viewModelScope.launch {
             expenseRepository.allExpenses.collect { expenses ->
-                val totalExpenses = expenseRepository.getTotalExpensesByDateRange()
-                
-                _uiState.update { 
-                    it.copy(
-                        expenses = expenses,
-                        totalExpenses = totalExpenses,
-                        isLoading = false,
-                        error = null
-                    ) 
-                }
+                allExpenses = expenses
+                applyCurrentFilter()
             }
         }
     }
 
     fun loadExpensesByDateRange(startDate: String, endDate: String) {
-        viewModelScope.launch {
-            _uiState.update { 
-                it.copy(
-                    isLoading = true,
-                    startDate = startDate,
-                    endDate = endDate
-                ) 
+        val start = dateFormat.parse(startDate)
+        val end = dateFormat.parse(endDate)
+        if (start == null || end == null) {
+            _uiState.update {
+                it.copy(error = "Format tanggal harus yyyy-MM-dd")
             }
-            
-            expenseRepository.allExpenses.collect { expenses ->
-                val filtered = expenses.filter { expense ->
-                    expense.createdAt?.let { createdAt ->
-                        isDateWithinRange(createdAt, startDate, endDate)
-                    } ?: false
-                }
-                val totalExpenses = filtered.sumOf { it.amount }
+            return
+        }
+        if (start.after(end)) {
+            _uiState.update {
+                it.copy(error = "Tanggal mulai tidak boleh lebih besar dari tanggal akhir")
+            }
+            return
+        }
 
-                _uiState.update {
-                    it.copy(
-                        expenses = filtered,
-                        totalExpenses = totalExpenses,
-                        isLoading = false,
-                        error = null
-                    )
-                }
+        _uiState.update {
+            it.copy(
+                startDate = startDate,
+                endDate = endDate,
+                isLoading = false,
+                error = null
+            )
+        }
+        applyCurrentFilter()
+    }
+
+    fun loadTodayExpenses() {
+        val today = dateFormat.format(Date())
+        loadExpensesByDateRange(today, today)
+    }
+
+    fun loadCurrentMonthExpenses() {
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        val startDate = dateFormat.format(calendar.time)
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        val endDate = dateFormat.format(calendar.time)
+        loadExpensesByDateRange(startDate, endDate)
+    }
+
+    fun clearDateFilter() {
+        _uiState.update {
+            it.copy(
+                startDate = "",
+                endDate = "",
+                error = null
+            )
+        }
+        applyCurrentFilter()
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
+
+    private fun applyCurrentFilter() {
+        val currentState = _uiState.value
+        val filteredExpenses = if (currentState.startDate.isNotBlank() && currentState.endDate.isNotBlank()) {
+            allExpenses.filter { expense ->
+                expense.createdAt?.let { createdAt ->
+                    isDateWithinRange(createdAt, currentState.startDate, currentState.endDate)
+                } ?: false
             }
+        } else {
+            allExpenses
+        }
+        _uiState.update {
+            it.copy(
+                expenses = filteredExpenses,
+                totalExpenses = filteredExpenses.sumOf { expense -> expense.amount },
+                isLoading = false,
+                error = currentState.error
+            )
         }
     }
 
