@@ -1,30 +1,18 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,9 +23,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ExpenseEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ExpenseViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,46 +32,25 @@ fun ExpensesScreen(
     viewModel: ExpenseViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     var showAddDialog by remember { mutableStateOf(false) }
-    var editingExpense by remember { mutableStateOf<ExpenseEntity?>(null) }
-    var showDateFilterDialog by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
 
-    val filteredExpenses = remember(uiState.expenses, searchQuery) {
-        val query = searchQuery.trim()
-        uiState.expenses.filter { expense ->
-            query.isBlank() ||
-                expense.category.contains(query, ignoreCase = true) ||
-                expense.notes.orEmpty().contains(query, ignoreCase = true)
-        }
-    }
-    val filteredTotal = remember(filteredExpenses) { filteredExpenses.sumOf { it.amount } }
-    val expenseByCategory = remember(filteredExpenses) {
-        filteredExpenses
-            .groupBy { it.category }
-            .mapValues { (_, expenses) -> expenses.sumOf { it.amount } }
-            .toList()
-            .sortedByDescending { it.second }
-            .take(3)
-    }
-    val activeFilterLabel = remember(uiState.startDate, uiState.endDate) {
-        when {
-            uiState.startDate.isBlank() || uiState.endDate.isBlank() -> "Semua tanggal"
-            uiState.startDate == uiState.endDate -> uiState.startDate
-            else -> "${uiState.startDate} s/d ${uiState.endDate}"
+    // Infinite scroll detection
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItemsCount = listState.layoutInfo.totalItemsCount
+            uiState.canLoadMore && lastVisibleItemIndex >= totalItemsCount - 5 && totalItemsCount > 0
         }
     }
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.clearError()
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && !uiState.isLoadMoreLoading) {
+            viewModel.loadNextPage()
         }
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Pengeluaran") },
@@ -95,133 +59,82 @@ fun ExpensesScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 },
-                windowInsets = WindowInsets.statusBars,
-                actions = {
-                    IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah")
-                    }
-                }
+                windowInsets = WindowInsets.statusBars
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showAddDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Tambah Pengeluaran")
+            }
         }
     ) { paddingValues ->
-        Column(
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refreshData() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                placeholder = { Text("Cari kategori / catatan pengeluaran") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true
-            )
-
-            ExpenseFilterSection(
-                activeFilterLabel = activeFilterLabel,
-                onTodayClick = { viewModel.loadTodayExpenses() },
-                onMonthClick = { viewModel.loadCurrentMonthExpenses() },
-                onCustomClick = { showDateFilterDialog = true },
-                onResetClick = { viewModel.clearDateFilter() },
-                hasActiveFilter = uiState.startDate.isNotBlank() || uiState.endDate.isNotBlank()
-            )
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Total Pengeluaran",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = activeFilterLabel,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = formatCurrency(filteredTotal),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Text(
-                        text = "${filteredExpenses.size} item",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            if (expenseByCategory.isNotEmpty()) {
+            Column(modifier = Modifier.fillMaxSize()) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
                 ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Kategori Teratas",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
+                            "Total Pengeluaran",
+                            style = MaterialTheme.typography.titleSmall
                         )
-                        expenseByCategory.forEach { (category, amount) ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = category,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = formatCurrency(amount),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
+                        Text(
+                            formatCurrency(uiState.totalExpense),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                 }
-            } else {
-                Spacer(modifier = Modifier.height(10.dp))
-            }
 
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (filteredExpenses.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Belum ada data pengeluaran")
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(filteredExpenses, key = { it.id }) { expense ->
-                        ExpenseCard(
-                            expense = expense,
-                            onEdit = { editingExpense = expense },
-                            onDelete = { viewModel.deleteExpense(expense) }
-                        )
+                if (uiState.isLoading && !uiState.isRefreshing) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (uiState.expenses.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Belum ada pengeluaran")
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = listState,
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(uiState.expenses, key = { it.id }) { expense ->
+                            ExpenseItemCard(
+                                expense = expense,
+                                onDelete = { viewModel.deleteExpense(expense) }
+                            )
+                        }
+
+                        if (uiState.isLoadMoreLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -229,271 +142,107 @@ fun ExpensesScreen(
     }
 
     if (showAddDialog) {
-        ExpenseFormDialog(
-            title = "Tambah Pengeluaran",
-            initialExpense = null,
+        AddExpenseDialog(
             onDismiss = { showAddDialog = false },
-            onSave = { category, amount, notes ->
-                val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-                viewModel.addExpense(
-                    ExpenseEntity(
-                        category = category,
-                        amount = amount,
-                        notes = notes.ifBlank { null },
-                        createdAt = now
-                    )
-                )
+            onConfirm = { category, amount, notes ->
+                viewModel.addExpense(category, amount, notes)
                 showAddDialog = false
             }
         )
     }
-
-    if (showDateFilterDialog) {
-        DateRangeFilterDialog(
-            initialStartDate = uiState.startDate,
-            initialEndDate = uiState.endDate,
-            onDismiss = { showDateFilterDialog = false },
-            onApply = { startDate, endDate ->
-                viewModel.loadExpensesByDateRange(startDate, endDate)
-                showDateFilterDialog = false
-            }
-        )
-    }
-
-    if (editingExpense != null) {
-        val expense = editingExpense ?: return
-        ExpenseFormDialog(
-            title = "Edit Pengeluaran",
-            initialExpense = expense,
-            onDismiss = { editingExpense = null },
-            onSave = { category, amount, notes ->
-                viewModel.updateExpense(
-                    expense.copy(
-                        category = category,
-                        amount = amount,
-                        notes = notes.ifBlank { null }
-                    )
-                )
-                editingExpense = null
-            }
-        )
-    }
 }
 
 @Composable
-private fun ExpenseFilterSection(
-    activeFilterLabel: String,
-    hasActiveFilter: Boolean,
-    onTodayClick: () -> Unit,
-    onMonthClick: () -> Unit,
-    onCustomClick: () -> Unit,
-    onResetClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = false,
-                onClick = onTodayClick,
-                label = { Text("Hari Ini") }
-            )
-            FilterChip(
-                selected = false,
-                onClick = onMonthClick,
-                label = { Text("Bulan Ini") }
-            )
-            FilterChip(
-                selected = hasActiveFilter,
-                onClick = onCustomClick,
-                label = { Text("Rentang") },
-                leadingIcon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) }
-            )
-        }
-        AnimatedVisibility(visible = hasActiveFilter) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = activeFilterLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TextButton(onClick = onResetClick) {
-                    Text("Reset")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExpenseCard(
+fun ExpenseItemCard(
     expense: ExpenseEntity,
-    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
+        Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    expense.category,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                if (!expense.notes.isNullOrBlank()) {
                     Text(
-                        text = expense.category,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
+                        expense.notes,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (!expense.notes.isNullOrBlank()) {
-                        Text(
-                            text = expense.notes.orEmpty(),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (!expense.createdAt.isNullOrBlank()) {
-                        Text(
-                            text = expense.createdAt.orEmpty(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = formatCurrency(expense.amount),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                Text(
+                    expense.createdAt ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    formatCurrency(expense.amount),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                IconButton(onClick = { showDeleteConfirm = true }) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Hapus",
+                        tint = MaterialTheme.colorScheme.error
                     )
-                    Row {
-                        IconButton(onClick = onEdit) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
-                        }
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Hapus",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
                 }
             }
         }
     }
 
-    if (showDeleteDialog) {
+    if (showDeleteConfirm) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = { showDeleteConfirm = false },
             title = { Text("Hapus Pengeluaran") },
-            text = { Text("Yakin ingin menghapus data pengeluaran ini?") },
+            text = { Text("Apakah Anda yakin ingin menghapus data pengeluaran ini?") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onDelete()
-                        showDeleteDialog = false
-                    }
+                        showDeleteConfirm = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("Hapus")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") }
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Batal")
+                }
             }
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DateRangeFilterDialog(
-    initialStartDate: String,
-    initialEndDate: String,
+fun AddExpenseDialog(
     onDismiss: () -> Unit,
-    onApply: (String, String) -> Unit
+    onConfirm: (String, Double, String) -> Unit
 ) {
-    var startDate by remember(initialStartDate) { mutableStateOf(initialStartDate) }
-    var endDate by remember(initialEndDate) { mutableStateOf(initialEndDate) }
+    var category by remember { mutableStateOf("") }
+    var amountText by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Filter Tanggal") },
+        title = { Text("Tambah Pengeluaran") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Masukkan format tanggal `yyyy-MM-dd`.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = startDate,
-                    onValueChange = { startDate = it },
-                    label = { Text("Tanggal Mulai") },
-                    placeholder = { Text("2026-04-01") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = endDate,
-                    onValueChange = { endDate = it },
-                    label = { Text("Tanggal Akhir") },
-                    placeholder = { Text("2026-04-30") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onApply(startDate.trim(), endDate.trim()) },
-                enabled = startDate.isNotBlank() && endDate.isNotBlank()
-            ) {
-                Text("Terapkan")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Batal") }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ExpenseFormDialog(
-    title: String,
-    initialExpense: ExpenseEntity?,
-    onDismiss: () -> Unit,
-    onSave: (category: String, amount: Double, notes: String) -> Unit
-) {
-    var category by remember(initialExpense?.id) { mutableStateOf(initialExpense?.category.orEmpty()) }
-    var amountText by remember(initialExpense?.id) {
-        mutableStateOf(initialExpense?.amount?.toLong()?.toString().orEmpty())
-    }
-    var notes by remember(initialExpense?.id) { mutableStateOf(initialExpense?.notes.orEmpty()) }
-    val parsedAmount = amountText.toDoubleOrNull() ?: 0.0
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = category,
                     onValueChange = { category = it },
@@ -503,33 +252,37 @@ private fun ExpenseFormDialog(
                 )
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Jumlah") },
+                    onValueChange = { if (it.isEmpty() || it.all { ch -> ch.isDigit() }) amountText = it },
+                    label = { Text("Nominal") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    prefix = { Text("Rp ") }
+                    prefix = { Text("Rp ") },
+                    singleLine = true
                 )
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Catatan") },
+                    label = { Text("Keterangan") },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                    maxLines = 3
+                    minLines = 2
                 )
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = { onSave(category.trim(), parsedAmount, notes.trim()) },
-                enabled = category.isNotBlank() && parsedAmount > 0
+            Button(
+                onClick = { 
+                    val amount = amountText.toDoubleOrNull() ?: 0.0
+                    onConfirm(category, amount, notes) 
+                },
+                enabled = category.isNotBlank() && amountText.isNotBlank()
             ) {
                 Text("Simpan")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Batal") }
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
         }
     )
 }

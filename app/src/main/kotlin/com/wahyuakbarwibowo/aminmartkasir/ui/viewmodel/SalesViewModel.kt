@@ -6,12 +6,15 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
 data class SalesTransactionUiState(
     val cartItems: List<CartItem> = emptyList(),
-    val allProducts: List<ProductEntity> = emptyList(),
+    val allProducts: List<ProductEntity> = emptyList(), // For selector, actually paginated
+    val products: List<ProductEntity> = emptyList(), // Paginated list for UI
     val customers: List<CustomerEntity> = emptyList(),
     val paymentMethods: List<PaymentMethodEntity> = emptyList(),
     val selectedCustomer: CustomerEntity? = null,
@@ -23,7 +26,10 @@ data class SalesTransactionUiState(
     val change: Double = 0.0,
     val pointsEarned: Int = 0,
     val pointsRedeemed: Int = 0,
+    val searchQuery: String = "",
     val isLoading: Boolean = true,
+    val isLoadMoreLoading: Boolean = false,
+    val canLoadMore: Boolean = true,
     val error: String? = null
 )
 
@@ -47,6 +53,12 @@ class SalesViewModel(
     val uiState: StateFlow<SalesTransactionUiState> = _uiState.asStateFlow()
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    
+    private var currentProductPage = 0
+    private val pageSize = 20
+    private var isLastProductPage = false
+    private var productLoadJob: Job? = null
+    private var searchJob: Job? = null
 
     init {
         loadInitialData()
@@ -55,18 +67,93 @@ class SalesViewModel(
     private fun loadInitialData() {
         viewModelScope.launch {
             combine(
-                productRepository.allProducts,
                 customerRepository.allCustomers,
                 paymentMethodRepository.allPaymentMethods
-            ) { products, customers, paymentMethods ->
-                SalesTransactionUiState(
-                    allProducts = products,
-                    customers = customers,
-                    paymentMethods = paymentMethods,
-                    isLoading = false
-                )
-            }.collect { state ->
-                _uiState.value = state
+            ) { customers, paymentMethods ->
+                customers to paymentMethods
+            }.collect { (customers, paymentMethods) ->
+                _uiState.update { 
+                    it.copy(
+                        customers = customers,
+                        paymentMethods = paymentMethods,
+                        isLoading = false
+                    ) 
+                }
+            }
+        }
+        loadInitialProducts()
+    }
+
+    private fun loadInitialProducts() {
+        currentProductPage = 0
+        isLastProductPage = false
+        productLoadJob?.cancel()
+        searchJob?.cancel()
+        
+        productLoadJob = viewModelScope.launch {
+            _uiState.update { it.copy(products = emptyList(), canLoadMore = true) }
+            try {
+                val initialProducts = productRepository.getProducts(pageSize, 0)
+                if (initialProducts.size < pageSize) {
+                    isLastProductPage = true
+                }
+                _uiState.update { 
+                    it.copy(
+                        products = initialProducts,
+                        canLoadMore = !isLastProductPage
+                    ) 
+                }
+                currentProductPage = 1
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    fun loadNextProductPage() {
+        if (isLastProductPage || _uiState.value.isLoadMoreLoading || _uiState.value.searchQuery.isNotBlank()) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadMoreLoading = true) }
+            try {
+                val offset = currentProductPage * pageSize
+                val newProducts = productRepository.getProducts(pageSize, offset)
+                
+                if (newProducts.size < pageSize) {
+                    isLastProductPage = true
+                }
+                
+                _uiState.update { state ->
+                    state.copy(
+                        products = state.products + newProducts,
+                        isLoadMoreLoading = false,
+                        canLoadMore = !isLastProductPage
+                    )
+                }
+                currentProductPage++
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadMoreLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun searchProducts(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        searchJob?.cancel()
+        productLoadJob?.cancel()
+        
+        if (query.isBlank()) {
+            loadInitialProducts()
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            try {
+                productRepository.searchProducts(query).collect { products ->
+                    _uiState.update { it.copy(products = products, canLoadMore = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
             }
         }
     }
@@ -133,7 +220,7 @@ class SalesViewModel(
 
     private fun updateCart(newCartItems: List<CartItem>) {
         val subtotal = newCartItems.sumOf { it.subtotal }
-        val total = subtotal - _uiState.value.discount
+        val total = (subtotal - _uiState.value.discount).coerceAtLeast(0.0)
         val paid = _uiState.value.paid
         val change = paid - total
         
@@ -185,7 +272,7 @@ class SalesViewModel(
     fun setPointsRedeemed(points: Int) {
         val currentState = _uiState.value
         val pointsValue = points * 100 // Asumsi 1 point = Rp 100
-        val total = currentState.subtotal - currentState.discount - pointsValue
+        val total = (currentState.subtotal - currentState.discount - pointsValue).coerceAtLeast(0.0)
         val change = currentState.paid - total
         
         _uiState.update { 

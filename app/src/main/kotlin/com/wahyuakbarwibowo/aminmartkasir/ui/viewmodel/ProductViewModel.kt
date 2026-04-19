@@ -2,23 +2,27 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 data class ProductUiState(
     val products: List<ProductEntity> = emptyList(),
     val lowStockProducts: List<ProductEntity> = emptyList(),
     val editingProduct: ProductEntity? = null,
-    val searchQuery: String = "",
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val isLoadMoreLoading: Boolean = false,
+    val canLoadMore: Boolean = true,
+    val searchQuery: String = "",
+    val successMessage: String? = null,
     val error: String? = null
 )
 
@@ -30,87 +34,145 @@ class ProductViewModel(
     private val _uiState = MutableStateFlow(ProductUiState())
     val uiState: StateFlow<ProductUiState> = _uiState.asStateFlow()
 
-    private val _searchQuery = MutableStateFlow("")
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    private var currentPage = 0
+    private val pageSize = 20
+    private var isLastPage = false
+    private var loadJob: Job? = null
     private var searchJob: Job? = null
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
     init {
-        loadProducts()
+        loadInitialProducts()
         loadLowStockProducts()
-
-        viewModelScope.launch {
-            _searchQuery.collect { query ->
-                searchJob?.cancel()
-                if (query.isNotBlank()) {
-                    searchJob = viewModelScope.launch {
-                        productRepository.searchProducts(query).collect { products ->
-                            _uiState.update { it.copy(products = products, searchQuery = query) }
-                        }
-                    }
-                } else {
-                    searchJob = viewModelScope.launch {
-                        productRepository.allProducts.collect { products ->
-                            _uiState.update {
-                                it.copy(
-                                    products = products,
-                                    searchQuery = query,
-                                    isLoading = false,
-                                    error = null
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
-    private fun loadProducts() {
-        // Only load if search query is empty to avoid overriding search results
-        if (_searchQuery.value.isBlank()) {
-            searchJob?.cancel()
-            searchJob = viewModelScope.launch {
-                productRepository.allProducts.collect { products ->
-                    _uiState.update { 
-                        it.copy(
-                            products = products,
-                            isLoading = false,
-                            error = null
-                        ) 
-                    }
-                }
-            }
-        }
-    }
     private fun loadLowStockProducts() {
         viewModelScope.launch {
-            productRepository.getLowStockProducts().collect { products ->
-                _uiState.update { it.copy(lowStockProducts = products) }
+            productRepository.getLowStockProducts().collect { lowStock ->
+                _uiState.update { it.copy(lowStockProducts = lowStock) }
             }
         }
     }
 
-    fun search(query: String) {
-        _searchQuery.value = query
+    private fun loadInitialProducts() {
+        currentPage = 0
+        isLastPage = false
+        loadJob?.cancel()
+        searchJob?.cancel()
+        
+        loadJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, products = emptyList(), canLoadMore = true) }
+            try {
+                val initialProducts = productRepository.getProducts(pageSize, 0)
+                if (initialProducts.size < pageSize) {
+                    isLastPage = true
+                }
+                _uiState.update { 
+                    it.copy(
+                        products = initialProducts,
+                        isLoading = false,
+                        isRefreshing = false,
+                        canLoadMore = !isLastPage
+                    ) 
+                }
+                currentPage = 1
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = e.message) }
+            }
+        }
+    }
+
+    fun loadNextPage() {
+        if (isLastPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading || _uiState.value.searchQuery.isNotBlank()) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadMoreLoading = true) }
+            try {
+                val offset = currentPage * pageSize
+                val newProducts = productRepository.getProducts(pageSize, offset)
+                
+                if (newProducts.size < pageSize) {
+                    isLastPage = true
+                }
+                
+                _uiState.update { state ->
+                    state.copy(
+                        products = state.products + newProducts,
+                        isLoadMoreLoading = false,
+                        canLoadMore = !isLastPage
+                    )
+                }
+                currentPage++
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadMoreLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun searchProducts(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        searchJob?.cancel()
+        loadJob?.cancel()
+        
+        if (query.isBlank()) {
+            loadInitialProducts()
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, canLoadMore = false) }
+            try {
+                productRepository.searchProducts(query).collect { products ->
+                    _uiState.update { it.copy(products = products, isLoading = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun refreshData() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true, searchQuery = "") }
+            delay(500)
+            loadInitialProducts()
+        }
+    }
+
+    fun loadProductById(id: Long) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val product = productRepository.getProductById(id)
+                _uiState.update { it.copy(editingProduct = product, isLoading = false) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
     }
 
     fun addProduct(product: ProductEntity) {
         viewModelScope.launch {
             try {
-                val insertedId = productRepository.insert(product)
-                if (product.stock > 0) {
+                val id = productRepository.insert(product)
+                
+                // Record stock history
+                if (product.stock != 0) {
                     stockHistoryRepository.insert(
                         StockHistoryEntity(
-                            productId = insertedId,
+                            productId = id,
                             productName = product.name,
                             changeQty = product.stock,
                             stockBefore = 0,
                             stockAfter = product.stock,
-                            reason = "Tambah produk baru",
+                            reason = "Stok awal produk baru",
                             createdAt = dateFormat.format(Date())
                         )
                     )
                 }
+                
+                _uiState.update { it.copy(successMessage = "Produk berhasil ditambahkan") }
+                loadInitialProducts()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
@@ -120,35 +182,26 @@ class ProductViewModel(
     fun updateProduct(product: ProductEntity) {
         viewModelScope.launch {
             try {
-                val previous = productRepository.getProductById(product.id)
+                val oldProduct = productRepository.getProductById(product.id)
                 productRepository.update(product)
-
-                if (previous != null && previous.stock != product.stock) {
-                    val delta = product.stock - previous.stock
-                    val reason = if (delta > 0) "Penambahan stok manual" else "Pengurangan stok manual"
+                
+                // Record stock history if stock changed manually
+                if (oldProduct != null && oldProduct.stock != product.stock) {
                     stockHistoryRepository.insert(
                         StockHistoryEntity(
                             productId = product.id,
                             productName = product.name,
-                            changeQty = delta,
-                            stockBefore = previous.stock,
+                            changeQty = product.stock - oldProduct.stock,
+                            stockBefore = oldProduct.stock,
                             stockAfter = product.stock,
-                            reason = reason,
+                            reason = "Update stok manual",
                             createdAt = dateFormat.format(Date())
                         )
                     )
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
-            }
-        }
-    }
-
-    fun loadProductById(productId: Long) {
-        viewModelScope.launch {
-            try {
-                val product = productRepository.getProductById(productId)
-                _uiState.update { it.copy(editingProduct = product, error = null) }
+                
+                _uiState.update { it.copy(successMessage = "Produk berhasil diperbarui") }
+                loadInitialProducts()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
@@ -159,9 +212,19 @@ class ProductViewModel(
         viewModelScope.launch {
             try {
                 productRepository.delete(product)
+                _uiState.update { it.copy(successMessage = "Produk berhasil dihapus") }
+                if (_uiState.value.searchQuery.isBlank()) {
+                    loadInitialProducts()
+                } else {
+                    searchProducts(_uiState.value.searchQuery)
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
         }
+    }
+
+    fun clearMessages() {
+        _uiState.update { it.copy(successMessage = null, error = null) }
     }
 }
