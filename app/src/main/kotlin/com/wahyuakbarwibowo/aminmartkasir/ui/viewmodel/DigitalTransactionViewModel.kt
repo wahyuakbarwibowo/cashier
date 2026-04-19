@@ -11,6 +11,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.PhoneHistoryRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -51,8 +52,11 @@ class DigitalTransactionViewModel(
     }
 
     fun refreshData() {
-        _uiState.update { it.copy(isRefreshing = true, searchQuery = "", selectedCategory = null) }
-        loadData()
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true, searchQuery = "", selectedCategory = null) }
+            delay(500)
+            loadData()
+        }
     }
 
     private fun loadData() {

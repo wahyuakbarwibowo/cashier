@@ -8,6 +8,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.SaleRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
@@ -53,8 +54,11 @@ class SalesHistoryViewModel(
     }
 
     fun refreshData() {
-        _uiState.update { it.copy(isRefreshing = true, startDate = "", endDate = "") }
-        loadSales()
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true, startDate = "", endDate = "") }
+            delay(500) // Give UI time to show the indicator and then clear it correctly
+            loadSales()
+        }
     }
 
     fun loadSalesByDateRange(startDate: String, endDate: String) {
