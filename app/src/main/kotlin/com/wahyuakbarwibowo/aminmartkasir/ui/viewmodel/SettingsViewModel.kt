@@ -69,9 +69,31 @@ class SettingsViewModel(
     fun addPaymentMethod(paymentMethod: PaymentMethodEntity) {
         viewModelScope.launch {
             try {
-                paymentMethodRepository.insert(paymentMethod)
+                val currentMax = _uiState.value.paymentMethods.maxOfOrNull { it.sortOrder } ?: -1
+                paymentMethodRepository.insert(paymentMethod.copy(sortOrder = currentMax + 1))
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    fun movePaymentMethod(fromIndex: Int, toIndex: Int) {
+        val methods = _uiState.value.paymentMethods
+        if (fromIndex !in methods.indices || toIndex !in methods.indices || fromIndex == toIndex) return
+
+        val mutable = methods.toMutableList()
+        val moved = mutable.removeAt(fromIndex)
+        mutable.add(toIndex, moved)
+
+        // Optimistic UI update
+        _uiState.update { it.copy(paymentMethods = mutable) }
+
+        // Persist to database
+        viewModelScope.launch {
+            mutable.forEachIndexed { index, method ->
+                if (method.sortOrder != index) {
+                    paymentMethodRepository.update(method.copy(sortOrder = index))
+                }
             }
         }
     }

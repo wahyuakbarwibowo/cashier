@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PaymentMethodDao {
-    @Query("SELECT * FROM payment_methods ORDER BY name ASC")
+    @Query("SELECT * FROM payment_methods ORDER BY sortOrder ASC, name ASC")
     fun getAllPaymentMethods(): Flow<List<PaymentMethodEntity>>
 
     @Query("SELECT * FROM payment_methods WHERE id = :id")
