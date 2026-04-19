@@ -20,9 +20,11 @@ import java.util.*
 data class PurchaseUiState(
     val suppliers: List<com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity> = emptyList(),
     val products: List<ProductEntity> = emptyList(),
+    val allProducts: List<ProductEntity> = emptyList(),
     val cartItems: List<PurchaseCartItem> = emptyList(),
     val selectedSupplier: com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity? = null,
     val total: Double = 0.0,
+    val searchQuery: String = "",
     val isLoading: Boolean = true,
     val successMessage: String? = null,
     val error: String? = null
@@ -46,6 +48,7 @@ class PurchaseViewModel(
     private val _uiState = MutableStateFlow(PurchaseUiState())
     val uiState: StateFlow<PurchaseUiState> = _uiState.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
     init {
@@ -56,23 +59,38 @@ class PurchaseViewModel(
         viewModelScope.launch {
             combine(
                 supplierRepository.allSuppliers,
-                productRepository.allProducts
-            ) { suppliers, products ->
-                suppliers to products
-            }.collect { (suppliers, products) ->
+                productRepository.allProducts,
+                _searchQuery
+            ) { suppliers, allProducts, query ->
+                val filteredProducts = if (query.isBlank()) {
+                    allProducts
+                } else {
+                    allProducts.filter { 
+                        it.name.contains(query, ignoreCase = true) || 
+                        it.code?.contains(query, ignoreCase = true) == true 
+                    }
+                }
+                Triple(suppliers, allProducts, filteredProducts)
+            }.collect { (suppliers, allProducts, filteredProducts) ->
                 _uiState.update { current ->
                     val selectedSupplier = current.selectedSupplier?.let { selected ->
                         suppliers.find { it.id == selected.id }
                     }
                     current.copy(
                         suppliers = suppliers,
-                        products = products,
+                        allProducts = allProducts,
+                        products = filteredProducts,
+                        searchQuery = _searchQuery.value,
                         selectedSupplier = selectedSupplier,
                         isLoading = false
                     )
                 }
             }
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     fun addToCart(product: ProductEntity, qty: Int, price: Double) {

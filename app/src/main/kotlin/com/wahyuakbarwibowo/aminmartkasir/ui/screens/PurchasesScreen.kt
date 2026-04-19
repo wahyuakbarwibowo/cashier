@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,6 +62,7 @@ fun PurchasesScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 },
+                windowInsets = WindowInsets.statusBars,
                 actions = {
                     IconButton(onClick = { showAddItemDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Tambah Item")
@@ -152,10 +154,16 @@ fun PurchasesScreen(
     if (showAddItemDialog) {
         AddPurchaseItemDialog(
             products = uiState.products,
-            onDismiss = { showAddItemDialog = false },
+            searchQuery = uiState.searchQuery,
+            onSearchQueryChange = { viewModel.setSearchQuery(it) },
+            onDismiss = { 
+                showAddItemDialog = false 
+                viewModel.setSearchQuery("") // Reset search on dismiss
+            },
             onSave = { product, qty, price ->
                 viewModel.addToCart(product, qty, price)
                 showAddItemDialog = false
+                viewModel.setSearchQuery("") // Reset search on save
             }
         )
     }
@@ -209,7 +217,7 @@ private fun SupplierSelectorCard(
                     onValueChange = {},
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(),
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                     readOnly = true,
                     singleLine = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
@@ -263,7 +271,7 @@ fun AddSupplierDialog(
                 )
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = { phone = it },
+                    onValueChange = { if (it.isEmpty() || it.all { ch -> ch.isDigit() }) phone = it },
                     label = { Text("Nomor Telepon") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -346,7 +354,7 @@ private fun PurchaseCartItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(item.product.name, fontWeight = FontWeight.SemiBold)
+                    Text(item.product.name, fontWeight = FontWeight.Bold)
                     Text(
                         text = "Harga beli: ${formatCurrency(item.price)}",
                         style = MaterialTheme.typography.bodySmall,
@@ -356,7 +364,8 @@ private fun PurchaseCartItemCard(
                 Text(
                     text = formatCurrency(item.subtotal),
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             Row(
@@ -368,7 +377,7 @@ private fun PurchaseCartItemCard(
                     IconButton(onClick = onDecreaseQty) {
                         Icon(Icons.Default.Remove, contentDescription = "Kurangi")
                     }
-                    Text(item.qty.toString(), fontWeight = FontWeight.Bold)
+                    Text(item.qty.toString(), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp))
                     IconButton(onClick = onIncreaseQty) {
                         Icon(Icons.Default.Add, contentDescription = "Tambah")
                     }
@@ -387,6 +396,8 @@ private fun PurchaseCartItemCard(
 @Composable
 private fun AddPurchaseItemDialog(
     products: List<ProductEntity>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: (ProductEntity, Int, Double) -> Unit
 ) {
@@ -403,6 +414,17 @@ private fun AddPurchaseItemDialog(
         title = { Text("Tambah Item Pembelian") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Search Field added
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    label = { Text("Cari Produk") },
+                    placeholder = { Text("Nama atau kode produk...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
@@ -412,60 +434,77 @@ private fun AddPurchaseItemDialog(
                         onValueChange = {},
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(),
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                         readOnly = true,
-                        label = { Text("Produk") },
-                        placeholder = { Text("Pilih produk") },
+                        label = { Text("Pilih Produk") },
+                        placeholder = { Text("Pilih dari daftar") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
                     )
                     ExposedDropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        products.forEach { product ->
+                        if (products.isEmpty()) {
                             DropdownMenuItem(
-                                text = { Text(product.name) },
-                                onClick = {
-                                    selectedProduct = product
-                                    if (priceText.isBlank()) {
-                                        priceText = if (product.purchasePrice > 0) {
-                                            product.purchasePrice.toLong().toString()
-                                        } else {
-                                            ""
-                                        }
-                                    }
-                                    expanded = false
-                                }
+                                text = { Text("Produk tidak ditemukan") },
+                                onClick = { },
+                                enabled = false
                             )
+                        } else {
+                            products.forEach { product ->
+                                DropdownMenuItem(
+                                    text = { 
+                                        Column {
+                                            Text(product.name, fontWeight = FontWeight.Bold)
+                                            if (!product.code.isNullOrBlank()) {
+                                                Text(product.code, style = MaterialTheme.typography.labelSmall)
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedProduct = product
+                                        if (priceText.isBlank() || priceText == "0") {
+                                            priceText = if (product.purchasePrice > 0) {
+                                                product.purchasePrice.toLong().toString()
+                                            } else {
+                                                ""
+                                            }
+                                        }
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
-                OutlinedTextField(
-                    value = qtyText,
-                    onValueChange = { qtyText = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Qty") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = priceText,
-                    onValueChange = { priceText = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Harga Beli Satuan") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    prefix = { Text("Rp ") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = qtyText,
+                        onValueChange = { if (it.isEmpty() || it.all { ch -> ch.isDigit() }) qtyText = it },
+                        label = { Text("Qty") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = priceText,
+                        onValueChange = { if (it.isEmpty() || it.all { ch -> ch.isDigit() }) priceText = it },
+                        label = { Text("Harga Beli") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        prefix = { Text("Rp ") },
+                        modifier = Modifier.weight(2f)
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = { onSave(selectedProduct!!, qty, price) },
                 enabled = selectedProduct != null && qty > 0 && price > 0
             ) {
-                Text("Simpan")
+                Text("Tambah")
             }
         },
         dismissButton = {
