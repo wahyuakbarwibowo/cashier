@@ -129,10 +129,6 @@ dependencies {
     implementation "com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.27"
     implementation "com.patrykandpatrick.vico:core:2.0.0-alpha.27"
 
-    // Excel Export (Apache POI 4.1.2 is more stable on Android)
-    implementation 'org.apache.poi:poi:4.1.2'
-    implementation 'org.apache.poi:poi-ooxml:4.1.2'
-    
     // Testing
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.14.2'
