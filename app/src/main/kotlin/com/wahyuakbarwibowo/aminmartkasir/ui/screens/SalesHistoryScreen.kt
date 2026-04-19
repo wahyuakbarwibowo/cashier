@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,53 +39,60 @@ fun SalesHistoryScreen(
                     IconButton(onClick = onOpenDrawer) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
-                }
+                },
+                windowInsets = WindowInsets.statusBars
             )
         }
     ) { paddingValues ->
-        Column(
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refreshData() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (uiState.sales.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (uiState.isLoading && !uiState.isRefreshing) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (uiState.sales.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ReceiptLong,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text("Belum ada transaksi")
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ReceiptLong,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text("Belum ada transaksi")
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(uiState.sales, key = { it.id }) { sale ->
-                        SaleHistoryCard(
-                            sale = sale,
-                            items = uiState.saleItems[sale.id] ?: emptyList(),
-                            onClick = { onNavigateToSaleDetail(sale.id) },
-                            dateFormat = dateFormat
-                        )
+                        items(uiState.sales, key = { it.id }) { sale ->
+                            SaleHistoryCard(
+                                sale = sale,
+                                items = uiState.saleItems[sale.id] ?: emptyList(),
+                                onClick = { onNavigateToSaleDetail(sale.id) },
+                                dateFormat = dateFormat
+                            )
+                        }
                     }
                 }
             }

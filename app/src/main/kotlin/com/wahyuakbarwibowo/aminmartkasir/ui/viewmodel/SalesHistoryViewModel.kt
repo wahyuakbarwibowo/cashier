@@ -7,6 +7,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SaleRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
@@ -17,6 +18,7 @@ data class SalesHistoryUiState(
     val startDate: String = "",
     val endDate: String = "",
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null
 )
 
@@ -28,34 +30,44 @@ class SalesHistoryViewModel(
     val uiState: StateFlow<SalesHistoryUiState> = _uiState.asStateFlow()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val dateTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    private var salesJob: Job? = null
 
     init {
         loadSales()
     }
 
     private fun loadSales() {
-        viewModelScope.launch {
+        salesJob?.cancel()
+        salesJob = viewModelScope.launch {
             saleRepository.allSales.collect { sales ->
                 _uiState.update { 
                     it.copy(
                         sales = sales,
                         isLoading = false,
+                        isRefreshing = false,
                         error = null
                     ) 
                 }
                 
                 // Load items for each sale
                 sales.forEach { sale ->
-                    saleRepository.getSaleItems(sale.id).collect { items ->
-                        _uiState.update { state ->
-                            state.copy(
-                                saleItems = state.saleItems + (sale.id to items)
-                            )
+                    viewModelScope.launch {
+                        saleRepository.getSaleItems(sale.id).collect { items ->
+                            _uiState.update { state ->
+                                state.copy(
+                                    saleItems = state.saleItems + (sale.id to items)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    fun refreshData() {
+        _uiState.update { it.copy(isRefreshing = true, startDate = "", endDate = "") }
+        loadSales()
     }
 
     fun loadSalesByDateRange(startDate: String, endDate: String) {

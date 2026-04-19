@@ -25,6 +25,7 @@ data class DigitalTransactionUiState(
     val transactionNote: String = "",
     val searchQuery: String = "",
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isProcessing: Boolean = false,
     val paidAmount: String = "",
     val lastProcessedTransaction: PhoneHistoryEntity? = null,
@@ -43,13 +44,20 @@ class DigitalTransactionViewModel(
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private var searchJob: Job? = null
+    private var loadDataJob: Job? = null
 
     init {
         loadData()
     }
 
+    fun refreshData() {
+        _uiState.update { it.copy(isRefreshing = true, searchQuery = "", selectedCategory = null) }
+        loadData()
+    }
+
     private fun loadData() {
-        viewModelScope.launch {
+        loadDataJob?.cancel()
+        loadDataJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             
             // Seed defaults if empty
@@ -71,6 +79,7 @@ class DigitalTransactionViewModel(
                         phoneHistory = history,
                         allProducts = allProds,
                         isLoading = false,
+                        isRefreshing = false,
                         selectedCategory = when {
                             state.selectedCategory != null && cats.any { it.name == state.selectedCategory } -> state.selectedCategory
                             else -> cats.firstOrNull()?.name
