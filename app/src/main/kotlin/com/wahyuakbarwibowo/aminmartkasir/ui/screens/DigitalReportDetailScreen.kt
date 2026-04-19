@@ -14,8 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
-import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
+import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalReportDetailViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,10 +25,15 @@ fun DigitalReportDetailScreen(
     reportId: Long,
     onNavigateBack: () -> Unit,
     viewModelFactory: Factory? = null,
-    viewModel: DigitalTransactionViewModel = viewModel(factory = viewModelFactory)
+    viewModel: DigitalReportDetailViewModel = viewModel(factory = viewModelFactory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val history = uiState.phoneHistory.find { it.id == reportId }
+    val history = uiState.history
+    
+    LaunchedEffect(reportId) {
+        viewModel.loadDetail(reportId)
+    }
+
     val productName = history?.let { parseDigitalProductName(it.notes) } ?: "Produk Digital"
     val tokenNote = history?.let { parseDigitalNote(it.notes) }
     var showPrinterDialog by remember { mutableStateOf(false) }
@@ -43,6 +47,7 @@ fun DigitalReportDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
+                windowInsets = WindowInsets.statusBars,
                 actions = {
                     if (history != null) {
                         IconButton(onClick = { showPrinterDialog = true }) {
@@ -53,6 +58,18 @@ fun DigitalReportDetailScreen(
             )
         }
     ) { paddingValues ->
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
+
         if (history == null) {
             Box(
                 modifier = Modifier
@@ -60,7 +77,7 @@ fun DigitalReportDetailScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Detail transaksi tidak ditemukan")
+                Text(uiState.error ?: "Detail transaksi tidak ditemukan")
             }
         } else {
             Column(
@@ -150,7 +167,7 @@ private fun parseDigitalNote(rawNotes: String?): String? {
 }
 
 @Composable
-fun DetailRow(
+private fun DetailRow(
     label: String,
     value: String,
     isBold: Boolean = false

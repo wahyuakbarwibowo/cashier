@@ -59,6 +59,10 @@ class DigitalProductRepository(private val digitalProductDao: DigitalProductDao)
 class PhoneHistoryRepository(private val phoneHistoryDao: PhoneHistoryDao) {
     val allPhoneHistory: Flow<List<PhoneHistoryEntity>> = phoneHistoryDao.getAllPhoneHistory()
 
+    suspend fun getPhoneHistoryById(id: Long): PhoneHistoryEntity? {
+        return phoneHistoryDao.getPhoneHistoryById(id)
+    }
+
     fun getPhoneHistoryByCategory(category: String): Flow<List<PhoneHistoryEntity>> {
         return phoneHistoryDao.getPhoneHistoryByCategory(category)
     }

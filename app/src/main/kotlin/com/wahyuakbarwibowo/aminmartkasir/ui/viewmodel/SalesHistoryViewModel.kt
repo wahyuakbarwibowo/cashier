@@ -48,19 +48,6 @@ class SalesHistoryViewModel(
                         error = null
                     ) 
                 }
-                
-                // Load items for each sale
-                sales.forEach { sale ->
-                    viewModelScope.launch {
-                        saleRepository.getSaleItems(sale.id).collect { items ->
-                            _uiState.update { state ->
-                                state.copy(
-                                    saleItems = state.saleItems + (sale.id to items)
-                                )
-                            }
-                        }
-                    }
-                }
             }
         }
     }

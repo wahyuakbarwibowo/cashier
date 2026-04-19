@@ -40,6 +40,11 @@ class ViewModelFactory(
                     saleRepository = SaleRepository(database.saleDao(), database.saleItemDao())
                 ) as T
             }
+            modelClass.isAssignableFrom(SaleDetailViewModel::class.java) -> {
+                SaleDetailViewModel(
+                    saleRepository = SaleRepository(database.saleDao(), database.saleItemDao())
+                ) as T
+            }
             modelClass.isAssignableFrom(PurchaseViewModel::class.java) -> {
                 PurchaseViewModel(
                     supplierRepository = SupplierRepository(
@@ -66,6 +71,11 @@ class ViewModelFactory(
                 DigitalTransactionViewModel(
                     digitalProductRepository = DigitalProductRepository(database.digitalProductDao()),
                     digitalCategoryRepository = DigitalCategoryRepository(database.digitalCategoryDao()),
+                    phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao())
+                ) as T
+            }
+            modelClass.isAssignableFrom(DigitalReportDetailViewModel::class.java) -> {
+                DigitalReportDetailViewModel(
                     phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao())
                 ) as T
             }

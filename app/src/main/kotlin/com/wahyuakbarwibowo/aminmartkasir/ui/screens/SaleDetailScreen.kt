@@ -23,11 +23,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SalesHistoryViewModel
+import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SaleDetailViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
 import java.text.SimpleDateFormat
 import java.util.*
+import com.wahyuakbarwibowo.aminmartkasir.ui.screens.LastTransactionData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,13 +36,17 @@ fun SaleDetailScreen(
     saleId: Long,
     onNavigateBack: () -> Unit,
     viewModelFactory: Factory? = null,
-    viewModel: SalesHistoryViewModel = viewModel(factory = viewModelFactory)
+    viewModel: SaleDetailViewModel = viewModel(factory = viewModelFactory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val sale = uiState.sales.find { it.id == saleId }
-    val items = uiState.saleItems[saleId] ?: emptyList()
+    val sale = uiState.sale
+    val items = uiState.items
     val dateFormat = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale("id", "ID"))
     var showPrinterDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(saleId) {
+        viewModel.loadSaleDetail(saleId)
+    }
     
     Scaffold(
         topBar = {
@@ -63,6 +68,18 @@ fun SaleDetailScreen(
             )
         }
     ) { paddingValues ->
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
+
         if (sale == null) {
             Box(
                 modifier = Modifier
@@ -70,10 +87,13 @@ fun SaleDetailScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Transaksi tidak ditemukan")
+                Text(uiState.error ?: "Transaksi tidak ditemukan")
             }
             return@Scaffold
         }
+
+        val calculatedSubtotal = items.sumOf { it.subtotal }
+        val calculatedDiscount = (calculatedSubtotal - sale.total).coerceAtLeast(0.0)
         
         Column(
             modifier = Modifier
@@ -99,40 +119,31 @@ fun SaleDetailScreen(
                     
                     HorizontalDivider()
                     
-                    InfoRow("No. Transaksi", "#TRX-${sale.id}")
-                    InfoRow(
-                        "Tanggal",
-                        sale.createdAt?.let {
+                    SaleDetailRow(label = "Nomor Transaksi", value = "#TRX-${sale.id}")
+                    SaleDetailRow(
+                        label = "Tanggal", 
+                        value = sale.createdAt?.let { 
                             try {
                                 dateFormat.format(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(it)!!)
                             } catch (e: Exception) {
                                 it
                             }
-                        } ?: "-"
+                        } ?: ""
                     )
-                    InfoRow("Total", formatCurrency(sale.total), isBold = true)
-                    InfoRow("Dibayar", formatCurrency(sale.paid))
-                    InfoRow("Kembalian", formatCurrency(sale.change))
-                    
-                    if (sale.pointsEarned > 0) {
-                        InfoRow("Poin Earned", "+${sale.pointsEarned} poin")
-                    }
-                    if (sale.pointsRedeemed > 0) {
-                        InfoRow("Poin Digunakan", "-${sale.pointsRedeemed} poin")
-                    }
+                    SaleDetailRow(label = "Status", value = "Selesai")
                 }
             }
             
-            // Items
+            // Items Section
             Card {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Item Pembelian",
+                        text = "Daftar Item",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -165,12 +176,25 @@ fun SaleDetailScreen(
                             }
                         }
                     }
+                    
+                    HorizontalDivider()
+                    
+                    SaleDetailRow(label = "Subtotal", value = formatCurrency(calculatedSubtotal))
+                    if (calculatedDiscount > 0) {
+                        SaleDetailRow(label = "Diskon", value = "- ${formatCurrency(calculatedDiscount)}")
+                    }
+                    SaleDetailRow(label = "Total", value = formatCurrency(sale.total), isBold = true)
+                    SaleDetailRow(label = "Tunai", value = formatCurrency(sale.paid))
+                    SaleDetailRow(label = "Kembalian", value = formatCurrency(sale.change))
                 }
             }
         }
     }
-
+    
     if (showPrinterDialog && sale != null) {
+        val calculatedSubtotal = items.sumOf { it.subtotal }
+        val calculatedDiscount = (calculatedSubtotal - sale.total).coerceAtLeast(0.0)
+
         val transactionData = LastTransactionData(
             transactionId = "TRX-${sale.id}",
             items = items.map { item ->
@@ -181,14 +205,14 @@ fun SaleDetailScreen(
                     subtotal = item.subtotal
                 )
             },
-            subtotal = items.sumOf { it.subtotal },
-            discount = 0.0, // We should probably store discount in SaleEntity if needed
+            subtotal = calculatedSubtotal,
+            discount = calculatedDiscount,
             total = sale.total,
             paid = sale.paid,
             change = sale.change,
-            pointsEarned = sale.pointsEarned
+            pointsEarned = 0 
         )
-
+        
         BluetoothPrinterDialog(
             onDismiss = { showPrinterDialog = false },
             onDeviceConnected = {},
@@ -199,7 +223,7 @@ fun SaleDetailScreen(
 }
 
 @Composable
-fun InfoRow(
+private fun SaleDetailRow(
     label: String,
     value: String,
     isBold: Boolean = false
