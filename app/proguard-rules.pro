@@ -33,9 +33,12 @@
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -dontwarn kotlinx.coroutines.**
 
-# Apache POI / Log4j exclusions
--dontwarn org.apache.logging.log4j.**
+# Apache POI 4.1.2
 -dontwarn org.apache.poi.**
+-dontwarn org.apache.commons.codec.**
+-dontwarn javax.xml.stream.**
+-dontwarn com.sun.org.apache.xerces.**
+-dontwarn com.sun.org.apache.xml.internal.resolver.**
 
 # Kotlin - Metadata compatibility with R8
 -dontwarn kotlin.Metadata
