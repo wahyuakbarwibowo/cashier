@@ -3,20 +3,18 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -30,15 +28,21 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 import java.math.BigDecimal
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 // Category colors mapping
 private val CategoryColors = mapOf(
@@ -65,6 +69,7 @@ fun DigitalTransactionScreen(
     var productToDelete by remember { mutableStateOf<DigitalProductEntity?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
     
     Scaffold(
         topBar = {
@@ -103,10 +108,12 @@ fun DigitalTransactionScreen(
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // 1. Categories Selection (Scrollable)
+                // 1. Categories Selection (Header)
                 Surface(
                     color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.zIndex(1f)
                 ) {
                     CategorySelectionSection(
                         categories = uiState.categories,
@@ -115,109 +122,52 @@ fun DigitalTransactionScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 2. Input Section & Recent (Main Content)
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
+                // 2. Main List (LazyColumn for better visibility and performance)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    // Input Card
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.ContactPhone, 
-                                    contentDescription = null, 
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Nomor Tujuan / ID Pelanggan",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            OutlinedTextField(
-                                value = uiState.targetNumber,
-                                onValueChange = { viewModel.setTargetNumber(it) },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("08xx / ID Pelanggan") },
-                                trailingIcon = {
-                                    if (uiState.targetNumber.isNotEmpty()) {
-                                        IconButton(onClick = { viewModel.setTargetNumber("") }) {
-                                            Icon(Icons.Default.Cancel, contentDescription = "Clear")
-                                        }
-                                    }
-                                },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
-                                textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            OutlinedTextField(
-                                value = uiState.transactionNote,
-                                onValueChange = { viewModel.setTransactionNote(it) },
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Keterangan Tambahan (Opsional)") },
-                                placeholder = { Text("Contoh: Token PLN") },
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            // Recent Targets
-                            val recentTargets = remember(uiState.phoneHistory) {
-                                uiState.phoneHistory
-                                    .mapNotNull { it.phoneNumber?.trim() }
-                                    .filter { it.isNotBlank() }
-                                    .distinct()
-                                    .take(5)
-                            }
-                            
-                            if (recentTargets.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text("Input Terakhir:", style = MaterialTheme.typography.labelMedium)
-                                FlowRow(
-                                    modifier = Modifier.padding(top = 4.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    recentTargets.forEach { target ->
-                                        SuggestionChip(
-                                            onClick = { viewModel.setTargetNumber(target) },
-                                            label = { Text(target) },
-                                            shape = CircleShape
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // 3. Provider Tabs (if any)
-                    val providers = uiState.products.map { it.provider }.distinct()
-                    if (providers.size > 1) {
-                        ProviderTabsSection(
-                            providers = providers,
-                            selectedProvider = uiState.selectedProvider,
-                            onProviderSelected = { viewModel.setSelectedProvider(it) }
+                    // Input Card Section
+                    item {
+                        InputSection(
+                            targetNumber = uiState.targetNumber,
+                            onTargetNumberChange = { viewModel.setTargetNumber(it) },
+                            note = uiState.transactionNote,
+                            onNoteChange = { viewModel.setTransactionNote(it) },
+                            recentTargets = uiState.phoneHistory
+                                .mapNotNull { it.phoneNumber?.trim() }
+                                .filter { it.isNotBlank() }
+                                .distinct()
+                                .take(5)
                         )
                     }
 
-                    // 4. Products Grid
+                    // Provider Selection Section
+                    val providers = uiState.products.map { it.provider }.distinct()
+                    if (providers.size > 1) {
+                        item {
+                            ProviderTabsSection(
+                                providers = providers,
+                                selectedProvider = uiState.selectedProvider,
+                                onProviderSelected = { viewModel.setSelectedProvider(it) }
+                            )
+                        }
+                    }
+
+                    // Products Header
+                    item {
+                        PaddingValues(horizontal = 16.dp, vertical = 8.dp).let {
+                            Text(
+                                text = "Daftar Produk",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(it)
+                            )
+                        }
+                    }
+
+                    // Products Grid-like items
                     val filteredProducts = if (uiState.selectedProvider != null) {
                         uiState.products.filter { it.provider == uiState.selectedProvider }
                     } else {
@@ -225,70 +175,58 @@ fun DigitalTransactionScreen(
                     }
 
                     if (uiState.isLoading && !uiState.isRefreshing) {
-                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
                         }
                     } else if (filteredProducts.isEmpty()) {
-                        EmptyProductsSection(uiState.selectedCategory ?: "Kategori")
+                        item {
+                            EmptyProductsSection(uiState.selectedCategory ?: "Kategori")
+                        }
                     } else {
-                        // We use a non-scrolling grid inside verticalScroll
-                        // Or we can manually calculate rows. Let's use a Column with Rows for simplicity in a scrollable view
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text(
-                                text = "Pilih Produk",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            
-                            filteredProducts.chunked(2).forEach { rowItems ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    rowItems.forEach { product ->
-                                        ProductCard(
-                                            modifier = Modifier.weight(1f),
-                                            product = product,
-                                            onClick = {
-                                                if (uiState.targetNumber.isBlank()) {
-                                                    // Trigger validation error
-                                                    viewModel.processTransaction(product, product.sellingPrice, null, null)
-                                                } else {
-                                                    selectedProductForPayment = product
-                                                    viewModel.setPaidAmount(product.sellingPrice.toInt().toString())
-                                                }
-                                            },
-                                            onEdit = {
-                                                productToEdit = product
-                                                showEditDialog = true
-                                            },
-                                            onDelete = {
-                                                productToDelete = product
-                                                showDeleteConfirmation = true
+                        val chunks = filteredProducts.chunked(2)
+                        items(chunks) { rowItems ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                rowItems.forEach { product ->
+                                    ProductCard(
+                                        modifier = Modifier.weight(1f),
+                                        product = product,
+                                        categoryColor = CategoryColors[product.category.uppercase()] ?: MaterialTheme.colorScheme.primary,
+                                        onClick = {
+                                            if (uiState.targetNumber.isBlank()) {
+                                                viewModel.processTransaction(product, product.sellingPrice, null, null)
+                                            } else {
+                                                selectedProductForPayment = product
+                                                viewModel.setPaidAmount(product.sellingPrice.toInt().toString())
                                             }
-                                        )
-                                    }
-                                    if (rowItems.size < 2) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
+                                        },
+                                        onEdit = {
+                                            productToEdit = product
+                                            showEditDialog = true
+                                        },
+                                        onDelete = {
+                                            productToDelete = product
+                                            showDeleteConfirmation = true
+                                        }
+                                    )
+                                }
+                                if (rowItems.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
     }
 
-    // Payment Confirmation Dialog (Enhanced)
     if (selectedProductForPayment != null) {
         DigitalPaymentDialog(
             product = selectedProductForPayment!!,
@@ -308,46 +246,30 @@ fun DigitalTransactionScreen(
         )
     }
 
-    // Edit Product Dialog
     if (showEditDialog && productToEdit != null) {
         EditDigitalProductDialog(
             product = productToEdit!!,
-            onDismiss = {
-                showEditDialog = false
-                productToEdit = null
-            },
-            onProductUpdated = { updatedProduct ->
-                viewModel.updateProduct(updatedProduct)
-                showEditDialog = false
-                productToEdit = null
-            }
+            onDismiss = { showEditDialog = false; productToEdit = null },
+            onProductUpdated = { viewModel.updateProduct(it); showEditDialog = false; productToEdit = null }
         )
     }
 
-    // Delete Confirmation
     if (showDeleteConfirmation && productToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
             title = { Text("Hapus Produk") },
-            text = { Text("Apakah Anda yakin ingin menghapus produk \"${productToDelete!!.name}\"?") },
+            text = { Text("Hapus ${productToDelete!!.name}?") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteProduct(productToDelete!!)
                     showDeleteConfirmation = false
-                    productToDelete = null
-                }) {
-                    Text("Hapus", color = MaterialTheme.colorScheme.error)
-                }
+                }) { Text("Hapus", color = Color.Red) }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) { Text("Batal") }
-            }
+            dismissButton = { TextButton(onClick = { showDeleteConfirmation = false }) { Text("Batal") } }
         )
     }
 
     var showPrinterDialog by remember { mutableStateOf(false) }
-
-    // Success Dialog
     if (uiState.successMessage != null) {
         AlertDialog(
             onDismissRequest = { viewModel.clearMessages() },
@@ -360,58 +282,189 @@ fun DigitalTransactionScreen(
             },
             text = { Text(uiState.successMessage!!) },
             confirmButton = {
-                Button(onClick = { showPrinterDialog = true }) {
-                    Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.size(4.dp))
-                    Text("Cetak Struk")
-                }
+                Button(onClick = { showPrinterDialog = true }) { Text("Cetak Struk") }
             },
-            dismissButton = {
-                TextButton(onClick = { viewModel.clearMessages() }) {
-                    Text("Tutup")
-                }
-            }
+            dismissButton = { TextButton(onClick = { viewModel.clearMessages() }) { Text("OK") } }
         )
     }
 
     if (showPrinterDialog && uiState.lastProcessedTransaction != null) {
         BluetoothPrinterDialog(
-            onDismiss = { 
-                showPrinterDialog = false
-                viewModel.clearMessages()
-            },
+            onDismiss = { showPrinterDialog = false; viewModel.clearMessages() },
             onDeviceConnected = {},
             digitalTransaction = uiState.lastProcessedTransaction,
             viewModelFactory = viewModelFactory
         )
     }
 
-    // Error Dialog
     if (uiState.error != null) {
         AlertDialog(
             onDismissRequest = { viewModel.clearMessages() },
             title = { Text("Gagal") },
             text = { Text(uiState.error!!) },
-            confirmButton = {
-                Button(onClick = { viewModel.clearMessages() }) {
-                    Text("Tutup")
-                }
-            }
+            confirmButton = { Button(onClick = { viewModel.clearMessages() }) { Text("Tutup") } }
         )
     }
 
-    // Processing Overlay
     if (uiState.isProcessing) {
-        AlertDialog(
-            onDismissRequest = {},
-            confirmButton = {},
-            title = { Text("Memproses Transaksi...") },
-            text = {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+        AlertDialog(onDismissRequest = {}, confirmButton = {}, title = { Text("Memproses...") }, text = { CircularProgressIndicator() })
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun InputSection(
+    targetNumber: String,
+    onTargetNumberChange: (String) -> Unit,
+    note: String,
+    onNoteChange: (String) -> Unit,
+    recentTargets: List<String>
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Tujuan & Keterangan",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            OutlinedTextField(
+                value = targetNumber,
+                onValueChange = onTargetNumberChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Nomor HP / ID Pelanggan") },
+                trailingIcon = {
+                    if (targetNumber.isNotEmpty()) {
+                        IconButton(onClick = { onTargetNumberChange("") }) {
+                            Icon(Icons.Default.Cancel, null)
+                        }
+                    }
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            OutlinedTextField(
+                value = note,
+                onValueChange = onNoteChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Note / Token PLN") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            if (recentTargets.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Input Terakhir:", style = MaterialTheme.typography.labelMedium)
+                FlowRow(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    recentTargets.forEach { target ->
+                        SuggestionChip(
+                            onClick = { onTargetNumberChange(target) },
+                            label = { Text(target) },
+                            shape = CircleShape
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ProductCard(
+    modifier: Modifier = Modifier,
+    product: DigitalProductEntity,
+    categoryColor: Color,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         )
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .background(categoryColor)
+                .align(Alignment.TopStart)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = product.provider,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = categoryColor,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    
+                    var expanded by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { expanded = true }, modifier = Modifier.size(18.dp)) {
+                            Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.outline)
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            DropdownMenuItem(text = { Text("Edit") }, onClick = { onEdit(); expanded = false })
+                            DropdownMenuItem(text = { Text("Hapus", color = Color.Red) }, onClick = { onDelete(); expanded = false })
+                        }
+                    }
+                }
+                
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = formatCurrency(product.sellingPrice),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
     }
 }
 
@@ -504,77 +557,6 @@ fun ProviderTabsSection(
                 onClick = { onProviderSelected(provider) },
                 text = { Text(provider) }
             )
-        }
-    }
-}
-
-@Composable
-fun ProductCard(
-    modifier: Modifier = Modifier,
-    product: DigitalProductEntity,
-    onClick: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Card(
-        modifier = modifier
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Box {
-            // Edit/Delete Menu
-            Row(
-                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
-            ) {
-                var expanded by remember { mutableStateOf(false) }
-                IconButton(onClick = { expanded = true }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.MoreVert, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
-                }
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Edit") },
-                        leadingIcon = { Icon(Icons.Default.Edit, null) },
-                        onClick = { onEdit(); expanded = false }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Hapus", color = Color.Red) },
-                        leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color.Red) },
-                        onClick = { onDelete(); expanded = false }
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = product.provider,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = formatCurrency(product.sellingPrice),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.align(Alignment.End)
-                )
-            }
         }
     }
 }
