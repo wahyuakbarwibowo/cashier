@@ -12,13 +12,23 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import android.Manifest
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import com.google.zxing.client.android.Intents
+import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PurchaseCartItem
@@ -405,22 +415,55 @@ private fun AddPurchaseItemDialog(
     var selectedProduct by remember { mutableStateOf<ProductEntity?>(null) }
     var qtyText by remember { mutableStateOf("1") }
     var priceText by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     val qty = qtyText.toIntOrNull() ?: 0
     val price = priceText.toDoubleOrNull() ?: 0.0
+
+    val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        val scannedCode = result.contents
+        if (!scannedCode.isNullOrBlank()) {
+            onSearchQueryChange(scannedCode)
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val options = ScanOptions().apply {
+                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
+                setPrompt("Scan barcode produk untuk pembelian")
+                setBeepEnabled(true)
+                setOrientationLocked(true)
+                setCaptureActivity(BarcodeCaptureActivity::class.java)
+                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
+            }
+            barcodeLauncher.launch(options)
+        } else {
+            Toast.makeText(context, "Izin kamera diperlukan untuk scan barcode", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Tambah Item Pembelian") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Search Field added
+                // Search Field with Scan Icon
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
                     label = { Text("Cari Produk") },
                     placeholder = { Text("Nama atau kode produk...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
