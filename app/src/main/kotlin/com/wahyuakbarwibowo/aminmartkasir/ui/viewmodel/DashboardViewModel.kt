@@ -76,9 +76,7 @@ class DashboardViewModel(
             try {
                 // Load weekly sales (last 7 days)
                 val allSales = saleRepository.allSales.first()
-                val calendar = Calendar.getInstance()
                 val weeklyTrend = mutableListOf<Pair<String, Double>>()
-                
                 val dayFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
                 
                 for (i in 6 downTo 0) {
@@ -91,16 +89,21 @@ class DashboardViewModel(
                     weeklyTrend.add(label to dailyTotal)
                 }
                 
-                // Load Top 5 Products
-                // Note: In real app, this should be a specialized DAO query
+                // Load Top 5 Products with improved name resolution
                 val allItems = mutableListOf<com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity>()
-                allSales.take(50).forEach { sale ->
+                // Get items from recent 100 sales for better sample
+                allSales.take(100).forEach { sale ->
                     allItems.addAll(saleRepository.getSaleItemsOnce(sale.id))
                 }
                 
-                val topProds = allItems.groupBy { it.productName }
-                    .mapValues { it.value.sumOf { item -> item.qty } }
-                    .toList()
+                val topProds = allItems.groupBy { it.productId } // Group by ID first for reliability
+                    .map { (productId, items) ->
+                        // Try to get name from the items, or fallback to "Produk #ID"
+                        val name = items.firstOrNull { !it.productName.isNullOrBlank() }?.productName 
+                                   ?: "Produk #$productId"
+                        val totalQty = items.sumOf { it.qty }
+                        name to totalQty
+                    }
                     .sortedByDescending { it.second }
                     .take(5)
 
@@ -111,13 +114,9 @@ class DashboardViewModel(
                     ) 
                 }
             } catch (e: Exception) {
-                // Ignore analytics errors for stability
+                // Ignore analytics errors
             }
         }
-    }
-
-    private fun _uiState_update_error(message: String?) {
-        // Placeholder for internal update if needed
     }
 
     fun refresh() {
@@ -125,7 +124,6 @@ class DashboardViewModel(
     }
 }
 
-// Extension to allow state update with error
 private fun <T> MutableStateFlow<T>.update(function: (T) -> T) {
     while (true) {
         val prevValue = value
