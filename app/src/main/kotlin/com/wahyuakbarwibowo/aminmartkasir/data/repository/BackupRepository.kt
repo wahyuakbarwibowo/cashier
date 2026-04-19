@@ -44,7 +44,7 @@ class BackupRepository(private val database: AppDatabase) {
 
         database.withTransaction {
             kotlin.runCatching {
-                // Re-insert everything
+                // Re-insert everything with sanitization for older versions
                 for (product in backupData.products) {
                     database.productDao().insert(product)
                 }
@@ -58,9 +58,17 @@ class BackupRepository(private val database: AppDatabase) {
                 for (sale in backupData.sales) {
                     database.saleDao().insert(sale)
                 }
+                
+                // Sanitize SaleItems (v4 added productName)
                 for (saleItem in backupData.saleItems) {
-                    database.saleItemDao().insert(saleItem)
+                    val sanitized = if (saleItem.productName.isNullOrBlank()) {
+                        saleItem.copy(productName = "Produk #${saleItem.productId}")
+                    } else {
+                        saleItem
+                    }
+                    database.saleItemDao().insert(sanitized)
                 }
+                
                 for (supplier in backupData.suppliers) {
                     database.supplierDao().insert(supplier)
                 }
@@ -79,12 +87,20 @@ class BackupRepository(private val database: AppDatabase) {
                 for (history in backupData.phoneHistory) {
                     database.phoneHistoryDao().insert(history)
                 }
-                for (digitalProduct in backupData.digitalProducts) {
-                    database.digitalProductDao().insert(digitalProduct)
+                
+                // Sanitize DigitalProducts (v3 added sortOrder)
+                backupData.digitalProducts.forEachIndexed { index, prod ->
+                    // If sortOrder is 0, it might be from old version, assign an index
+                    val sanitized = if (prod.sortOrder == 0) prod.copy(sortOrder = index) else prod
+                    database.digitalProductDao().insert(sanitized)
                 }
-                for (digitalCategory in backupData.digitalCategories) {
-                    database.digitalCategoryDao().insert(digitalCategory)
+
+                // Sanitize DigitalCategories (v3 added sortOrder)
+                backupData.digitalCategories.forEachIndexed { index, cat ->
+                    val sanitized = if (cat.sortOrder == 0) cat.copy(sortOrder = index) else cat
+                    database.digitalCategoryDao().insert(sanitized)
                 }
+
                 for (expense in backupData.expenses) {
                     database.expenseDao().insert(expense)
                 }
