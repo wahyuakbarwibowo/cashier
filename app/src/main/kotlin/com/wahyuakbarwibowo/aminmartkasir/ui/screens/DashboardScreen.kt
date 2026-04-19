@@ -87,7 +87,7 @@ fun DashboardScreen(
         }
     ) { paddingValues ->
         PullToRefreshBox(
-            isRefreshing = uiState.isLoading && uiState.weeklySales.isNotEmpty(), // Only show refresh when already has data
+            isRefreshing = uiState.isLoading && uiState.weeklySales.isNotEmpty(),
             onRefresh = { viewModel.refresh() },
             modifier = Modifier
                 .fillMaxSize()
@@ -142,7 +142,11 @@ fun DashboardScreen(
                                 chart = rememberCartesianChart(
                                     rememberLineCartesianLayer(),
                                     startAxis = rememberStartAxis(),
-                                    bottomAxis = rememberBottomAxis(),
+                                    bottomAxis = rememberBottomAxis(
+                                        valueFormatter = { value, _, _ ->
+                                            uiState.weeklySales.getOrNull(value.toInt())?.first ?: ""
+                                        }
+                                    ),
                                 ),
                                 modelProducer = salesModelProducer,
                                 modifier = Modifier.height(200.dp)
@@ -237,7 +241,11 @@ fun DashboardScreen(
                                 chart = rememberCartesianChart(
                                     rememberColumnCartesianLayer(),
                                     startAxis = rememberStartAxis(),
-                                    bottomAxis = rememberBottomAxis(),
+                                    bottomAxis = rememberBottomAxis(
+                                        valueFormatter = { value, _, _ ->
+                                            uiState.topProducts.getOrNull(value.toInt())?.first?.take(8) ?: ""
+                                        }
+                                    ),
                                 ),
                                 modelProducer = topProductsModelProducer,
                                 modifier = Modifier.height(200.dp)
