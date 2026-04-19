@@ -52,9 +52,13 @@ class BackupRepository(private val database: AppDatabase) {
                 for (customer in backupData.customers) {
                     database.customerDao().insert(customer)
                 }
-                for (paymentMethod in backupData.paymentMethods) {
-                    database.paymentMethodDao().insert(paymentMethod)
+                
+                // Sanitize PaymentMethods (v6 added sortOrder)
+                backupData.paymentMethods.forEachIndexed { index, method ->
+                    val sanitized = if (method.sortOrder == 0) method.copy(sortOrder = index) else method
+                    database.paymentMethodDao().insert(sanitized)
                 }
+                
                 backupData.shopProfile?.let { database.shopProfileDao().insert(it) }
                 for (sale in backupData.sales) {
                     database.saleDao().insert(sale)
