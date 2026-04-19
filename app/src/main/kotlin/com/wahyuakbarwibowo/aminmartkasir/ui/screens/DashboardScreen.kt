@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,191 +86,198 @@ fun DashboardScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading && uiState.weeklySales.isNotEmpty(), // Only show refresh when already has data
+            onRefresh = { viewModel.refresh() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Summary Cards
-            Text(
-                text = "Ringkasan",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SummaryCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Penjualan Hari Ini",
-                    value = formatCurrency(uiState.todaySales),
-                    icon = Icons.AutoMirrored.Filled.TrendingUp,
-                    backgroundColor = MaterialTheme.colorScheme.primaryContainer
+                // Summary Cards
+                Text(
+                    text = "Ringkasan",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
                 
-                SummaryCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Total Transaksi",
-                    value = uiState.totalSales.toString(),
-                    icon = Icons.AutoMirrored.Filled.ShowChart,
-                    backgroundColor = MaterialTheme.colorScheme.secondaryContainer
-                )
-            }
-            
-            // Weekly Sales Chart
-            if (uiState.weeklySales.isNotEmpty()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Tren Penjualan (7 Hari)",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        CartesianChartHost(
-                            chart = rememberCartesianChart(
-                                rememberLineCartesianLayer(),
-                                startAxis = rememberStartAxis(),
-                                bottomAxis = rememberBottomAxis(),
-                            ),
-                            modelProducer = salesModelProducer,
-                            modifier = Modifier.height(200.dp)
-                        )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SummaryCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Penjualan Hari Ini",
+                        value = formatCurrency(uiState.todaySales),
+                        icon = Icons.AutoMirrored.Filled.TrendingUp,
+                        backgroundColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                    
+                    SummaryCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Total Transaksi",
+                        value = uiState.totalSales.toString(),
+                        icon = Icons.AutoMirrored.Filled.ShowChart,
+                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                }
+                
+                // Weekly Sales Chart
+                if (uiState.weeklySales.isNotEmpty()) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Tren Penjualan (7 Hari)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            CartesianChartHost(
+                                chart = rememberCartesianChart(
+                                    rememberLineCartesianLayer(),
+                                    startAxis = rememberStartAxis(),
+                                    bottomAxis = rememberBottomAxis(),
+                                ),
+                                modelProducer = salesModelProducer,
+                                modifier = Modifier.height(200.dp)
+                            )
+                        }
                     }
                 }
-            }
 
-            // Quick Actions
-            Text(
-                text = "Menu Cepat",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            
-            QuickActionButton(
-                text = "Transaksi Penjualan",
-                icon = Icons.Default.ShoppingCart,
-                onClick = onNavigateToSales
-            )
-            
-            QuickActionButton(
-                text = "Transaksi Digital",
-                icon = Icons.Default.PhoneIphone,
-                onClick = onNavigateToDigital
-            )
-            
-            QuickActionButton(
-                text = "Manajemen Produk",
-                icon = Icons.Default.Inventory,
-                onClick = onNavigateToProducts
-            )
-            
-            // Low Stock Alert
-            if (uiState.lowStockCount > 0) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ),
-                    onClick = onNavigateToLowStock
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                // Quick Actions
+                Text(
+                    text = "Menu Cepat",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                QuickActionButton(
+                    text = "Transaksi Penjualan",
+                    icon = Icons.Default.ShoppingCart,
+                    onClick = onNavigateToSales
+                )
+                
+                QuickActionButton(
+                    text = "Transaksi Digital",
+                    icon = Icons.Default.PhoneIphone,
+                    onClick = onNavigateToDigital
+                )
+                
+                QuickActionButton(
+                    text = "Manajemen Produk",
+                    icon = Icons.Default.Inventory,
+                    onClick = onNavigateToProducts
+                )
+                
+                // Low Stock Alert
+                if (uiState.lowStockCount > 0) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        ),
+                        onClick = onNavigateToLowStock
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Column {
+                                    Text(
+                                        text = "Stok Rendah",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Text(
+                                        text = "${uiState.lowStockCount} produk perlu restock",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
                             Icon(
-                                imageVector = Icons.Default.Warning,
+                                imageVector = Icons.Default.ChevronRight,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onErrorContainer
                             )
-                            Column {
-                                Text(
-                                    text = "Stok Rendah",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                                Text(
-                                    text = "${uiState.lowStockCount} produk perlu restock",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
                         }
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
                     }
                 }
-            }
-            
-            // Top Products
-            if (uiState.topProducts.isNotEmpty()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Produk Terlaris (Qty)",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        CartesianChartHost(
-                            chart = rememberCartesianChart(
-                                rememberColumnCartesianLayer(),
-                                startAxis = rememberStartAxis(),
-                                bottomAxis = rememberBottomAxis(),
-                            ),
-                            modelProducer = topProductsModelProducer,
-                            modifier = Modifier.height(200.dp)
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        // Legend
-                        uiState.topProducts.forEachIndexed { index, pair ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = 2.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraSmall)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = "${index + 1}. ${pair.first}: ${pair.second}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                
+                // Top Products
+                if (uiState.topProducts.isNotEmpty()) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Produk Terlaris (Qty)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            CartesianChartHost(
+                                chart = rememberCartesianChart(
+                                    rememberColumnCartesianLayer(),
+                                    startAxis = rememberStartAxis(),
+                                    bottomAxis = rememberBottomAxis(),
+                                ),
+                                modelProducer = topProductsModelProducer,
+                                modifier = Modifier.height(200.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            // Legend
+                            uiState.topProducts.forEachIndexed { index, pair ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 2.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraSmall)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = "${index + 1}. ${pair.first}: ${pair.second}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
                         }
                     }
                 }
+                
+                // Stats Footer
+                StatRow(
+                    label = "Total Produk",
+                    value = uiState.totalProducts.toString()
+                )
+                StatRow(
+                    label = "Total Pelanggan",
+                    value = uiState.totalCustomers.toString()
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
             }
-            
-            // Stats Footer
-            StatRow(
-                label = "Total Produk",
-                value = uiState.totalProducts.toString()
-            )
-            StatRow(
-                label = "Total Pelanggan",
-                value = uiState.totalCustomers.toString()
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

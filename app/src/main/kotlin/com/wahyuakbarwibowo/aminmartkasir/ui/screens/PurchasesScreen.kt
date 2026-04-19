@@ -14,27 +14,28 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
-import android.Manifest
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
-import com.google.zxing.client.android.Intents
-import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PurchaseCartItem
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PurchaseViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import android.Manifest
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import com.google.zxing.client.android.Intents
+import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,80 +82,83 @@ fun PurchasesScreen(
             )
         }
     ) { paddingValues ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-            return@Scaffold
-        }
-
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refreshData() },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(paddingValues)
         ) {
-            item {
-                SupplierSelectorCard(
-                    suppliers = uiState.suppliers,
-                    selectedSupplier = uiState.selectedSupplier,
-                    onSelectSupplier = { viewModel.setSelectedSupplier(it) },
-                    onAddSupplier = { showAddSupplierDialog = true }
-                )
-            }
-
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("Total Pembelian", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                text = formatCurrency(uiState.total),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Text(
-                            text = "${uiState.cartItems.size} item",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            if (uiState.cartItems.isEmpty()) {
-                item {
-                    EmptyPurchaseCart(onAddItem = { showAddItemDialog = true })
+            if (uiState.isLoading && !uiState.isRefreshing) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             } else {
-                items(uiState.cartItems, key = { it.product.id }) { item ->
-                    PurchaseCartItemCard(
-                        item = item,
-                        onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
-                        onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
-                        onRemove = { viewModel.removeFromCart(item.product.id) }
-                    )
-                }
-                item {
-                    Button(
-                        onClick = { viewModel.processPurchase() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = uiState.cartItems.isNotEmpty()
-                    ) {
-                        Text("Proses Pembelian")
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        SupplierSelectorCard(
+                            suppliers = uiState.suppliers,
+                            selectedSupplier = uiState.selectedSupplier,
+                            onSelectSupplier = { viewModel.setSelectedSupplier(it) },
+                            onAddSupplier = { showAddSupplierDialog = true }
+                        )
+                    }
+
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("Total Pembelian", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = formatCurrency(uiState.total),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Text(
+                                    text = "${uiState.cartItems.size} item",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (uiState.cartItems.isEmpty()) {
+                        item {
+                            EmptyPurchaseCart(onAddItem = { showAddItemDialog = true })
+                        }
+                    } else {
+                        items(uiState.cartItems, key = { it.product.id }) { item ->
+                            PurchaseCartItemCard(
+                                item = item,
+                                onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
+                                onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
+                                onRemove = { viewModel.removeFromCart(item.product.id) }
+                            )
+                        }
+                        item {
+                            Button(
+                                onClick = { viewModel.processPurchase() },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = uiState.cartItems.isNotEmpty()
+                            ) {
+                                Text("Proses Pembelian")
+                            }
+                        }
                     }
                 }
             }

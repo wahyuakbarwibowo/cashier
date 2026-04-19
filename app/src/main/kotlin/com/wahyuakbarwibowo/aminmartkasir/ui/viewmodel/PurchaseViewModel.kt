@@ -14,6 +14,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.PurchaseRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SupplierRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,6 +27,7 @@ data class PurchaseUiState(
     val total: Double = 0.0,
     val searchQuery: String = "",
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val successMessage: String? = null,
     val error: String? = null
 )
@@ -82,7 +84,8 @@ class PurchaseViewModel(
                         products = filteredProducts,
                         searchQuery = _searchQuery.value,
                         selectedSupplier = selectedSupplier,
-                        isLoading = false
+                        isLoading = false,
+                        isRefreshing = false
                     )
                 }
             }
@@ -91,6 +94,14 @@ class PurchaseViewModel(
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun refreshData() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            delay(500)
+            loadInitialData()
+        }
     }
 
     fun addToCart(product: ProductEntity, qty: Int, price: Double) {

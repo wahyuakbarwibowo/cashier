@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 data class StockHistoryUiState(
     val history: List<StockHistoryEntity> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isLoadMoreLoading: Boolean = false,
     val canLoadMore: Boolean = true,
     val error: String? = null
@@ -82,6 +83,10 @@ class StockHistoryViewModel(
     }
 
     fun refreshData() {
-        loadInitialData()
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            kotlinx.coroutines.delay(500)
+            loadInitialData()
+        }
     }
 }
