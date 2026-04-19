@@ -63,6 +63,10 @@ class PhoneHistoryRepository(private val phoneHistoryDao: PhoneHistoryDao) {
         return phoneHistoryDao.getPhoneHistoryById(id)
     }
 
+    suspend fun getPhoneHistory(limit: Int, offset: Int): List<PhoneHistoryEntity> {
+        return phoneHistoryDao.getPhoneHistory(limit, offset)
+    }
+
     fun getPhoneHistoryByCategory(category: String): Flow<List<PhoneHistoryEntity>> {
         return phoneHistoryDao.getPhoneHistoryByCategory(category)
     }

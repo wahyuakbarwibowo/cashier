@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,6 +33,23 @@ fun SalesHistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+    val listState = rememberLazyListState()
+
+    // Detect when scrolled to bottom for infinite scroll
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItemsCount = listState.layoutInfo.totalItemsCount
+            // Load more when user is 5 items away from the bottom
+            uiState.canLoadMore && lastVisibleItemIndex >= totalItemsCount - 5 && totalItemsCount > 0
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && !uiState.isLoadMoreLoading) {
+            viewModel.loadNextPage()
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -61,7 +79,6 @@ fun SalesHistoryScreen(
                     CircularProgressIndicator()
                 }
             } else if (uiState.sales.isEmpty()) {
-                // Ensure empty state is still scrollable so pull to refresh works
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -84,6 +101,7 @@ fun SalesHistoryScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -94,6 +112,19 @@ fun SalesHistoryScreen(
                             onClick = { onNavigateToSaleDetail(sale.id) },
                             dateFormat = dateFormat
                         )
+                    }
+
+                    if (uiState.isLoadMoreLoading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
+                        }
                     }
                 }
             }

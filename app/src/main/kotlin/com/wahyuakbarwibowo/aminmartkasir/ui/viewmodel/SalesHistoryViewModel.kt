@@ -20,6 +20,8 @@ data class SalesHistoryUiState(
     val endDate: String = "",
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isLoadMoreLoading: Boolean = false,
+    val canLoadMore: Boolean = true,
     val error: String? = null
 )
 
@@ -31,24 +33,67 @@ class SalesHistoryViewModel(
     val uiState: StateFlow<SalesHistoryUiState> = _uiState.asStateFlow()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val dateTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    private var salesJob: Job? = null
+    
+    private var currentPage = 0
+    private val pageSize = 20
+    private var isLastPage = false
+    private var loadJob: Job? = null
 
     init {
-        loadSales()
+        loadInitialSales()
     }
 
-    private fun loadSales() {
-        salesJob?.cancel()
-        salesJob = viewModelScope.launch {
-            saleRepository.allSales.collect { sales ->
+    private fun loadInitialSales() {
+        currentPage = 0
+        isLastPage = false
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, sales = emptyList(), canLoadMore = true) }
+            try {
+                val sales = saleRepository.getSales(pageSize, 0)
+                if (sales.size < pageSize) {
+                    isLastPage = true
+                }
                 _uiState.update { 
                     it.copy(
                         sales = sales,
                         isLoading = false,
                         isRefreshing = false,
+                        canLoadMore = !isLastPage,
                         error = null
                     ) 
                 }
+                currentPage++
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = e.message) }
+            }
+        }
+    }
+
+    fun loadNextPage() {
+        if (isLastPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading) return
+
+        loadJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoadMoreLoading = true) }
+            try {
+                val offset = currentPage * pageSize
+                val newSales = saleRepository.getSales(pageSize, offset)
+                
+                if (newSales.size < pageSize) {
+                    isLastPage = true
+                }
+                
+                _uiState.update { state ->
+                    state.copy(
+                        sales = state.sales + newSales,
+                        isLoadMoreLoading = false,
+                        canLoadMore = !isLastPage,
+                        error = null
+                    )
+                }
+                currentPage++
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadMoreLoading = false, error = e.message) }
             }
         }
     }
@@ -56,28 +101,35 @@ class SalesHistoryViewModel(
     fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true, startDate = "", endDate = "") }
-            delay(500) // Give UI time to show the indicator and then clear it correctly
-            loadSales()
+            delay(500)
+            loadInitialSales()
         }
     }
 
     fun loadSalesByDateRange(startDate: String, endDate: String) {
+        // For date range, we usually load all or use a different paging strategy
+        // Simplified: load all for the range for now to keep it predictable
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, startDate = startDate, endDate = endDate) }
-            
-            saleRepository.allSales.collect { sales ->
-                val filtered = sales.filter { sale ->
-                    sale.createdAt?.let { createdAt ->
-                        isDateWithinRange(createdAt, startDate, endDate)
-                    } ?: false
+            _uiState.update { it.copy(isLoading = true, startDate = startDate, endDate = endDate, canLoadMore = false) }
+            try {
+                // This repository method needs to be checked if it supports pagination or not
+                // For now we use the existing allSales flow filtered manually or a specific query
+                saleRepository.allSales.first().let { allSales ->
+                    val filtered = allSales.filter { sale ->
+                        sale.createdAt?.let { createdAt ->
+                            isDateWithinRange(createdAt, startDate, endDate)
+                        } ?: false
+                    }
+                    _uiState.update { 
+                        it.copy(
+                            sales = filtered,
+                            isLoading = false,
+                            error = null
+                        ) 
+                    }
                 }
-                _uiState.update { 
-                    it.copy(
-                        sales = filtered,
-                        isLoading = false,
-                        error = null
-                    ) 
-                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
     }

@@ -14,6 +14,9 @@ interface StockHistoryDao {
     @Query("SELECT * FROM stock_history ORDER BY createdAt DESC, id DESC")
     fun getAllStockHistory(): Flow<List<StockHistoryEntity>>
 
+    @Query("SELECT * FROM stock_history ORDER BY createdAt DESC, id DESC LIMIT :limit OFFSET :offset")
+    suspend fun getStockHistory(limit: Int, offset: Int): List<StockHistoryEntity>
+
     @Query("SELECT * FROM stock_history WHERE productId = :productId ORDER BY createdAt DESC, id DESC")
     fun getStockHistoryByProduct(productId: Long): Flow<List<StockHistoryEntity>>
 

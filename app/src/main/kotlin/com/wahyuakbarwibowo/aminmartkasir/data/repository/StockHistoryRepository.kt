@@ -7,6 +7,10 @@ import kotlinx.coroutines.flow.Flow
 class StockHistoryRepository(private val stockHistoryDao: StockHistoryDao) {
     val allStockHistory: Flow<List<StockHistoryEntity>> = stockHistoryDao.getAllStockHistory()
 
+    suspend fun getStockHistory(limit: Int, offset: Int): List<StockHistoryEntity> {
+        return stockHistoryDao.getStockHistory(limit, offset)
+    }
+
     fun getStockHistoryByProduct(productId: Long): Flow<List<StockHistoryEntity>> {
         return stockHistoryDao.getStockHistoryByProduct(productId)
     }

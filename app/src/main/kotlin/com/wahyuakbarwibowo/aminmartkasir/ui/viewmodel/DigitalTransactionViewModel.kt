@@ -27,6 +27,8 @@ data class DigitalTransactionUiState(
     val searchQuery: String = "",
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isLoadMoreLoading: Boolean = false,
+    val canLoadMore: Boolean = true,
     val isProcessing: Boolean = false,
     val paidAmount: String = "",
     val lastProcessedTransaction: PhoneHistoryEntity? = null,
@@ -46,6 +48,10 @@ class DigitalTransactionViewModel(
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private var searchJob: Job? = null
     private var loadDataJob: Job? = null
+    
+    private var currentHistoryPage = 0
+    private val pageSize = 20
+    private var isLastHistoryPage = false
 
     init {
         loadData()
@@ -61,6 +67,9 @@ class DigitalTransactionViewModel(
 
     private fun loadData() {
         loadDataJob?.cancel()
+        currentHistoryPage = 0
+        isLastHistoryPage = false
+        
         loadDataJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             
@@ -70,20 +79,27 @@ class DigitalTransactionViewModel(
                 seedInitialData()
             }
 
+            // Load history first page
+            val initialHistory = phoneHistoryRepository.getPhoneHistory(pageSize, 0)
+            if (initialHistory.size < pageSize) {
+                isLastHistoryPage = true
+            }
+            currentHistoryPage = 1
+
             combine(
                 digitalCategoryRepository.allDigitalCategories,
-                phoneHistoryRepository.allPhoneHistory,
                 digitalProductRepository.allDigitalProducts
-            ) { cats, history, allProds ->
-                Triple(cats, history, allProds)
-            }.collect { (cats, history, allProds) ->
+            ) { cats, allProds ->
+                cats to allProds
+            }.collect { (cats, allProds) ->
                 _uiState.update { state ->
                     state.copy(
                         categories = cats,
-                        phoneHistory = history,
+                        phoneHistory = initialHistory,
                         allProducts = allProds,
                         isLoading = false,
                         isRefreshing = false,
+                        canLoadMore = !isLastHistoryPage,
                         selectedCategory = when {
                             state.selectedCategory != null && cats.any { it.name == state.selectedCategory } -> state.selectedCategory
                             else -> cats.firstOrNull()?.name
@@ -96,18 +112,38 @@ class DigitalTransactionViewModel(
         }
     }
 
+    fun loadNextHistoryPage() {
+        if (isLastHistoryPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadMoreLoading = true) }
+            try {
+                val offset = currentHistoryPage * pageSize
+                val newHistory = phoneHistoryRepository.getPhoneHistory(pageSize, offset)
+                
+                if (newHistory.size < pageSize) {
+                    isLastHistoryPage = true
+                }
+                
+                _uiState.update { state ->
+                    state.copy(
+                        phoneHistory = state.phoneHistory + newHistory,
+                        isLoadMoreLoading = false,
+                        canLoadMore = !isLastHistoryPage
+                    )
+                }
+                currentHistoryPage++
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadMoreLoading = false, error = e.message) }
+            }
+        }
+    }
+
     private suspend fun seedInitialData() {
         val cats = listOf("PULSA", "PLN", "E-WALLET", "PAKET DATA")
         cats.forEachIndexed { index, name ->
             digitalCategoryRepository.insert(DigitalCategoryEntity(name = name, sortOrder = index))
         }
-        
-        // Add some example products
-        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Telkomsel", name = "Pulsa 10k", nominal = 10000.0, costPrice = 10200.0, sellingPrice = 12000.0, sortOrder = 0))
-        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Telkomsel", name = "Pulsa 20k", nominal = 20000.0, costPrice = 20200.0, sellingPrice = 22000.0, sortOrder = 1))
-        digitalProductRepository.insert(DigitalProductEntity(category = "PULSA", provider = "Indosat", name = "Pulsa 10k", nominal = 10000.0, costPrice = 10100.0, sellingPrice = 12000.0, sortOrder = 2))
-        digitalProductRepository.insert(DigitalProductEntity(category = "PLN", provider = "TOKEN", name = "PLN Token 20k", nominal = 20000.0, costPrice = 20000.0, sellingPrice = 22000.0, sortOrder = 0))
-        digitalProductRepository.insert(DigitalProductEntity(category = "PLN", provider = "TOKEN", name = "PLN Token 50k", nominal = 50000.0, costPrice = 50000.0, sellingPrice = 52000.0, sortOrder = 1))
     }
 
     fun setSelectedCategory(category: String) {
@@ -221,6 +257,8 @@ class DigitalTransactionViewModel(
                     )
                 }
                 resetTransactionForm()
+                // Refresh history for the first page to show the new transaction
+                loadData()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isProcessing = false, error = e.message) }
             }

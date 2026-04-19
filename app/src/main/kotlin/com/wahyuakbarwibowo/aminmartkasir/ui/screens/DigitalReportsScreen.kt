@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -43,6 +45,7 @@ fun DigitalReportsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
 
     val categories = remember(uiState.phoneHistory) {
         uiState.phoneHistory.map { it.category }.distinct()
@@ -58,6 +61,23 @@ fun DigitalReportsScreen(
             categoryMatch && queryMatch
         }
     }
+
+    // Detect when scrolled to bottom for infinite scroll
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItemsCount = listState.layoutInfo.totalItemsCount
+            // Load more when user is 5 items away from the bottom
+            uiState.canLoadMore && lastVisibleItemIndex >= totalItemsCount - 5 && totalItemsCount > 0
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && !uiState.isLoadMoreLoading) {
+            viewModel.loadNextHistoryPage()
+        }
+    }
+
     val totalAmount = remember(filteredHistory) { filteredHistory.sumOf { it.sellingPrice } }
     val totalProfit = remember(filteredHistory) { filteredHistory.sumOf { it.profit } }
     
@@ -98,97 +118,111 @@ fun DigitalReportsScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    placeholder = { Text("Cari nomor tujuan / provider / note") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    singleLine = true
-                )
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        placeholder = { Text("Cari nomor tujuan / provider / note") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        singleLine = true
+                    )
 
-                if (categories.isNotEmpty()) {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
+                    if (categories.isNotEmpty()) {
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                FilterChip(
+                                    selected = selectedCategory == null,
+                                    onClick = { selectedCategory = null },
+                                    label = { Text("Semua") }
+                                )
+                            }
+                            items(categories) { category ->
+                                FilterChip(
+                                    selected = selectedCategory == category,
+                                    onClick = { selectedCategory = category },
+                                    label = { Text(category) }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        item {
-                            FilterChip(
-                                selected = selectedCategory == null,
-                                onClick = { selectedCategory = null },
-                                label = { Text("Semua") }
-                            )
+                        Card(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("Total Nominal", style = MaterialTheme.typography.labelMedium)
+                                Text(
+                                    text = formatCurrency(totalAmount),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                        items(categories) { category ->
-                            FilterChip(
-                                selected = selectedCategory == category,
-                                onClick = { selectedCategory = category },
-                                label = { Text(category) }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Card(modifier = Modifier.weight(1f)) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Total Nominal", style = MaterialTheme.typography.labelMedium)
-                            Text(
-                                text = formatCurrency(totalAmount),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Card(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("Total Profit", style = MaterialTheme.typography.labelMedium)
+                                Text(
+                                    text = formatCurrency(totalProfit),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
-                    Card(modifier = Modifier.weight(1f)) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Total Profit", style = MaterialTheme.typography.labelMedium)
-                            Text(
-                                text = formatCurrency(totalProfit),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (filteredHistory.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Data tidak ditemukan")
                         }
-                    }
-                }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            state = listState,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredHistory, key = { it.id }) { item ->
+                                DigitalHistoryItem(
+                                    history = item,
+                                    onClick = { onNavigateToDetail(item.id) }
+                                )
+                            }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (filteredHistory.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Data tidak ditemukan")
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(filteredHistory, key = { it.id }) { item ->
-                            DigitalHistoryItem(
-                                history = item,
-                                onClick = { onNavigateToDetail(item.id) }
-                            )
+                            if (uiState.isLoadMoreLoading) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
 }
 
 @Composable
