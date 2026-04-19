@@ -88,6 +88,11 @@ class ViewModelFactory(
                     stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao())
                 ) as T
             }
+            modelClass.isAssignableFrom(CustomerViewModel::class.java) -> {
+                CustomerViewModel(
+                    customerRepository = CustomerRepository(database.customerDao())
+                ) as T
+            }
             modelClass.isAssignableFrom(DebtViewModel::class.java) -> {
                 DebtViewModel(
                     receivableRepository = ReceivableRepository(database.receivableDao()),

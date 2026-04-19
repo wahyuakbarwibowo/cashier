@@ -31,6 +31,7 @@ val secondaryMenuItems = listOf(
     AppMenuItem(Screen.SalesHistory.route, "Riwayat Penjualan", Icons.AutoMirrored.Filled.ReceiptLong),
     AppMenuItem(Screen.Reports.route, "Laporan", Icons.Default.Assessment),
     AppMenuItem(Screen.ProfitLoss.route, "Laba Rugi", Icons.AutoMirrored.Filled.ShowChart),
+    AppMenuItem(Screen.Customers.route, "Daftar Pelanggan", Icons.Default.People),
     AppMenuItem(Screen.Expenses.route, "Pengeluaran", Icons.Default.MoneyOff),
     AppMenuItem(Screen.StockHistory.route, "Riwayat Stok", Icons.Default.History),
     AppMenuItem(Screen.DigitalReports.route, "Riwayat Digital", Icons.Default.Receipt),

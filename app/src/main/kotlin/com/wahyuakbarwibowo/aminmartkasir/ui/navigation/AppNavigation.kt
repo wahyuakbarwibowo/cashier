@@ -219,5 +219,12 @@ fun AppNavigation(
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
+
+        composable(Screen.Customers.route) {
+            CustomersScreen(
+                onOpenDrawer = onOpenDrawer,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
     }
 }
