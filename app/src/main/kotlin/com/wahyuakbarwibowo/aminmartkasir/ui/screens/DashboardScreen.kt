@@ -49,13 +49,13 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
-    // Model producers for Vico charts
-    val salesModelProducer = remember { CartesianChartModelProducer.build() }
-    val topProductsModelProducer = remember { CartesianChartModelProducer.build() }
+    // Updated Model producers construction
+    val salesModelProducer = remember { CartesianChartModelProducer() }
+    val topProductsModelProducer = remember { CartesianChartModelProducer() }
     
     LaunchedEffect(uiState.weeklySales) {
         if (uiState.weeklySales.isNotEmpty()) {
-            salesModelProducer.tryRunTransaction {
+            salesModelProducer.runTransaction {
                 lineSeries {
                     series(uiState.weeklySales.map { it.second })
                 }
@@ -65,7 +65,7 @@ fun DashboardScreen(
     
     LaunchedEffect(uiState.topProducts) {
         if (uiState.topProducts.isNotEmpty()) {
-            topProductsModelProducer.tryRunTransaction {
+            topProductsModelProducer.runTransaction {
                 columnSeries {
                     series(uiState.topProducts.map { it.second })
                 }
@@ -145,7 +145,7 @@ fun DashboardScreen(
                             title = "Total Produk",
                             value = uiState.totalProducts.toString(),
                             icon = Icons.Default.Inventory2,
-                            backgroundColor = Color(0xFFE8F5E9), // Light Green
+                            backgroundColor = Color(0xFFE8F5E9),
                             onClick = onNavigateToProducts
                         )
                         
@@ -154,7 +154,7 @@ fun DashboardScreen(
                             title = "Total Pelanggan",
                             value = uiState.totalCustomers.toString(),
                             icon = Icons.Default.Groups,
-                            backgroundColor = Color(0xFFE1F5FE), // Light Blue
+                            backgroundColor = Color(0xFFE1F5FE),
                             onClick = onNavigateToCustomers
                         )
                     }
@@ -291,11 +291,11 @@ fun DashboardScreen(
                             ) {
                                 uiState.topProducts.forEachIndexed { index, pair ->
                                     val color = when(index) {
-                                        0 -> Color(0xFFE91E63) // Brand Pink
-                                        1 -> Color(0xFF2196F3) // Blue
-                                        2 -> Color(0xFF4CAF50) // Green
-                                        3 -> Color(0xFFFF9800) // Orange
-                                        else -> Color(0xFF9C27B0) // Purple
+                                        0 -> Color(0xFFE91E63)
+                                        1 -> Color(0xFF2196F3)
+                                        2 -> Color(0xFF4CAF50)
+                                        3 -> Color(0xFFFF9800)
+                                        else -> Color(0xFF9C27B0)
                                     }
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
