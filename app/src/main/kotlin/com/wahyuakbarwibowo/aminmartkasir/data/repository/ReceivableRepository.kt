@@ -7,6 +7,14 @@ import kotlinx.coroutines.flow.Flow
 class ReceivableRepository(private val receivableDao: ReceivableDao) {
     val allReceivables: Flow<List<ReceivableEntity>> = receivableDao.getAllReceivables()
 
+    suspend fun getReceivables(limit: Int, offset: Int): List<ReceivableEntity> {
+        return receivableDao.getReceivables(limit, offset)
+    }
+
+    suspend fun getReceivablesByStatusPaginated(status: String, limit: Int, offset: Int): List<ReceivableEntity> {
+        return receivableDao.getReceivablesByStatus(status, limit, offset)
+    }
+
     fun getReceivablesByCustomerId(customerId: Long): Flow<List<ReceivableEntity>> {
         return receivableDao.getReceivablesByCustomerId(customerId)
     }

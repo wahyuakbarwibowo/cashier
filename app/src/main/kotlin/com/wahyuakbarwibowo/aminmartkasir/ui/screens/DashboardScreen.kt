@@ -1,5 +1,6 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +21,16 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DashboardViewModel
 import java.text.NumberFormat
 import java.util.*
 
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -32,6 +43,30 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
+    // Model producers for Vico charts
+    val salesModelProducer = remember { CartesianChartModelProducer.build() }
+    val topProductsModelProducer = remember { CartesianChartModelProducer.build() }
+    
+    LaunchedEffect(uiState.weeklySales) {
+        if (uiState.weeklySales.isNotEmpty()) {
+            salesModelProducer.tryRunTransaction {
+                lineSeries {
+                    series(uiState.weeklySales.map { it.second })
+                }
+            }
+        }
+    }
+    
+    LaunchedEffect(uiState.topProducts) {
+        if (uiState.topProducts.isNotEmpty()) {
+            topProductsModelProducer.tryRunTransaction {
+                columnSeries {
+                    series(uiState.topProducts.map { it.second })
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -79,34 +114,36 @@ fun DashboardScreen(
                 
                 SummaryCard(
                     modifier = Modifier.weight(1f),
-                    title = "Penjualan Bulan Ini",
-                    value = formatCurrency(uiState.monthSales),
+                    title = "Total Transaksi",
+                    value = uiState.totalSales.toString(),
                     icon = Icons.AutoMirrored.Filled.ShowChart,
                     backgroundColor = MaterialTheme.colorScheme.secondaryContainer
                 )
             }
             
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SummaryCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Total Produk",
-                    value = uiState.totalProducts.toString(),
-                    icon = Icons.Default.Inventory,
-                    backgroundColor = MaterialTheme.colorScheme.tertiaryContainer
-                )
-                
-                SummaryCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Total Pelanggan",
-                    value = uiState.totalCustomers.toString(),
-                    icon = Icons.Default.People,
-                    backgroundColor = MaterialTheme.colorScheme.primaryContainer
-                )
+            // Weekly Sales Chart
+            if (uiState.weeklySales.isNotEmpty()) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Tren Penjualan (7 Hari)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CartesianChartHost(
+                            chart = rememberCartesianChart(
+                                rememberLineCartesianLayer(),
+                                startAxis = rememberStartAxis(),
+                                bottomAxis = rememberBottomAxis(),
+                            ),
+                            modelProducer = salesModelProducer,
+                            modifier = Modifier.height(200.dp)
+                        )
+                    }
+                }
             }
-            
+
             // Quick Actions
             Text(
                 text = "Menu Cepat",
@@ -179,18 +216,60 @@ fun DashboardScreen(
                 }
             }
             
-            // Stats
-            Text(
-                text = "Statistik",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            // Top Products
+            if (uiState.topProducts.isNotEmpty()) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Produk Terlaris (Qty)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CartesianChartHost(
+                            chart = rememberCartesianChart(
+                                rememberColumnCartesianLayer(),
+                                startAxis = rememberStartAxis(),
+                                bottomAxis = rememberBottomAxis(),
+                            ),
+                            modelProducer = topProductsModelProducer,
+                            modifier = Modifier.height(200.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Legend
+                        uiState.topProducts.forEachIndexed { index, pair ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraSmall)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "${index + 1}. ${pair.first}: ${pair.second}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
             
+            // Stats Footer
             StatRow(
-                label = "Total Transaksi",
-                value = uiState.totalSales.toString()
+                label = "Total Produk",
+                value = uiState.totalProducts.toString()
+            )
+            StatRow(
+                label = "Total Pelanggan",
+                value = uiState.totalCustomers.toString()
             )
             
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

@@ -7,6 +7,14 @@ import kotlinx.coroutines.flow.Flow
 class PayableRepository(private val payableDao: PayableDao) {
     val allPayables: Flow<List<PayableEntity>> = payableDao.getAllPayables()
 
+    suspend fun getPayables(limit: Int, offset: Int): List<PayableEntity> {
+        return payableDao.getPayables(limit, offset)
+    }
+
+    suspend fun getPayablesByStatusPaginated(status: String, limit: Int, offset: Int): List<PayableEntity> {
+        return payableDao.getPayablesByStatus(status, limit, offset)
+    }
+
     fun getPayablesBySupplierId(supplierId: Long): Flow<List<PayableEntity>> {
         return payableDao.getPayablesBySupplierId(supplierId)
     }

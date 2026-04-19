@@ -183,12 +183,14 @@ fun SettingsScreen(
             Button(
                 onClick = {
                     val profile = ShopProfileEntity(
+                        id = uiState.shopProfile?.id ?: 0,
                         name = shopName,
                         phoneNumber = phoneNumber,
                         address = address,
                         footerNote = footerNote,
                         cashierName = cashierName,
-                        poinEnabled = if (poinEnabled) 1 else 0
+                        poinEnabled = if (poinEnabled) 1 else 0,
+                        logoPath = uiState.shopProfile?.logoPath
                     )
                     viewModel.updateShopProfile(profile)
                 },

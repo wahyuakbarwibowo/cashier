@@ -32,7 +32,8 @@ class ViewModelFactory(
                     paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao()),
                     saleRepository = SaleRepository(database.saleDao(), database.saleItemDao()),
                     stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao()),
-                    customerPointsHistoryRepository = CustomerPointsHistoryRepository(database.customerPointsHistoryDao())
+                    customerPointsHistoryRepository = CustomerPointsHistoryRepository(database.customerPointsHistoryDao()),
+                    receivableRepository = ReceivableRepository(database.receivableDao())
                 ) as T
             }
             modelClass.isAssignableFrom(SalesHistoryViewModel::class.java) -> {
@@ -82,6 +83,14 @@ class ViewModelFactory(
             modelClass.isAssignableFrom(StockHistoryViewModel::class.java) -> {
                 StockHistoryViewModel(
                     stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao())
+                ) as T
+            }
+            modelClass.isAssignableFrom(DebtViewModel::class.java) -> {
+                DebtViewModel(
+                    receivableRepository = ReceivableRepository(database.receivableDao()),
+                    payableRepository = PayableRepository(database.payableDao()),
+                    customerRepository = CustomerRepository(database.customerDao()),
+                    supplierRepository = SupplierRepository(database.supplierDao(), database.purchaseDao(), database.purchaseItemDao())
                 ) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {

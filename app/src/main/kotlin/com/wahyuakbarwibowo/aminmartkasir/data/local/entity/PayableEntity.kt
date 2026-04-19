@@ -30,6 +30,9 @@ data class PayableEntity(
     val supplierId: Long? = null,
     val supplier: String? = null,
     val amount: Double = 0.0,
+    val paidAmount: Double = 0.0,
     val dueDate: String? = null,
-    val status: String = "pending"
+    val status: String = "pending",
+    val notes: String? = null,
+    val createdAt: String? = null
 )

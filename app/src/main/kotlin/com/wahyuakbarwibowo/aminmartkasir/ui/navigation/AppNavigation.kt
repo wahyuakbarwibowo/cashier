@@ -211,5 +211,13 @@ fun AppNavigation(
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
+
+        composable(Screen.Receivable.route) {
+            ReceivableScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
     }
 }

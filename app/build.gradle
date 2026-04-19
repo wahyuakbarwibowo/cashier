@@ -28,7 +28,7 @@ android {
 
     defaultConfig {
         applicationId "com.wahyuakbarwibowo.aminmartkasir"
-        minSdk 24
+        minSdk 26
         targetSdk 35
         versionCode 1
         versionName "1.0.0"
@@ -123,6 +123,14 @@ dependencies {
 
     // JSON
     implementation 'com.google.code.gson:gson:2.11.0'
+
+    // Charts (Vico)
+    implementation "com.patrykandpatrick.vico:compose:2.0.0-alpha.27"
+    implementation "com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.27"
+    implementation "com.patrykandpatrick.vico:core:2.0.0-alpha.27"
+
+    // Excel Export (Apache POI)
+    implementation 'org.apache.poi:poi-ooxml:5.3.0'
 
     // Testing
     testImplementation 'junit:junit:4.13.2'

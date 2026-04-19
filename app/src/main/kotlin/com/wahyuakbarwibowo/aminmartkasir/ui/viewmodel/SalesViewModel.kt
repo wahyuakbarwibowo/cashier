@@ -46,7 +46,8 @@ class SalesViewModel(
     private val paymentMethodRepository: PaymentMethodRepository,
     private val saleRepository: SaleRepository,
     private val stockHistoryRepository: StockHistoryRepository,
-    private val customerPointsHistoryRepository: CustomerPointsHistoryRepository
+    private val customerPointsHistoryRepository: CustomerPointsHistoryRepository,
+    private val receivableRepository: ReceivableRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SalesTransactionUiState())
@@ -366,6 +367,21 @@ class SalesViewModel(
                             )
                         )
                     }
+                }
+
+                // If payment method is debt, record to receivables
+                if (currentState.selectedPaymentMethod?.name?.contains("Hutang", ignoreCase = true) == true) {
+                    receivableRepository.insert(
+                        ReceivableEntity(
+                            saleId = saleId,
+                            customerId = currentState.selectedCustomer?.id,
+                            amount = currentState.total,
+                            paidAmount = currentState.paid,
+                            status = if (currentState.paid >= currentState.total) "paid" else "pending",
+                            createdAt = dateFormat.format(Date()),
+                            notes = "Hutang dari transaksi #$saleId"
+                        )
+                    )
                 }
 
                 // Clear cart

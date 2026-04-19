@@ -730,13 +730,17 @@ fun PaymentMethodSelectorDialog(
             }
         },
         confirmButton = {
+            val isDebt = selectedMethod?.name?.contains("Hutang", ignoreCase = true) == true
+            val isCustomerSelected = selectedCustomer != null
+            val isPaidValid = if (isDebt) true else paidValue >= currentTotal
+
             Button(
                 onClick = { 
                     if (selectedMethod != null) {
                         onProcess(paidValue, selectedMethod!!)
                     }
                 },
-                enabled = paidValue >= currentTotal && selectedMethod != null
+                enabled = selectedMethod != null && (!isDebt || isCustomerSelected) && isPaidValid
             ) {
                 Text("Selesaikan Transaksi")
             }

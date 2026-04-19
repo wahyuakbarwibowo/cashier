@@ -12,5 +12,6 @@ data class ShopProfileEntity(
     val cashierName: String? = null,
     val phoneNumber: String? = null,
     val address: String? = null,
-    val poinEnabled: Int = 0
+    val poinEnabled: Int = 0,
+    val logoPath: String? = null
 )

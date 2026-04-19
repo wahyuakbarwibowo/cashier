@@ -13,15 +13,12 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.PointOfSale
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PhoneIphone
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
@@ -30,6 +27,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewMod
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ExpenseViewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SalesHistoryViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import com.wahyuakbarwibowo.aminmartkasir.utils.ExcelExportUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +42,7 @@ fun ReportsScreen(
     val salesState by salesHistoryViewModel.uiState.collectAsState()
     val expenseState by expenseViewModel.uiState.collectAsState()
     val digitalState by digitalTransactionViewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     val cashierRevenue = remember(salesState.sales) { salesState.sales.sumOf { it.total } }
     val cashierCount = salesState.sales.size
@@ -67,7 +66,22 @@ fun ReportsScreen(
                         Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
                     }
                 },
-                windowInsets = WindowInsets.statusBars
+                windowInsets = WindowInsets.statusBars,
+                actions = {
+                    IconButton(onClick = {
+                        val file = ExcelExportUtils.exportFullReport(
+                            context,
+                            salesState.sales,
+                            digitalState.phoneHistory,
+                            expenseState.expenses
+                        )
+                        if (file != null) {
+                            ExcelExportUtils.shareFile(context, file)
+                        }
+                    }) {
+                        Icon(Icons.Default.Download, contentDescription = "Ekspor Excel")
+                    }
+                }
             )
         }
     ) { paddingValues ->

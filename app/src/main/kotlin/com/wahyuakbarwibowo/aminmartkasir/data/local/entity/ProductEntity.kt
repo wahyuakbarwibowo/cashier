@@ -17,6 +17,7 @@ data class ProductEntity(
     val packageQty: Int = 0,
     val discount: Double = 0.0,
     val stock: Int = 0,
+    val lowStockThreshold: Int = 5,
     val createdAt: String? = null,
     val updatedAt: String? = null
 )

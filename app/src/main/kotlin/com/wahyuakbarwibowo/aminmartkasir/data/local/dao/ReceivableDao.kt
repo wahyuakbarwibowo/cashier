@@ -6,10 +6,16 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReceivableDao {
-    @Query("SELECT * FROM receivables ORDER BY dueDate ASC")
+    @Query("SELECT * FROM receivables ORDER BY createdAt DESC, id DESC")
     fun getAllReceivables(): Flow<List<ReceivableEntity>>
 
-    @Query("SELECT * FROM receivables WHERE customerId = :customerId ORDER BY dueDate ASC")
+    @Query("SELECT * FROM receivables ORDER BY createdAt DESC, id DESC LIMIT :limit OFFSET :offset")
+    suspend fun getReceivables(limit: Int, offset: Int): List<ReceivableEntity>
+
+    @Query("SELECT * FROM receivables WHERE status = :status ORDER BY createdAt DESC, id DESC LIMIT :limit OFFSET :offset")
+    suspend fun getReceivablesByStatus(status: String, limit: Int, offset: Int): List<ReceivableEntity>
+
+    @Query("SELECT * FROM receivables WHERE customerId = :customerId ORDER BY createdAt DESC, id DESC")
     fun getReceivablesByCustomerId(customerId: Long): Flow<List<ReceivableEntity>>
 
     @Query("SELECT * FROM receivables WHERE id = :id")
