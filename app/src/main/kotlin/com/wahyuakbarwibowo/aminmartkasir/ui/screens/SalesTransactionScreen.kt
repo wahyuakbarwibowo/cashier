@@ -325,14 +325,6 @@ fun SalesTransactionScreen(
                 showSuccessDialog = false 
                 successTransactionData = null
             },
-            title = { 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Berhasil")
-                }
-            },
-            text = { Text("Transaksi telah berhasil disimpan.") },
             confirmButton = {
                 Button(
                     onClick = { 
@@ -353,7 +345,15 @@ fun SalesTransactionScreen(
                 }) {
                     Text("Tutup")
                 }
-            }
+            },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Berhasil")
+                }
+            },
+            text = { Text("Transaksi telah berhasil disimpan.") }
         )
     }
 
@@ -373,6 +373,16 @@ fun SalesTransactionScreen(
         var newPrice by remember { mutableStateOf(productToEdit!!.sellingPrice.toLong().toString()) }
         AlertDialog(
             onDismissRequest = { showEditProductDialog = false },
+            confirmButton = {
+                Button(onClick = {
+                    showEditProductDialog = false
+                }) {
+                    Text("Simpan")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProductDialog = false }) { Text("Batal") }
+            },
             title = { Text("Ubah Harga Sementara") },
             text = {
                 Column {
@@ -389,18 +399,6 @@ fun SalesTransactionScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    // Note: This logic would need VM support to override price in cart specifically
-                    // For now we close it as price override is a complex state addition
-                    showEditProductDialog = false
-                }) {
-                    Text("Simpan")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditProductDialog = false }) { Text("Batal") }
             }
         )
     }
@@ -563,7 +561,7 @@ fun ProductSelectorDialog(
         }
     }
     
-    AlertDialog(
+    BasicAlertDialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f).padding(16.dp),
@@ -702,7 +700,7 @@ fun PaymentMethodSelectorDialog(
     val paidValue = paidText.toDoubleOrNull() ?: 0.0
     val changeValue = paidValue - currentTotal
 
-    AlertDialog(
+    BasicAlertDialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f).padding(16.dp),
@@ -852,23 +850,4 @@ fun PaymentMethodSelectorDialog(
             }
         }
     )
-}
-
-@Composable
-private fun SummaryRow(label: String, value: String, isBold: Boolean = false, color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = color
-        )
-        Text(
-            text = value,
-            style = if (isBold) MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.bodyMedium,
-            color = color
-        )
-    }
 }

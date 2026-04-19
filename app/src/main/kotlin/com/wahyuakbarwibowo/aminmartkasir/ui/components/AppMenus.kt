@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
@@ -35,7 +36,7 @@ val secondaryMenuItems = listOf(
     AppMenuItem(Screen.Expenses.route, "Pengeluaran", Icons.Default.MoneyOff),
     AppMenuItem(Screen.StockHistory.route, "Riwayat Stok", Icons.Default.History),
     AppMenuItem(Screen.DigitalReports.route, "Riwayat Digital", Icons.Default.Receipt),
-    AppMenuItem(Screen.Receivable.route, "Buku Hutang", Icons.Default.MenuBook),
+    AppMenuItem(Screen.Receivable.route, "Buku Hutang", Icons.AutoMirrored.Filled.MenuBook),
     AppMenuItem(Screen.DigitalManagement.route, "Kelola Produk Digital", Icons.Default.AppRegistration),
     AppMenuItem(Screen.Purchases.route, "Pembelian", Icons.Default.LocalShipping),
     AppMenuItem(Screen.Backup.route, "Backup & Restore", Icons.Default.Backup),

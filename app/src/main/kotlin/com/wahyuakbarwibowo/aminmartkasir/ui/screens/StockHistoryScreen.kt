@@ -164,7 +164,7 @@ fun StockHistoryItem(history: StockHistoryEntity) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = history.createdAt ?: "",
+                    text = history.createdAt,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -172,7 +172,7 @@ fun CustomerItemCard(
                 Text(customer.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(customer.phone ?: "-", style = MaterialTheme.typography.bodyMedium)
                 if (!customer.address.isNullOrBlank()) {
-                    Text(customer.address!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(customer.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Surface(
                     shape = MaterialTheme.shapes.extraSmall,
