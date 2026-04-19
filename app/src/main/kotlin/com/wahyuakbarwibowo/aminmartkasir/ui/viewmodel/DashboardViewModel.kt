@@ -74,7 +74,7 @@ class DashboardViewModel(
     private fun loadAnalyticsData() {
         viewModelScope.launch {
             try {
-                // Load weekly sales (last 7 days)
+                // 1. Weekly Sales
                 val allSales = saleRepository.allSales.first()
                 val weeklyTrend = mutableListOf<Pair<String, Double>>()
                 val dayFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
@@ -89,28 +89,30 @@ class DashboardViewModel(
                     weeklyTrend.add(label to dailyTotal)
                 }
                 
-                // Load Top 5 Products with improved name resolution
+                // 2. Resolve Top Products with Real Names from Master Data
                 val allItems = mutableListOf<com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity>()
-                // Get items from recent 100 sales for better sample
                 allSales.take(100).forEach { sale ->
                     allItems.addAll(saleRepository.getSaleItemsOnce(sale.id))
                 }
                 
-                val topProds = allItems.groupBy { it.productId } // Group by ID first for reliability
-                    .map { (productId, items) ->
-                        // Try to get name from the items, or fallback to "Produk #ID"
-                        val name = items.firstOrNull { !it.productName.isNullOrBlank() }?.productName 
-                                   ?: "Produk #$productId"
-                        val totalQty = items.sumOf { it.qty }
-                        name to totalQty
-                    }
+                // Group by ID to find top sellers
+                val topById = allItems.groupBy { it.productId }
+                    .mapValues { it.value.sumOf { item -> item.qty } }
+                    .toList()
                     .sortedByDescending { it.second }
                     .take(5)
+
+                // Fetch real names from Product Repository for these IDs
+                val resolvedTopProducts = topById.map { (productId, qty) ->
+                    val product = productRepository.getProductById(productId)
+                    val name = product?.name ?: allItems.firstOrNull { it.productId == productId }?.productName ?: "Produk #$productId"
+                    name to qty
+                }
 
                 _uiState.update { 
                     it.copy(
                         weeklySales = weeklyTrend,
-                        topProducts = topProds
+                        topProducts = resolvedTopProducts
                     ) 
                 }
             } catch (e: Exception) {
