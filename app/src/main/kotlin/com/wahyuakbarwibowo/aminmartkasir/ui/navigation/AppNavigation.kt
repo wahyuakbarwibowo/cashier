@@ -24,6 +24,7 @@ fun AppNavigation(
         composable(Screen.Dashboard.route) {
             DashboardScreen(
                 onNavigateToProducts = { navController.navigate(Screen.Products.route) },
+                onNavigateToCustomers = { navController.navigate(Screen.Customers.route) },
                 onNavigateToSales = { navController.navigate(Screen.SalesTransaction.route) },
                 onNavigateToLowStock = { navController.navigate(Screen.LowStock.route) },
                 onNavigateToDigital = { navController.navigate(Screen.DigitalTransaction.route) },

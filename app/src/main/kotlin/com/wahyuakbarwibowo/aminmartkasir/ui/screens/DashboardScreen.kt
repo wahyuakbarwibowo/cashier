@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
@@ -39,6 +40,7 @@ import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 @Composable
 fun DashboardScreen(
     onNavigateToProducts: () -> Unit,
+    onNavigateToCustomers: () -> Unit,
     onNavigateToSales: () -> Unit,
     onNavigateToLowStock: () -> Unit,
     onNavigateToDigital: () -> Unit,
@@ -103,32 +105,59 @@ fun DashboardScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Summary Cards
+                // Summary Cards - Grid 2x2
                 Text(
-                    text = "Ringkasan",
+                    text = "Ringkasan Performa",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    SummaryCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Penjualan Hari Ini",
-                        value = formatCurrency(uiState.todaySales),
-                        icon = Icons.AutoMirrored.Filled.TrendingUp,
-                        backgroundColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        SummaryCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Omzet Hari Ini",
+                            value = formatCurrency(uiState.todaySales),
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+                            onClick = onNavigateToSales
+                        )
+                        
+                        SummaryCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Total Transaksi",
+                            value = uiState.totalSales.toString(),
+                            icon = Icons.AutoMirrored.Filled.ShowChart,
+                            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                            onClick = onNavigateToSales
+                        )
+                    }
                     
-                    SummaryCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Total Transaksi",
-                        value = uiState.totalSales.toString(),
-                        icon = Icons.AutoMirrored.Filled.ShowChart,
-                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        SummaryCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Total Produk",
+                            value = uiState.totalProducts.toString(),
+                            icon = Icons.Default.Inventory2,
+                            backgroundColor = Color(0xFFE8F5E9), // Light Green
+                            onClick = onNavigateToProducts
+                        )
+                        
+                        SummaryCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Total Pelanggan",
+                            value = uiState.totalCustomers.toString(),
+                            icon = Icons.Default.Groups,
+                            backgroundColor = Color(0xFFE1F5FE), // Light Blue
+                            onClick = onNavigateToCustomers
+                        )
+                    }
                 }
                 
                 // Weekly Sales Chart
@@ -299,16 +328,6 @@ fun DashboardScreen(
                     }
                 }
                 
-                // Stats Footer
-                StatRow(
-                    label = "Total Produk",
-                    value = uiState.totalProducts.toString()
-                )
-                StatRow(
-                    label = "Total Pelanggan",
-                    value = uiState.totalCustomers.toString()
-                )
-                
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -321,13 +340,17 @@ fun SummaryCard(
     title: String,
     value: String,
     icon: ImageVector,
-    backgroundColor: Color
+    backgroundColor: Color,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier,
+        onClick = onClick,
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor
-        )
+        ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -335,20 +358,31 @@ fun SummaryCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
+            Surface(
+                modifier = Modifier.size(32.dp),
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.5f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -362,7 +396,8 @@ fun QuickActionButton(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier
@@ -392,27 +427,6 @@ fun QuickActionButton(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-@Composable
-fun StatRow(
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 
