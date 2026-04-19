@@ -34,6 +34,7 @@
 -dontwarn kotlinx.coroutines.**
 
 # Kotlin - Metadata compatibility with R8
+-dontwarn kotlin.Metadata
 -dontwarn kotlin.**
 -keep class kotlin.** { *; }
 -keep class kotlin.Metadata { *; }
