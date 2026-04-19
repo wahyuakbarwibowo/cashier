@@ -33,6 +33,10 @@
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -dontwarn kotlinx.coroutines.**
 
+# Apache POI / Log4j exclusions
+-dontwarn org.apache.logging.log4j.**
+-dontwarn org.apache.poi.**
+
 # Kotlin - Metadata compatibility with R8
 -dontwarn kotlin.Metadata
 -dontwarn kotlin.**
