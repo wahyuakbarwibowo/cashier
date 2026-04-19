@@ -23,63 +23,63 @@ if (hasReleaseSigning) {
 }
 
 android {
-    namespace 'com.wahyuakbarwibowo.aminmartkasir'
-    compileSdk 35
+    namespace = 'com.wahyuakbarwibowo.aminmartkasir'
+    compileSdk = 35
 
     defaultConfig {
-        applicationId "com.wahyuakbarwibowo.aminmartkasir"
-        minSdk 26
-        targetSdk 35
-        versionCode 1
-        versionName "1.0.0"
+        applicationId = "com.wahyuakbarwibowo.aminmartkasir"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
-            useSupportLibrary true
+            useSupportLibrary = true
         }
     }
 
     signingConfigs {
         debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+            storeFile = file('debug.keystore')
+            storePassword = 'android'
+            keyAlias = 'androiddebugkey'
+            keyPassword = 'android'
         }
         if (hasReleaseSigning) {
             release {
                 // Resolve relative paths from the project root (not :app module dir).
-                storeFile rootProject.file(signingProperties['MYAPP_UPLOAD_STORE_FILE'])
-                storePassword signingProperties['MYAPP_UPLOAD_STORE_PASSWORD']
-                keyAlias signingProperties['MYAPP_UPLOAD_KEY_ALIAS']
-                keyPassword signingProperties['MYAPP_UPLOAD_KEY_PASSWORD']
+                storeFile = rootProject.file(signingProperties['MYAPP_UPLOAD_STORE_FILE'])
+                storePassword = signingProperties['MYAPP_UPLOAD_STORE_PASSWORD']
+                keyAlias = signingProperties['MYAPP_UPLOAD_KEY_ALIAS']
+                keyPassword = signingProperties['MYAPP_UPLOAD_KEY_PASSWORD']
             }
         }
     }
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'r8-rules.pro'
             if (!forceUnsignedRelease && hasReleaseSigning) {
-                signingConfig signingConfigs.release
+                signingConfig = signingConfigs.release
             }
         }
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
         jvmTarget = '17'
     }
     buildFeatures {
-        compose true
-        buildConfig true
+        compose = true
+        buildConfig = true
     }
     packaging {
         resources {
