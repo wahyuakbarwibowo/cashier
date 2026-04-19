@@ -601,7 +601,7 @@ fun CartItemCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PaymentMethodSelectorDialog(
     total: Double,
@@ -715,15 +715,28 @@ fun PaymentMethodSelectorDialog(
 
                 // Payment Method Selector
                 Text("Metode Pembayaran", style = MaterialTheme.typography.titleSmall)
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     paymentMethods.forEach { method ->
                         FilterChip(
                             selected = selectedMethod == method,
                             onClick = { selectedMethod = method },
                             label = { Text(method.name) }
+                        )
+                    }
+                    
+                    // Add manual Hutang option if not in DB list
+                    val hasHutangInDb = paymentMethods.any { it.name.contains("Hutang", ignoreCase = true) }
+                    if (!hasHutangInDb) {
+                        FilterChip(
+                            selected = selectedMethod?.name == "Hutang",
+                            onClick = { 
+                                selectedMethod = PaymentMethodEntity(id = -1, name = "Hutang")
+                            },
+                            label = { Text("Hutang") }
                         )
                     }
                 }

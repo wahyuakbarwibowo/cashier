@@ -46,7 +46,8 @@ class BackupRepository(private val database: AppDatabase) {
             kotlin.runCatching {
                 // Re-insert everything with sanitization for older versions
                 for (product in backupData.products) {
-                    database.productDao().insert(product)
+                    val sanitized = if (product.lowStockThreshold == 0) product.copy(lowStockThreshold = 5) else product
+                    database.productDao().insert(sanitized)
                 }
                 for (customer in backupData.customers) {
                     database.customerDao().insert(customer)
@@ -79,10 +80,12 @@ class BackupRepository(private val database: AppDatabase) {
                     database.purchaseItemDao().insert(purchaseItem)
                 }
                 for (receivable in backupData.receivables) {
-                    database.receivableDao().insert(receivable)
+                    val sanitized = if (receivable.status.isBlank()) receivable.copy(status = "pending") else receivable
+                    database.receivableDao().insert(sanitized)
                 }
                 for (payable in backupData.payables) {
-                    database.payableDao().insert(payable)
+                    val sanitized = if (payable.status.isBlank()) payable.copy(status = "pending") else payable
+                    database.payableDao().insert(sanitized)
                 }
                 for (history in backupData.phoneHistory) {
                     database.phoneHistoryDao().insert(history)
