@@ -72,7 +72,10 @@ class ViewModelFactory(
                 DigitalTransactionViewModel(
                     digitalProductRepository = DigitalProductRepository(database.digitalProductDao()),
                     digitalCategoryRepository = DigitalCategoryRepository(database.digitalCategoryDao()),
-                    phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao())
+                    phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao()),
+                    paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao()),
+                    customerRepository = CustomerRepository(database.customerDao()),
+                    receivableRepository = ReceivableRepository(database.receivableDao())
                 ) as T
             }
             modelClass.isAssignableFrom(DigitalReportDetailViewModel::class.java) -> {

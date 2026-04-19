@@ -2,12 +2,8 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalCategoryEntity
-import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalProductEntity
-import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
-import com.wahyuakbarwibowo.aminmartkasir.data.repository.DigitalCategoryRepository
-import com.wahyuakbarwibowo.aminmartkasir.data.repository.DigitalProductRepository
-import com.wahyuakbarwibowo.aminmartkasir.data.repository.PhoneHistoryRepository
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
+import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -20,8 +16,12 @@ data class DigitalTransactionUiState(
     val products: List<DigitalProductEntity> = emptyList(),
     val allProducts: List<DigitalProductEntity> = emptyList(),
     val phoneHistory: List<PhoneHistoryEntity> = emptyList(),
+    val paymentMethods: List<PaymentMethodEntity> = emptyList(),
+    val customers: List<CustomerEntity> = emptyList(),
     val selectedCategory: String? = null,
     val selectedProvider: String? = null,
+    val selectedCustomer: CustomerEntity? = null,
+    val selectedPaymentMethod: PaymentMethodEntity? = null,
     val targetNumber: String = "",
     val transactionNote: String = "",
     val searchQuery: String = "",
@@ -39,7 +39,10 @@ data class DigitalTransactionUiState(
 class DigitalTransactionViewModel(
     private val digitalProductRepository: DigitalProductRepository,
     private val digitalCategoryRepository: DigitalCategoryRepository,
-    private val phoneHistoryRepository: PhoneHistoryRepository
+    private val phoneHistoryRepository: PhoneHistoryRepository,
+    private val paymentMethodRepository: PaymentMethodRepository,
+    private val customerRepository: CustomerRepository,
+    private val receivableRepository: ReceivableRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DigitalTransactionUiState())
@@ -55,6 +58,20 @@ class DigitalTransactionViewModel(
 
     init {
         loadData()
+        loadPaymentAndCustomers()
+    }
+
+    private fun loadPaymentAndCustomers() {
+        viewModelScope.launch {
+            combine(
+                paymentMethodRepository.allPaymentMethods,
+                customerRepository.allCustomers
+            ) { methods, customers ->
+                methods to customers
+            }.collect { (methods, customers) ->
+                _uiState.update { it.copy(paymentMethods = methods, customers = customers) }
+            }
+        }
     }
 
     fun refreshData() {
@@ -176,6 +193,14 @@ class DigitalTransactionViewModel(
         _uiState.update { it.copy(paidAmount = amount) }
     }
 
+    fun setSelectedCustomer(customer: CustomerEntity?) {
+        _uiState.update { it.copy(selectedCustomer = customer) }
+    }
+
+    fun setSelectedPaymentMethod(method: PaymentMethodEntity?) {
+        _uiState.update { it.copy(selectedPaymentMethod = method) }
+    }
+
     fun search(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
         searchJob?.cancel()
@@ -214,7 +239,7 @@ class DigitalTransactionViewModel(
         }
     }
 
-    fun processTransaction(product: DigitalProductEntity, paid: Double) {
+    fun processTransaction(product: DigitalProductEntity, paid: Double, method: PaymentMethodEntity?, customer: CustomerEntity?) {
         val currentState = _uiState.value
         val phoneNumber = currentState.targetNumber
         if (phoneNumber.isBlank()) {
@@ -235,7 +260,7 @@ class DigitalTransactionViewModel(
                 val phoneHistory = PhoneHistoryEntity(
                     category = product.category,
                     phoneNumber = phoneNumber,
-                    customerName = null,
+                    customerName = customer?.name,
                     provider = product.provider,
                     amount = product.sellingPrice,
                     costPrice = product.costPrice,
@@ -249,6 +274,21 @@ class DigitalTransactionViewModel(
                 val id = phoneHistoryRepository.insert(phoneHistory)
                 val insertedTransaction = phoneHistory.copy(id = id)
                 
+                // If payment method is debt, record to receivables
+                if (method?.name?.contains("Hutang", ignoreCase = true) == true) {
+                    receivableRepository.insert(
+                        ReceivableEntity(
+                            saleId = null, // digital doesn't use retail saleId
+                            customerId = customer?.id,
+                            amount = product.sellingPrice,
+                            paidAmount = paid,
+                            status = if (paid >= product.sellingPrice) "paid" else "pending",
+                            createdAt = dateFormat.format(Date()),
+                            notes = "Hutang dari Transaksi Digital ${product.name} ke $phoneNumber"
+                        )
+                    )
+                }
+                
                 _uiState.update { 
                     it.copy(
                         isProcessing = false, 
@@ -257,7 +297,6 @@ class DigitalTransactionViewModel(
                     )
                 }
                 resetTransactionForm()
-                // Refresh history for the first page to show the new transaction
                 loadData()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isProcessing = false, error = e.message) }
@@ -270,7 +309,9 @@ class DigitalTransactionViewModel(
             it.copy(
                 targetNumber = "",
                 transactionNote = "",
-                paidAmount = ""
+                paidAmount = "",
+                selectedCustomer = null,
+                selectedPaymentMethod = null
             )
         }
     }

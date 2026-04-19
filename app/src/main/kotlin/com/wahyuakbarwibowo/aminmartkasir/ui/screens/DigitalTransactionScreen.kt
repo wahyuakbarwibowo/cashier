@@ -39,9 +39,15 @@ import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalCategoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalProductEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PaymentMethodEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.CustomerEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 import java.math.BigDecimal
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -196,7 +202,7 @@ fun DigitalTransactionScreen(
                     products = filteredProducts,
                     onProductClick = {
                         if (uiState.targetNumber.isBlank()) {
-                            viewModel.processTransaction(it, it.sellingPrice) // Will trigger error in VM
+                            viewModel.processTransaction(it, it.sellingPrice, null, null) // Will trigger error in VM
                         } else {
                             selectedProductForPayment = it
                             viewModel.setPaidAmount(it.sellingPrice.toInt().toString())
@@ -217,67 +223,20 @@ fun DigitalTransactionScreen(
 
     // Payment Confirmation Dialog
     if (selectedProductForPayment != null) {
-        val product = selectedProductForPayment!!
-        val paidVal = uiState.paidAmount.toDoubleOrNull() ?: 0.0
-        val change = paidVal - product.sellingPrice
-
-        AlertDialog(
-            onDismissRequest = { selectedProductForPayment = null },
-            title = { Text("Konfirmasi Pembayaran") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Column {
-                        Text(product.name, fontWeight = FontWeight.Bold)
-                        Text(product.provider, style = MaterialTheme.typography.bodySmall)
-                        Text(formatCurrency(product.sellingPrice),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-
-                    HorizontalDivider()
-
-                    OutlinedTextField(
-                        value = uiState.paidAmount,
-                        onValueChange = { viewModel.setPaidAmount(it) },
-                        label = { Text("Jumlah Bayar") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        prefix = { Text("Rp ") }
-                    )
-
-                    if (paidVal > 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Kembalian:")
-                            Text(
-                                formatCurrency(change),
-                                color = if (change >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.processTransaction(product, paidVal)
-                        selectedProductForPayment = null
-                    },
-                    enabled = paidVal >= product.sellingPrice
-                ) {
-                    Text("Proses")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { selectedProductForPayment = null }) {
-                    Text("Batal")
-                }
+        DigitalPaymentDialog(
+            product = selectedProductForPayment!!,
+            paidAmount = uiState.paidAmount,
+            paymentMethods = uiState.paymentMethods,
+            customers = uiState.customers,
+            selectedCustomer = uiState.selectedCustomer,
+            selectedPaymentMethod = uiState.selectedPaymentMethod,
+            onPaidAmountChange = { viewModel.setPaidAmount(it) },
+            onSelectCustomer = { viewModel.setSelectedCustomer(it) },
+            onSelectPaymentMethod = { viewModel.setSelectedPaymentMethod(it) },
+            onDismiss = { selectedProductForPayment = null },
+            onConfirm = { product, paid, method, customer ->
+                viewModel.processTransaction(product, paid, method, customer)
+                selectedProductForPayment = null
             }
         )
     }
@@ -397,6 +356,162 @@ fun DigitalTransactionScreen(
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun DigitalPaymentDialog(
+    product: DigitalProductEntity,
+    paidAmount: String,
+    paymentMethods: List<PaymentMethodEntity>,
+    customers: List<CustomerEntity>,
+    selectedCustomer: CustomerEntity?,
+    selectedPaymentMethod: PaymentMethodEntity?,
+    onPaidAmountChange: (String) -> Unit,
+    onSelectCustomer: (CustomerEntity?) -> Unit,
+    onSelectPaymentMethod: (PaymentMethodEntity?) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: (DigitalProductEntity, Double, PaymentMethodEntity?, CustomerEntity?) -> Unit
+) {
+    val paidVal = paidAmount.toDoubleOrNull() ?: 0.0
+    val change = paidVal - product.sellingPrice
+    var customerExpanded by remember { mutableStateOf(false) }
+    
+    // Auto-select first method if none
+    LaunchedEffect(paymentMethods) {
+        if (selectedPaymentMethod == null && paymentMethods.isNotEmpty()) {
+            onSelectPaymentMethod(paymentMethods.first())
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Konfirmasi Pembayaran") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column {
+                    Text(product.name, fontWeight = FontWeight.Bold)
+                    Text(product.provider, style = MaterialTheme.typography.bodySmall)
+                    Text(formatCurrency(product.sellingPrice),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+
+                HorizontalDivider()
+
+                // Customer Selector
+                ExposedDropdownMenuBox(
+                    expanded = customerExpanded,
+                    onExpandedChange = { customerExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCustomer?.name ?: "Pilih Pelanggan (Opsional)",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Pelanggan") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded) },
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = customerExpanded,
+                        onDismissRequest = { customerExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Tanpa Pelanggan") },
+                            onClick = {
+                                onSelectCustomer(null)
+                                customerExpanded = false
+                            }
+                        )
+                        customers.forEach { customer ->
+                            DropdownMenuItem(
+                                text = { Text(customer.name) },
+                                onClick = {
+                                    onSelectCustomer(customer)
+                                    customerExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = paidAmount,
+                    onValueChange = { onPaidAmountChange(it) },
+                    label = { Text("Jumlah Bayar") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    prefix = { Text("Rp ") }
+                )
+
+                if (paidVal > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Kembalian:")
+                        Text(
+                            formatCurrency(change),
+                            color = if (change >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Payment Method Selector
+                Text("Metode Pembayaran", style = MaterialTheme.typography.titleSmall)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    paymentMethods.forEach { method ->
+                        FilterChip(
+                            selected = selectedPaymentMethod == method,
+                            onClick = { onSelectPaymentMethod(method) },
+                            label = { Text(method.name) }
+                        )
+                    }
+                    
+                    val hasHutangInDb = paymentMethods.any { it.name.contains("Hutang", ignoreCase = true) }
+                    if (!hasHutangInDb) {
+                        FilterChip(
+                            selected = selectedPaymentMethod?.name == "Hutang",
+                            onClick = { 
+                                onSelectPaymentMethod(PaymentMethodEntity(id = -1, name = "Hutang"))
+                            },
+                            label = { Text("Hutang") }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            val isDebt = selectedPaymentMethod?.name?.contains("Hutang", ignoreCase = true) == true
+            val isCustomerSelected = selectedCustomer != null
+            val isPaidValid = if (isDebt) true else paidVal >= product.sellingPrice
+
+            Button(
+                onClick = {
+                    onConfirm(product, paidVal, selectedPaymentMethod, selectedCustomer)
+                },
+                enabled = selectedPaymentMethod != null && (!isDebt || isCustomerSelected) && isPaidValid
+            ) {
+                Text("Proses")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }
 
 @Composable
