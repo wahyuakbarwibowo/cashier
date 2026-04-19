@@ -101,7 +101,6 @@ class PrinterViewModel(
         total: Double,
         paid: Double,
         change: Double,
-        pointsEarned: Int = 0,
         autoDisconnect: Boolean = false
     ) {
         viewModelScope.launch {
@@ -123,7 +122,6 @@ class PrinterViewModel(
                     total = total,
                     paid = paid,
                     change = change,
-                    pointsEarned = pointsEarned,
                     footerNote = profile?.footerNote
                 )
                 

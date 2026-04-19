@@ -9,6 +9,5 @@ data class LastTransactionData(
     val discount: Double,
     val total: Double,
     val paid: Double,
-    val change: Double,
-    val pointsEarned: Int
+    val change: Double
 )

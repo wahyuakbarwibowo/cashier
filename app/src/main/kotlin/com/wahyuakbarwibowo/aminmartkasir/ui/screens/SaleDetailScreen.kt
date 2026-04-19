@@ -209,8 +209,7 @@ fun SaleDetailScreen(
             discount = calculatedDiscount,
             total = sale.total,
             paid = sale.paid,
-            change = sale.change,
-            pointsEarned = 0 
+            change = sale.change
         )
         
         BluetoothPrinterDialog(

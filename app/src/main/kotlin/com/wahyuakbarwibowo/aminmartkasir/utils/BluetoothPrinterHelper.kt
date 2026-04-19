@@ -121,7 +121,6 @@ class BluetoothPrinterHelper(private val context: Context) {
         total: Double,
         paid: Double,
         change: Double,
-        pointsEarned: Int = 0,
         footerNote: String? = null
     ) {
         if (!isConnected) return

@@ -244,8 +244,7 @@ fun SalesTransactionScreen(
                     discount = uiState.discount,
                     total = uiState.total,
                     paid = paid,
-                    change = paid - uiState.total,
-                    pointsEarned = uiState.pointsEarned
+                    change = paid - uiState.total
                 )
 
                 viewModel.processTransaction()

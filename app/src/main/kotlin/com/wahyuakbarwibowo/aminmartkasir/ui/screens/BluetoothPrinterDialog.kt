@@ -111,7 +111,6 @@ fun BluetoothPrinterDialog(
                     total = transactionData.total,
                     paid = transactionData.paid,
                     change = transactionData.change,
-                    pointsEarned = transactionData.pointsEarned,
                     autoDisconnect = true
                 )
             } else if (digitalTransaction != null) {
