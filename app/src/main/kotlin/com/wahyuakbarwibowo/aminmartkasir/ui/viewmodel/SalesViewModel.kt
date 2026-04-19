@@ -28,6 +28,7 @@ data class SalesTransactionUiState(
     val pointsRedeemed: Int = 0,
     val searchQuery: String = "",
     val isLoading: Boolean = true,
+    val isRefreshingProducts: Boolean = false,
     val isLoadMoreLoading: Boolean = false,
     val canLoadMore: Boolean = true,
     val error: String? = null
@@ -156,6 +157,15 @@ class SalesViewModel(
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
+        }
+    }
+
+    fun refreshProducts() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshingProducts = true) }
+            delay(500)
+            loadInitialProducts()
+            _uiState.update { it.copy(isRefreshingProducts = false) }
         }
     }
 

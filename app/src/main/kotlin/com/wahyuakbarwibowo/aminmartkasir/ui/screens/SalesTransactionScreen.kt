@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +37,8 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.screens.LastTransactionData
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,8 +56,6 @@ fun SalesTransactionScreen(
     var showPrinterDialog by remember { mutableStateOf(false) }
     var showEditProductDialog by remember { mutableStateOf(false) }
     var productToEdit by remember { mutableStateOf<ProductEntity?>(null) }
-    var lastTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
-    var successTransactionId by remember { mutableStateOf<String?>(null) }
     var successTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
 
     LaunchedEffect(uiState.cartItems) {
@@ -193,8 +194,10 @@ fun SalesTransactionScreen(
             searchQuery = uiState.searchQuery,
             canLoadMore = uiState.canLoadMore,
             isLoadMoreLoading = uiState.isLoadMoreLoading,
+            isRefreshing = uiState.isRefreshingProducts,
             onSearchQueryChange = { viewModel.searchProducts(it) },
             onLoadNextPage = { viewModel.loadNextProductPage() },
+            onRefresh = { viewModel.refreshProducts() },
             onProductSelected = { product ->
                 viewModel.addToCart(product)
                 showProductSelector = false
@@ -321,11 +324,6 @@ fun SalesTransactionScreen(
                             it.copy(price = price, subtotal = price * it.qty)
                         } else it
                     }
-                    // This is a bit of a hack since updateCart is private and we don't have a public "updateItemPrice"
-                    // But in a real app we'd add that method to ViewModel.
-                    // For now, let's just use the current implementation's updateCartItemQty 
-                    // which recalculates price based on ProductEntity. 
-                    // To actually support temporary price override, we need ViewModel changes.
                     showEditProductDialog = false
                 }) {
                     Text("Simpan")
@@ -361,8 +359,10 @@ fun ProductSelectorDialog(
     searchQuery: String,
     canLoadMore: Boolean,
     isLoadMoreLoading: Boolean,
+    isRefreshing: Boolean,
     onSearchQueryChange: (String) -> Unit,
     onLoadNextPage: () -> Unit,
+    onRefresh: () -> Unit,
     onProductSelected: (ProductEntity) -> Unit,
     onCreateProduct: () -> Unit,
     onDismiss: () -> Unit
@@ -433,60 +433,66 @@ fun ProductSelectorDialog(
                 
                 Spacer(Modifier.size(8.dp))
                 
-                if (products.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(100.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Produk tidak ditemukan")
-                    }
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.heightIn(max = 400.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(products, key = { it.id }) { product ->
-                            Card(
-                                onClick = { onProductSelected(product) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.heightIn(max = 400.dp)
+                ) {
+                    if (products.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(100.dp).verticalScroll(rememberScrollState()),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Produk tidak ditemukan")
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(products, key = { it.id }) { product ->
+                                Card(
+                                    onClick = { onProductSelected(product) },
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = product.name,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Stok: ${product.stock}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (product.stock <= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                         Text(
-                                            text = product.name,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "Stok: ${product.stock}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = if (product.stock <= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                            text = formatCurrency(product.sellingPrice),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                    Text(
-                                        text = formatCurrency(product.sellingPrice),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
                                 }
                             }
-                        }
 
-                        if (isLoadMoreLoading) {
-                            item {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            if (isLoadMoreLoading) {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                                    }
                                 }
                             }
                         }
