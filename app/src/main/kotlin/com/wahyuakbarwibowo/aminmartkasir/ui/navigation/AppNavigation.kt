@@ -70,8 +70,18 @@ fun AppNavigation(
             )
         }
         
-        composable(Screen.SalesTransaction.route) {
+        composable(
+            route = Screen.SalesTransaction.route,
+            arguments = listOf(
+                navArgument("saleId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) { backStackEntry ->
+            val saleId = backStackEntry.arguments?.getLong("saleId") ?: -1L
             SalesTransactionScreen(
+                editingSaleId = if (saleId == -1L) null else saleId,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCreateProduct = { navController.navigate(Screen.ProductForm.createRoute()) },
                 onOpenDrawer = onOpenDrawer,
@@ -103,6 +113,9 @@ fun AppNavigation(
             SaleDetailScreen(
                 saleId = saleId,
                 onNavigateBack = { navController.popBackStack() },
+                onEditSale = { id ->
+                    navController.navigate(Screen.SalesTransaction.createRoute(id))
+                },
                 viewModelFactory = viewModelFactory,
                 viewModel = viewModel(factory = viewModelFactory)
             )

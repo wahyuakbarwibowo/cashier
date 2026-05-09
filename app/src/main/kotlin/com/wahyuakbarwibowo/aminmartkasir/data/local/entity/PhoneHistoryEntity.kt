@@ -11,6 +11,8 @@ data class PhoneHistoryEntity(
     val phoneNumber: String? = null,
     val customerName: String? = null,
     val provider: String? = null,
+    val senderName: String? = null,
+    val receiverName: String? = null,
     val amount: Double = 0.0,
     val costPrice: Double = 0.0,
     val sellingPrice: Double = 0.0,

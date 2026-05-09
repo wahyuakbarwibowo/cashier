@@ -224,6 +224,47 @@ class ProductViewModel(
         }
     }
 
+    fun adjustStock(productId: Long, changeQty: Int, reason: String) {
+        viewModelScope.launch {
+            try {
+                val product = productRepository.getProductById(productId)
+                if (product == null) {
+                    _uiState.update { it.copy(error = "Produk tidak ditemukan") }
+                    return@launch
+                }
+
+                val newStock = product.stock + changeQty
+                
+                if (changeQty > 0) {
+                    productRepository.increaseStock(productId, changeQty)
+                } else {
+                    productRepository.decreaseStock(productId, -changeQty)
+                }
+
+                stockHistoryRepository.insert(
+                    StockHistoryEntity(
+                        productId = productId,
+                        productName = product.name,
+                        changeQty = changeQty,
+                        stockBefore = product.stock,
+                        stockAfter = newStock,
+                        reason = reason,
+                        createdAt = dateFormat.format(Date())
+                    )
+                )
+
+                _uiState.update { it.copy(successMessage = "Stok berhasil disesuaikan") }
+                if (_uiState.value.searchQuery.isBlank()) {
+                    loadInitialProducts()
+                } else {
+                    searchProducts(_uiState.value.searchQuery)
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
     fun clearMessages() {
         _uiState.update { it.copy(successMessage = null, error = null) }
     }

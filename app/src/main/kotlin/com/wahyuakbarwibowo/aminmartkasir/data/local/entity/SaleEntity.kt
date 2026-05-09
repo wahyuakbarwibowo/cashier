@@ -14,5 +14,6 @@ data class SaleEntity(
     val change: Double = 0.0,
     val pointsEarned: Int = 0,
     val pointsRedeemed: Int = 0,
+    val profit: Double = 0.0,
     val createdAt: String? = null
 )

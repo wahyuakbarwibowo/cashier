@@ -158,7 +158,10 @@ fun ProductsScreen(
                             ProductItemCard(
                                 product = product,
                                 onClick = { onNavigateToProductForm(product.id) },
-                                onDelete = { viewModel.deleteProduct(product) }
+                                onDelete = { viewModel.deleteProduct(product) },
+                                onAdjustStock = { qty, reason -> 
+                                    viewModel.adjustStock(product.id, qty, reason)
+                                }
                             )
                         }
 
@@ -185,9 +188,12 @@ fun ProductsScreen(
 fun ProductItemCard(
     product: ProductEntity,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onAdjustStock: (Int, String) -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showStockAdjust by remember { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -215,12 +221,31 @@ fun ProductItemCard(
                         )
                     }
                 }
-                IconButton(onClick = { showDeleteConfirm = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Hapus",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Opsi")
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Sesuaikan Stok") },
+                            onClick = {
+                                showStockAdjust = true
+                                menuExpanded = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Tune, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Hapus") },
+                            onClick = {
+                                showDeleteConfirm = true
+                                menuExpanded = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                        )
+                    }
                 }
             }
             
@@ -284,4 +309,70 @@ fun ProductItemCard(
             }
         )
     }
+
+    if (showStockAdjust) {
+        StockAdjustmentDialog(
+            product = product,
+            onDismiss = { showStockAdjust = false },
+            onConfirm = { qty, reason ->
+                onAdjustStock(qty, reason)
+                showStockAdjust = false
+            }
+        )
+    }
+}
+
+@Composable
+fun StockAdjustmentDialog(
+    product: ProductEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (Int, String) -> Unit
+) {
+    var adjustmentQty by remember { mutableStateOf("") }
+    var reason by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sesuaikan Stok - ${product.name}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Stok saat ini: ${product.stock}")
+                OutlinedTextField(
+                    value = adjustmentQty,
+                    onValueChange = { value ->
+                        if (value.isEmpty() || value == "-" || value.toIntOrNull() != null) {
+                            adjustmentQty = value
+                        }
+                    },
+                    label = { Text("Jumlah Penyesuaian") },
+                    placeholder = { Text("Contoh: 10 atau -5") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    label = { Text("Alasan Penyesuaian") },
+                    placeholder = { Text("Contoh: Stok masuk, rusak, dll.") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val qty = adjustmentQty.toIntOrNull()
+                    if (qty != null && qty != 0 && reason.isNotBlank()) {
+                        onConfirm(qty, reason)
+                    }
+                },
+                enabled = adjustmentQty.toIntOrNull() != null && adjustmentQty.toIntOrNull() != 0 && reason.isNotBlank()
+            ) {
+                Text("Simpan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }

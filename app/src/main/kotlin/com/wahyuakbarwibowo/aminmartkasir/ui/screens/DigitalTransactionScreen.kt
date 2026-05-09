@@ -133,6 +133,10 @@ fun DigitalTransactionScreen(
                         InputSection(
                             targetNumber = uiState.targetNumber,
                             onTargetNumberChange = { viewModel.setTargetNumber(it) },
+                            senderName = uiState.senderName,
+                            onSenderNameChange = { viewModel.setSenderName(it) },
+                            receiverName = uiState.receiverName,
+                            onReceiverNameChange = { viewModel.setReceiverName(it) },
                             note = uiState.transactionNote,
                             onNoteChange = { viewModel.setTransactionNote(it) },
                             recentTargets = uiState.phoneHistory
@@ -316,6 +320,10 @@ fun DigitalTransactionScreen(
 private fun InputSection(
     targetNumber: String,
     onTargetNumberChange: (String) -> Unit,
+    senderName: String,
+    onSenderNameChange: (String) -> Unit,
+    receiverName: String,
+    onReceiverNameChange: (String) -> Unit,
     note: String,
     onNoteChange: (String) -> Unit,
     recentTargets: List<String>
@@ -354,6 +362,30 @@ private fun InputSection(
                 shape = RoundedCornerShape(12.dp),
                 textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = senderName,
+                    onValueChange = onSenderNameChange,
+                    modifier = Modifier.weight(1f),
+                    label = { Text("Pengirim (Opsional)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                OutlinedTextField(
+                    value = receiverName,
+                    onValueChange = onReceiverNameChange,
+                    modifier = Modifier.weight(1f),
+                    label = { Text("Penerima (Opsional)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
             

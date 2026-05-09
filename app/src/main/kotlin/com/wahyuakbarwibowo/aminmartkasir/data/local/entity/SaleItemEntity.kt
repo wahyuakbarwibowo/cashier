@@ -31,5 +31,6 @@ data class SaleItemEntity(
     val productName: String = "",
     val qty: Int = 0,
     val price: Double = 0.0,
+    val costPrice: Double = 0.0,
     val subtotal: Double = 0.0
 )

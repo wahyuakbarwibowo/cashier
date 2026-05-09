@@ -216,6 +216,8 @@ class BluetoothPrinterHelper(private val context: Context) {
         category: String,
         provider: String,
         targetNumber: String,
+        senderName: String? = null,
+        receiverName: String? = null,
         productName: String,
         sellingPrice: Double,
         notes: String?,
@@ -259,6 +261,14 @@ class BluetoothPrinterHelper(private val context: Context) {
             printText(formatInfoLine("Kategori", category))
             printText(formatInfoLine("Provider", provider))
             printText(formatInfoLine("Tujuan", targetNumber))
+            
+            if (!senderName.isNullOrBlank()) {
+                printText(formatInfoLine("DARI", senderName))
+            }
+            if (!receiverName.isNullOrBlank()) {
+                printText(formatInfoLine("UNTUK", receiverName))
+            }
+            
             printText("--------------------------------\n")
             
             // Product info

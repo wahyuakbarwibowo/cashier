@@ -58,20 +58,8 @@ fun ProfitLossScreen(
         salesState.sales.filter { isMatchPeriod(it.createdAt) }.sumOf { it.total }
     }
     
-    val cashierProfit = remember(salesState.sales, salesState.saleItems, productState.products, selectedPeriod) {
-        val filteredSales = salesState.sales.filter { isMatchPeriod(it.createdAt) }
-        var totalProfit = 0.0
-        filteredSales.forEach { sale ->
-            val items = salesState.saleItems[sale.id] ?: emptyList()
-            var saleCost = 0.0
-            items.forEach { item ->
-                val product = productState.products.find { it.id == item.productId }
-                val costPrice = product?.purchasePrice ?: 0.0
-                saleCost += (costPrice * item.qty)
-            }
-            totalProfit += (sale.total - saleCost)
-        }
-        totalProfit
+    val cashierProfit = remember(salesState.sales, selectedPeriod) {
+        salesState.sales.filter { isMatchPeriod(it.createdAt) }.sumOf { it.profit }
     }
 
     val digitalRevenue = remember(digitalState.phoneHistory, selectedPeriod) {

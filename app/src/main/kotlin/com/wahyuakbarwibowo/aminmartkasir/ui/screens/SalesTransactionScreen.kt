@@ -55,6 +55,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SalesTransactionScreen(
+    editingSaleId: Long? = null,
     onNavigateBack: () -> Unit,
     onNavigateToCreateProduct: () -> Unit,
     onOpenDrawer: () -> Unit,
@@ -72,6 +73,12 @@ fun SalesTransactionScreen(
     val cartListState = rememberLazyListState()
     val context = LocalContext.current
 
+    LaunchedEffect(editingSaleId) {
+        if (editingSaleId != null) {
+            viewModel.loadSaleIntoCart(editingSaleId)
+        }
+    }
+
     LaunchedEffect(uiState.cartItems) {
         viewModel.calculatePoints()
     }
@@ -81,7 +88,7 @@ fun SalesTransactionScreen(
             TopAppBar(
                 title = { 
                     Column {
-                        Text("Kasir Retail", style = MaterialTheme.typography.titleMedium)
+                        Text(if (uiState.editingSaleId != null) "Edit Transaksi #${uiState.editingSaleId}" else "Kasir Retail", style = MaterialTheme.typography.titleMedium)
                         if (uiState.cartItems.isNotEmpty()) {
                             Text(
                                 "${uiState.cartItems.size} Item terpilih", 
@@ -264,6 +271,7 @@ fun SalesTransactionScreen(
             onRefresh = { viewModel.refreshProducts() },
             onProductSelected = { product ->
                 viewModel.addToCart(product)
+                viewModel.searchProducts("") // Clear search after selection
                 // showProductSelector = false // Allow multiple add
                 Toast.makeText(context, "${product.name} ditambah", Toast.LENGTH_SHORT).show()
             },
@@ -303,7 +311,7 @@ fun SalesTransactionScreen(
                 }
                 
                 successTransactionData = LastTransactionData(
-                    transactionId = "", 
+                    transactionId = if (uiState.editingSaleId != null) "TRX-${uiState.editingSaleId}" else "", 
                     items = receiptItems,
                     subtotal = uiState.subtotal,
                     discount = uiState.discount,
@@ -312,9 +320,16 @@ fun SalesTransactionScreen(
                     change = paid - uiState.total
                 )
 
-                viewModel.processTransaction()
-                showPaymentMethodSelector = false
-                showSuccessDialog = true
+                if (uiState.editingSaleId != null) {
+                    viewModel.updateTransaction(uiState.editingSaleId!!) {
+                        showPaymentMethodSelector = false
+                        showSuccessDialog = true
+                    }
+                } else {
+                    viewModel.processTransaction()
+                    showPaymentMethodSelector = false
+                    showSuccessDialog = true
+                }
             }
         )
     }
@@ -428,13 +443,30 @@ fun CartItemCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.product.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = item.product.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (item.product.packageQty > 0 && item.qty >= item.product.packageQty) {
+                            Spacer(Modifier.width(8.dp))
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    "Paket",
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = formatCurrency(item.price),
                         style = MaterialTheme.typography.bodySmall,

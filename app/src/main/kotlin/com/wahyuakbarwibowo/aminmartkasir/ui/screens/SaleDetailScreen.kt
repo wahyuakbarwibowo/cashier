@@ -35,6 +35,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.screens.LastTransactionData
 fun SaleDetailScreen(
     saleId: Long,
     onNavigateBack: () -> Unit,
+    onEditSale: (Long) -> Unit,
     viewModelFactory: Factory? = null,
     viewModel: SaleDetailViewModel = viewModel(factory = viewModelFactory)
 ) {
@@ -60,6 +61,9 @@ fun SaleDetailScreen(
                 windowInsets = WindowInsets.statusBars,
                 actions = {
                     if (sale != null) {
+                        IconButton(onClick = { onEditSale(sale.id) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        }
                         IconButton(onClick = { showPrinterDialog = true }) {
                             Icon(Icons.Default.Print, contentDescription = "Cetak")
                         }

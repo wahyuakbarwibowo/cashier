@@ -122,6 +122,8 @@ fun BluetoothPrinterDialog(
                     category = digitalTransaction.category,
                     provider = digitalTransaction.provider ?: "-",
                     targetNumber = digitalTransaction.phoneNumber ?: "-",
+                    senderName = digitalTransaction.senderName,
+                    receiverName = digitalTransaction.receiverName,
                     productName = parsedProductName,
                     sellingPrice = digitalTransaction.sellingPrice,
                     notes = parsedNote,

@@ -23,6 +23,8 @@ data class DigitalTransactionUiState(
     val selectedCustomer: CustomerEntity? = null,
     val selectedPaymentMethod: PaymentMethodEntity? = null,
     val targetNumber: String = "",
+    val senderName: String = "",
+    val receiverName: String = "",
     val transactionNote: String = "",
     val searchQuery: String = "",
     val isLoading: Boolean = true,
@@ -185,6 +187,14 @@ class DigitalTransactionViewModel(
         _uiState.update { it.copy(targetNumber = number) }
     }
 
+    fun setSenderName(name: String) {
+        _uiState.update { it.copy(senderName = name) }
+    }
+
+    fun setReceiverName(name: String) {
+        _uiState.update { it.copy(receiverName = name) }
+    }
+
     fun setTransactionNote(note: String) {
         _uiState.update { it.copy(transactionNote = note) }
     }
@@ -262,6 +272,8 @@ class DigitalTransactionViewModel(
                     phoneNumber = phoneNumber,
                     customerName = customer?.name,
                     provider = product.provider,
+                    senderName = currentState.senderName.trim().ifBlank { null },
+                    receiverName = currentState.receiverName.trim().ifBlank { null },
                     amount = product.sellingPrice,
                     costPrice = product.costPrice,
                     sellingPrice = product.sellingPrice,
@@ -308,6 +320,8 @@ class DigitalTransactionViewModel(
         _uiState.update {
             it.copy(
                 targetNumber = "",
+                senderName = "",
+                receiverName = "",
                 transactionNote = "",
                 paidAmount = "",
                 selectedCustomer = null,

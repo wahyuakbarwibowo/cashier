@@ -11,7 +11,13 @@ sealed class Screen(val route: String) {
         }
     }
     object StockHistory : Screen("stock_history")
-    object SalesTransaction : Screen("sales_transaction")
+    object SalesTransaction : Screen("sales_transaction?saleId={saleId}") {
+        fun createRoute(saleId: Long? = null) = if (saleId != null) {
+            "sales_transaction?saleId=$saleId"
+        } else {
+            "sales_transaction"
+        }
+    }
     object SalesHistory : Screen("sales_history")
     object SaleDetail : Screen("sale_detail/{saleId}") {
         fun createRoute(saleId: Long) = "sale_detail/$saleId"

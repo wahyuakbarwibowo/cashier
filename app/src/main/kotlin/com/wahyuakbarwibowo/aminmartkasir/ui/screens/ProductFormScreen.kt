@@ -126,6 +126,7 @@ fun ProductFormScreen(
                 },
                 actions = {
                     IconButton(
+                        enabled = name.isNotBlank(),
                         onClick = {
                             val product = ProductEntity(
                                 id = productId ?: 0,
@@ -228,7 +229,15 @@ fun ProductFormScreen(
             ) {
                 OutlinedTextField(
                     value = purchasePackagePrice,
-                    onValueChange = { onNumberChange(it) { purchasePackagePrice = it } },
+                    onValueChange = { onNumberChange(it) { 
+                        purchasePackagePrice = it 
+                        // Auto calculate unit price
+                        val p = it.toDoubleOrNull() ?: 0.0
+                        val q = purchasePackageQty.toIntOrNull() ?: 0
+                        if (q > 0) {
+                            purchasePrice = formatDouble(p / q)
+                        }
+                    } },
                     label = { Text("Harga Beli Paket") },
                     modifier = Modifier
                         .weight(1f)
@@ -240,7 +249,15 @@ fun ProductFormScreen(
 
                 OutlinedTextField(
                     value = purchasePackageQty,
-                    onValueChange = { onNumberChange(it) { purchasePackageQty = it } },
+                    onValueChange = { onNumberChange(it) { 
+                        purchasePackageQty = it 
+                        // Auto calculate unit price
+                        val p = purchasePackagePrice.toDoubleOrNull() ?: 0.0
+                        val q = it.toIntOrNull() ?: 0
+                        if (q > 0) {
+                            purchasePrice = formatDouble(p / q)
+                        }
+                    } },
                     label = { Text("Isi Paket") },
                     modifier = Modifier
                         .weight(1f)
@@ -274,7 +291,15 @@ fun ProductFormScreen(
             ) {
                 OutlinedTextField(
                     value = packagePrice,
-                    onValueChange = { onNumberChange(it) { packagePrice = it } },
+                    onValueChange = { onNumberChange(it) { 
+                        packagePrice = it 
+                        // Auto calculate unit price
+                        val p = it.toDoubleOrNull() ?: 0.0
+                        val q = packageQty.toIntOrNull() ?: 0
+                        if (q > 0) {
+                            sellingPrice = formatDouble(p / q)
+                        }
+                    } },
                     label = { Text("Harga Jual Paket") },
                     modifier = Modifier
                         .weight(1f)
@@ -286,7 +311,15 @@ fun ProductFormScreen(
 
                 OutlinedTextField(
                     value = packageQty,
-                    onValueChange = { onNumberChange(it) { packageQty = it } },
+                    onValueChange = { onNumberChange(it) { 
+                        packageQty = it 
+                        // Auto calculate unit price
+                        val p = packagePrice.toDoubleOrNull() ?: 0.0
+                        val q = it.toIntOrNull() ?: 0
+                        if (q > 0) {
+                            sellingPrice = formatDouble(p / q)
+                        }
+                    } },
                     label = { Text("Isi Paket") },
                     modifier = Modifier
                         .weight(1f)

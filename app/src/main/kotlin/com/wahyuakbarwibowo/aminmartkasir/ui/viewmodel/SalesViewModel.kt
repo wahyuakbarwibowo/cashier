@@ -31,14 +31,16 @@ data class SalesTransactionUiState(
     val isRefreshingProducts: Boolean = false,
     val isLoadMoreLoading: Boolean = false,
     val canLoadMore: Boolean = true,
+    val editingSaleId: Long? = null,
     val error: String? = null
 )
 
 data class CartItem(
     val product: ProductEntity,
-    val qty: Int = 1,
-    val price: Double = 0.0,
-    val subtotal: Double = 0.0
+    val qty: Int,
+    val price: Double,
+    val costPrice: Double,
+    val subtotal: Double
 )
 
 class SalesViewModel(
@@ -198,6 +200,7 @@ class SalesViewModel(
                 product = product,
                 qty = 1,
                 price = product.sellingPrice,
+                costPrice = product.purchasePrice,
                 subtotal = calculateSubtotal(product, 1)
             )
         }
@@ -304,6 +307,9 @@ class SalesViewModel(
                     return@launch
                 }
 
+                val totalCost = currentState.cartItems.sumOf { it.costPrice * it.qty }
+                val profit = currentState.total - totalCost
+
                 val sale = SaleEntity(
                     customerId = currentState.selectedCustomer?.id,
                     paymentMethodId = currentState.selectedPaymentMethod?.id,
@@ -312,6 +318,7 @@ class SalesViewModel(
                     change = currentState.change,
                     pointsEarned = currentState.pointsEarned,
                     pointsRedeemed = currentState.pointsRedeemed,
+                    profit = profit,
                     createdAt = dateFormat.format(Date())
                 )
 
@@ -322,6 +329,7 @@ class SalesViewModel(
                         productName = item.product.name,
                         qty = item.qty,
                         price = item.price,
+                        costPrice = item.costPrice,
                         subtotal = item.subtotal
                     )
                 }
@@ -403,6 +411,51 @@ class SalesViewModel(
         }
     }
 
+    fun loadSaleIntoCart(saleId: Long) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val sale = saleRepository.getSaleById(saleId)
+                if (sale == null) {
+                    _uiState.update { it.copy(isLoading = false, error = "Transaksi tidak ditemukan") }
+                    return@launch
+                }
+
+                val items = saleRepository.getSaleItemsOnce(saleId)
+                val cartItems = items.mapNotNull { item ->
+                    val product = productRepository.getProductById(item.productId)
+                    if (product != null) {
+                        CartItem(
+                            product = product,
+                            qty = item.qty,
+                            price = item.price,
+                            costPrice = item.costPrice,
+                            subtotal = item.subtotal
+                        )
+                    } else null
+                }
+
+                val customer = sale.customerId?.let { customerRepository.getCustomerById(it) }
+                val paymentMethod = sale.paymentMethodId?.let { paymentMethodRepository.getPaymentMethodById(it) }
+
+                _uiState.update { state ->
+                    state.copy(
+                        cartItems = cartItems,
+                        selectedCustomer = customer,
+                        selectedPaymentMethod = paymentMethod,
+                        discount = (cartItems.sumOf { it.subtotal } - sale.total).coerceAtLeast(0.0),
+                        pointsRedeemed = sale.pointsRedeemed,
+                        editingSaleId = saleId,
+                        isLoading = false
+                    )
+                }
+                updateCart(cartItems)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
+
     fun clearCart() {
         _uiState.update { 
             it.copy(
@@ -415,7 +468,8 @@ class SalesViewModel(
                 pointsEarned = 0,
                 pointsRedeemed = 0,
                 selectedCustomer = null,
-                selectedPaymentMethod = null
+                selectedPaymentMethod = null,
+                editingSaleId = null
             ) 
         }
     }
@@ -497,6 +551,9 @@ class SalesViewModel(
                     }
                 }
 
+                val totalCost = currentState.cartItems.sumOf { it.costPrice * it.qty }
+                val newProfit = currentState.total - totalCost
+                
                 // Update sale entity
                 val updatedSale = existingSale.copy(
                     customerId = currentState.selectedCustomer?.id,
@@ -505,7 +562,8 @@ class SalesViewModel(
                     paid = currentState.paid,
                     change = currentState.change,
                     pointsEarned = currentState.pointsEarned,
-                    pointsRedeemed = currentState.pointsRedeemed
+                    pointsRedeemed = currentState.pointsRedeemed,
+                    profit = newProfit
                 )
 
                 // Update sale with new items
@@ -513,8 +571,10 @@ class SalesViewModel(
                     SaleItemEntity(
                         saleId = saleId,
                         productId = item.product.id,
+                        productName = item.product.name,
                         qty = item.qty,
                         price = item.price,
+                        costPrice = item.costPrice,
                         subtotal = item.subtotal
                     )
                 }

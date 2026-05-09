@@ -108,6 +108,13 @@ fun DigitalReportDetailScreen(
                         DetailRow("Provider", history.provider ?: "-")
                         DetailRow("Nomor Tujuan", history.phoneNumber ?: "-")
                         
+                        if (!history.senderName.isNullOrBlank()) {
+                            DetailRow("Pengirim", history.senderName)
+                        }
+                        if (!history.receiverName.isNullOrBlank()) {
+                            DetailRow("Penerima", history.receiverName)
+                        }
+                        
                         HorizontalDivider()
                         
                         DetailRow("Produk", productName)
