@@ -432,17 +432,18 @@ class SalesViewModel(
                 val paymentMethod = sale.paymentMethodId?.let { paymentMethodRepository.getPaymentMethodById(it) }
 
                 _uiState.update { state ->
-                    state.copy(
-                        cartItems = cartItems,
-                        selectedCustomer = customer,
-                        selectedPaymentMethod = paymentMethod,
-                        discount = (cartItems.sumOf { it.subtotal } - sale.total).coerceAtLeast(0.0),
-                        pointsRedeemed = sale.pointsRedeemed,
-                        editingSaleId = saleId,
-                        isLoading = false
+                    recalculateState(
+                        state.copy(
+                            cartItems = cartItems,
+                            selectedCustomer = customer,
+                            selectedPaymentMethod = paymentMethod,
+                            discount = (cartItems.sumOf { it.subtotal } - sale.total).coerceAtLeast(0.0),
+                            pointsRedeemed = sale.pointsRedeemed,
+                            editingSaleId = saleId,
+                            isLoading = false
+                        )
                     )
                 }
-                updateCart(cartItems)
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
