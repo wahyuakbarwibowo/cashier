@@ -18,7 +18,7 @@ import androidx.room.PrimaryKey
             entity = ProductEntity::class,
             parentColumns = ["id"],
             childColumns = ["productId"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.SET_NULL
         )
     ],
     indices = [Index("saleId"), Index("productId")]
@@ -27,7 +27,7 @@ data class SaleItemEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val saleId: Long,
-    val productId: Long,
+    val productId: Long? = null,
     val productName: String = "",
     val qty: Int = 0,
     val price: Double = 0.0,

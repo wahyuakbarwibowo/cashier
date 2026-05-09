@@ -204,6 +204,7 @@ class PurchaseViewModel(
                     PurchaseItemEntity(
                         purchaseId = 0,
                         productId = item.product.id,
+                        productName = item.product.name,
                         qty = item.qty,
                         price = item.price,
                         subtotal = item.subtotal

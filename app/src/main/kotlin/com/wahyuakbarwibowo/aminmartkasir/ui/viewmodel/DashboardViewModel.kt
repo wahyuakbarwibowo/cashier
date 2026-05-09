@@ -96,7 +96,7 @@ class DashboardViewModel(
                 }
                 
                 // Group by ID to find top sellers
-                val topById = allItems.groupBy { it.productId }
+                val topById = allItems.filter { it.productId != null }.groupBy { it.productId!! }
                     .mapValues { it.value.sumOf { item -> item.qty } }
                     .toList()
                     .sortedByDescending { it.second }

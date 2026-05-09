@@ -171,6 +171,14 @@ class SalesViewModel(
         }
     }
 
+    private fun getPricePerUnit(product: ProductEntity, qty: Int): Double {
+        return if (product.packageQty > 0 && qty >= product.packageQty) {
+            product.packagePrice / product.packageQty
+        } else {
+            product.sellingPrice
+        }
+    }
+
     private fun calculateSubtotal(product: ProductEntity, qty: Int): Double {
         val totalDiscount = product.discount * qty
         return if (product.packageQty > 0 && product.packagePrice > 0) {
@@ -183,95 +191,89 @@ class SalesViewModel(
     }
 
     fun addToCart(product: ProductEntity) {
-        val currentState = _uiState.value
-        val existingItem = currentState.cartItems.find { it.product.id == product.id }
-        
-        val newCartItems = if (existingItem != null) {
-            currentState.cartItems.map {
-                if (it.product.id == product.id) {
-                    val newQty = it.qty + 1
-                    it.copy(qty = newQty, subtotal = calculateSubtotal(product, newQty))
-                } else {
-                    it
+        _uiState.update { currentState ->
+            val existingItem = currentState.cartItems.find { it.product.id == product.id }
+            val newCartItems = if (existingItem != null) {
+                currentState.cartItems.map {
+                    if (it.product.id == product.id) {
+                        val newQty = it.qty + 1
+                        it.copy(
+                            qty = newQty, 
+                            price = getPricePerUnit(product, newQty),
+                            subtotal = calculateSubtotal(product, newQty)
+                        )
+                    } else {
+                        it
+                    }
                 }
+            } else {
+                currentState.cartItems + CartItem(
+                    product = product,
+                    qty = 1,
+                    price = getPricePerUnit(product, 1),
+                    costPrice = product.purchasePrice,
+                    subtotal = calculateSubtotal(product, 1)
+                )
             }
-        } else {
-            currentState.cartItems + CartItem(
-                product = product,
-                qty = 1,
-                price = product.sellingPrice,
-                costPrice = product.purchasePrice,
-                subtotal = calculateSubtotal(product, 1)
-            )
+            recalculateState(currentState.copy(cartItems = newCartItems))
         }
-        
-        updateCart(newCartItems)
     }
 
     fun updateCartItemQty(productId: Long, qty: Int) {
-        val currentState = _uiState.value
         if (qty <= 0) {
             removeFromCart(productId)
             return
         }
-        
-        val newCartItems = currentState.cartItems.map {
-            if (it.product.id == productId) {
-                it.copy(qty = qty, subtotal = calculateSubtotal(it.product, qty))
-            } else {
-                it
+        _uiState.update { currentState ->
+            val newCartItems = currentState.cartItems.map {
+                if (it.product.id == productId) {
+                    it.copy(
+                        qty = qty, 
+                        price = getPricePerUnit(it.product, qty),
+                        subtotal = calculateSubtotal(it.product, qty)
+                    )
+                } else {
+                    it
+                }
             }
+            recalculateState(currentState.copy(cartItems = newCartItems))
         }
-        
-        updateCart(newCartItems)
     }
 
     fun removeFromCart(productId: Long) {
-        val currentState = _uiState.value
-        val newCartItems = currentState.cartItems.filter { it.product.id != productId }
-        updateCart(newCartItems)
+        _uiState.update { currentState ->
+            val newCartItems = currentState.cartItems.filter { it.product.id != productId }
+            recalculateState(currentState.copy(cartItems = newCartItems))
+        }
     }
 
-    private fun updateCart(newCartItems: List<CartItem>) {
-        val subtotal = newCartItems.sumOf { it.subtotal }
-        val total = (subtotal - _uiState.value.discount).coerceAtLeast(0.0)
-        val paid = _uiState.value.paid
-        val change = paid - total
-        
-        _uiState.update { 
-            it.copy(
-                cartItems = newCartItems,
-                subtotal = subtotal,
-                total = total,
-                change = change
-            ) 
-        }
+    private fun recalculateState(state: SalesTransactionUiState): SalesTransactionUiState {
+        val subtotal = state.cartItems.sumOf { it.subtotal }
+        val pointsValue = state.pointsRedeemed * 100
+        val total = (subtotal - state.discount - pointsValue).coerceAtLeast(0.0)
+        val change = state.paid - total
+        return state.copy(
+            subtotal = subtotal,
+            total = total,
+            change = change
+        )
     }
 
     fun setDiscount(discount: Double) {
-        val currentState = _uiState.value
-        val total = (currentState.subtotal - discount).coerceAtLeast(0.0)
-        val paid = if (currentState.paid < total) total else currentState.paid
-        val change = paid - total
-
-        _uiState.update { 
-            it.copy(
-                discount = discount,
-                total = total,
-                paid = paid,
-                change = change
-            ) 
+        _uiState.update { currentState ->
+            recalculateState(currentState.copy(discount = discount)).let { newState ->
+                val paid = if (newState.paid < newState.total) newState.total else newState.paid
+                newState.copy(paid = paid, change = paid - newState.total)
+            }
         }
     }
+
     fun setPaid(paid: Double) {
-        val currentState = _uiState.value
-        val change = paid - currentState.total
-        
-        _uiState.update { 
-            it.copy(
+        _uiState.update { currentState ->
+            currentState.copy(
                 paid = paid,
-                change = change
-            ) 
+                change = paid - currentState.total
+            )
         }
     }
 
@@ -284,17 +286,8 @@ class SalesViewModel(
     }
 
     fun setPointsRedeemed(points: Int) {
-        val currentState = _uiState.value
-        val pointsValue = points * 100 // Asumsi 1 point = Rp 100
-        val total = (currentState.subtotal - currentState.discount - pointsValue).coerceAtLeast(0.0)
-        val change = currentState.paid - total
-        
-        _uiState.update { 
-            it.copy(
-                pointsRedeemed = points,
-                total = total,
-                change = change
-            ) 
+        _uiState.update { currentState ->
+            recalculateState(currentState.copy(pointsRedeemed = points))
         }
     }
 
@@ -423,7 +416,7 @@ class SalesViewModel(
 
                 val items = saleRepository.getSaleItemsOnce(saleId)
                 val cartItems = items.mapNotNull { item ->
-                    val product = productRepository.getProductById(item.productId)
+                    val product = item.productId?.let { productRepository.getProductById(it) }
                     if (product != null) {
                         CartItem(
                             product = product,
@@ -504,9 +497,9 @@ class SalesViewModel(
 
                 // Restore stock for old items
                 existingItems.forEach { item ->
-                    val product = productRepository.getProductById(item.productId)
+                    val product = item.productId?.let { productRepository.getProductById(it) }
                     if (product != null) {
-                        productRepository.increaseStock(item.productId, item.qty)
+                        productRepository.increaseStock(product.id, item.qty)
                         stockHistoryRepository.insert(
                             StockHistoryEntity(
                                 productId = product.id,

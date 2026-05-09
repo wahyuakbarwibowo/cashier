@@ -65,7 +65,9 @@ class PurchaseRepository(
         items.forEach { item ->
             purchaseItemDao.insert(item.copy(purchaseId = purchaseId))
             // Update product stock
-            productDao.increaseStock(item.productId, item.qty)
+            item.productId?.let {
+                productDao.increaseStock(it, item.qty)
+            }
         }
         return purchaseId
     }
