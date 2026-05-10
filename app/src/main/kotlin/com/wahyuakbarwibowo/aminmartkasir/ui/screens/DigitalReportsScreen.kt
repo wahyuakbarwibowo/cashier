@@ -34,6 +34,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,7 @@ fun DigitalReportsScreen(
     viewModel: DigitalTransactionViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
@@ -201,7 +204,8 @@ fun DigitalReportsScreen(
                             items(filteredHistory, key = { it.id }) { item ->
                                 DigitalHistoryItem(
                                     history = item,
-                                    onClick = { onNavigateToDetail(item.id) }
+                                    onClick = { onNavigateToDetail(item.id) },
+                                    dateFormat = dateFormat
                                 )
                             }
 
@@ -228,7 +232,8 @@ fun DigitalReportsScreen(
 @Composable
 fun DigitalHistoryItem(
     history: PhoneHistoryEntity,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    dateFormat: SimpleDateFormat
 ) {
     Card(
         modifier = Modifier
@@ -254,7 +259,13 @@ fun DigitalHistoryItem(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = history.createdAt ?: "-",
+                    text = history.createdAt?.let { 
+                        try {
+                            dateFormat.format(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(it)!!)
+                        } catch (e: Exception) {
+                            it
+                        }
+                    } ?: "-",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

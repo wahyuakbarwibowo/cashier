@@ -32,7 +32,7 @@ fun SalesHistoryScreen(
     viewModel: SalesHistoryViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")) }
     val listState = rememberLazyListState()
 
     // Detect when scrolled to bottom for infinite scroll
