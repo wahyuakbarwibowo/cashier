@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `colors.xml` with dark mode support in `values-night/colors.xml`
 
 ### Fixed
+- Data import crash "Parameter specified as non-null is null" when importing older backup files with missing fields
 - Color theme inconsistency between XML and Compose themes
 
 ---
