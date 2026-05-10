@@ -76,9 +76,10 @@ fun LowStockScreen(
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                                 Text(
-                                    text = "Stok tersisa: ${product.stock}",
+                                    text = if (product.stock <= 0) "Stok Habis" else "Stok tersisa: ${product.stock}",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                                    fontWeight = if (product.stock <= 0) androidx.compose.ui.text.font.FontWeight.ExtraBold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = if (product.stock <= 0) 1f else 0.8f)
                                 )
                             }
                             Text(

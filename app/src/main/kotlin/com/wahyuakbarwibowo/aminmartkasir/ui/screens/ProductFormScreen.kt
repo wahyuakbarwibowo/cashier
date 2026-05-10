@@ -76,6 +76,12 @@ fun ProductFormScreen(
     
     val isEdit = productId != null
     
+    // Helper to round up to nearest 500
+    fun roundUpTo500(value: Double): String {
+        val rounded = Math.ceil(value / 500.0) * 500.0
+        return rounded.toLong().toString()
+    }
+
     // Helper to format double as integer string (remove .0)
     fun formatDouble(value: Double): String {
         return if (value == value.toLong().toDouble()) {
@@ -235,7 +241,7 @@ fun ProductFormScreen(
                         val p = it.toDoubleOrNull() ?: 0.0
                         val q = purchasePackageQty.toIntOrNull() ?: 0
                         if (q > 0) {
-                            purchasePrice = formatDouble(p / q)
+                            purchasePrice = roundUpTo500(p / q)
                         }
                     } },
                     label = { Text("Harga Beli Paket") },
@@ -255,7 +261,7 @@ fun ProductFormScreen(
                         val p = purchasePackagePrice.toDoubleOrNull() ?: 0.0
                         val q = it.toIntOrNull() ?: 0
                         if (q > 0) {
-                            purchasePrice = formatDouble(p / q)
+                            purchasePrice = roundUpTo500(p / q)
                         }
                     } },
                     label = { Text("Isi Paket") },
@@ -297,7 +303,7 @@ fun ProductFormScreen(
                         val p = it.toDoubleOrNull() ?: 0.0
                         val q = packageQty.toIntOrNull() ?: 0
                         if (q > 0) {
-                            sellingPrice = formatDouble(p / q)
+                            sellingPrice = roundUpTo500(p / q)
                         }
                     } },
                     label = { Text("Harga Jual Paket") },
@@ -317,7 +323,7 @@ fun ProductFormScreen(
                         val p = packagePrice.toDoubleOrNull() ?: 0.0
                         val q = it.toIntOrNull() ?: 0
                         if (q > 0) {
-                            sellingPrice = formatDouble(p / q)
+                            sellingPrice = roundUpTo500(p / q)
                         }
                     } },
                     label = { Text("Isi Paket") },

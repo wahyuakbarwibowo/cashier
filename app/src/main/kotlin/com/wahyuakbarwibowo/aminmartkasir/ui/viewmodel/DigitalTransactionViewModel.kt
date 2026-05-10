@@ -15,11 +15,13 @@ data class DigitalTransactionUiState(
     val categories: List<DigitalCategoryEntity> = emptyList(),
     val products: List<DigitalProductEntity> = emptyList(),
     val allProducts: List<DigitalProductEntity> = emptyList(),
+    val managementProviders: List<String> = emptyList(),
     val phoneHistory: List<PhoneHistoryEntity> = emptyList(),
     val paymentMethods: List<PaymentMethodEntity> = emptyList(),
     val customers: List<CustomerEntity> = emptyList(),
     val selectedCategory: String? = null,
     val selectedProvider: String? = null,
+    val selectedManagementProvider: String? = null,
     val selectedCustomer: CustomerEntity? = null,
     val selectedPaymentMethod: PaymentMethodEntity? = null,
     val targetNumber: String = "",
@@ -166,7 +168,7 @@ class DigitalTransactionViewModel(
     }
 
     fun setSelectedCategory(category: String) {
-        _uiState.update { it.copy(selectedCategory = category, selectedProvider = null, products = emptyList()) }
+        _uiState.update { it.copy(selectedCategory = category, selectedProvider = null, selectedManagementProvider = null, products = emptyList(), managementProviders = emptyList()) }
         loadProductsByCategory(category)
     }
 
@@ -174,13 +176,18 @@ class DigitalTransactionViewModel(
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             digitalProductRepository.getDigitalProductsByCategory(category).collect { products ->
-                _uiState.update { it.copy(products = products) }
+                val providers = products.map { it.provider }.distinct().sorted()
+                _uiState.update { it.copy(products = products, managementProviders = providers) }
             }
         }
     }
 
     fun setSelectedProvider(provider: String?) {
         _uiState.update { it.copy(selectedProvider = provider) }
+    }
+
+    fun setSelectedManagementProvider(provider: String?) {
+        _uiState.update { it.copy(selectedManagementProvider = provider) }
     }
 
     fun setTargetNumber(number: String) {

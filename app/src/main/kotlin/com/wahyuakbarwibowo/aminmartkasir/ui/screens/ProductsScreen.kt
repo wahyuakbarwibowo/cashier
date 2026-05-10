@@ -272,14 +272,22 @@ fun ProductItemCard(
                 
                 Surface(
                     shape = MaterialTheme.shapes.small,
-                    color = if (product.stock <= 5) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer
+                    color = when {
+                        product.stock <= 0 -> MaterialTheme.colorScheme.error
+                        product.stock <= 5 -> MaterialTheme.colorScheme.errorContainer
+                        else -> MaterialTheme.colorScheme.secondaryContainer
+                    }
                 ) {
                     Text(
-                        text = "Stok: ${product.stock}",
+                        text = if (product.stock <= 0) "Stok Habis" else "Stok: ${product.stock}",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        color = if (product.stock <= 5) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                        color = when {
+                            product.stock <= 0 -> MaterialTheme.colorScheme.onError
+                            product.stock <= 5 -> MaterialTheme.colorScheme.onErrorContainer
+                            else -> MaterialTheme.colorScheme.onSecondaryContainer
+                        }
                     )
                 }
             }

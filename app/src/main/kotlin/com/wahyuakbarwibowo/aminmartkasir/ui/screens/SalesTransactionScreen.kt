@@ -179,8 +179,11 @@ fun SalesTransactionScreen(
                         items(uiState.cartItems, key = { it.product.id }) { item ->
                             CartItemCard(
                                 item = item,
-                                onIncreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty + 1) },
-                                onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
+                                onIncreaseQty = { 
+                                    if (!viewModel.updateCartItemQty(item.product.id, item.qty + 1)) {
+                                        Toast.makeText(context, "Stok tidak mencukupi", Toast.LENGTH_SHORT).show()
+                                    }
+                                },                                onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
                                 onRemove = { viewModel.removeFromCart(item.product.id) },
                                 onEdit = {
                                     productToEdit = item.product
@@ -270,10 +273,13 @@ fun SalesTransactionScreen(
             onLoadNextPage = { viewModel.loadNextProductPage() },
             onRefresh = { viewModel.refreshProducts() },
             onProductSelected = { product ->
-                viewModel.addToCart(product)
-                viewModel.searchProducts("") // Clear search after selection
-                // showProductSelector = false // Allow multiple add
-                Toast.makeText(context, "${product.name} ditambah", Toast.LENGTH_SHORT).show()
+                if (viewModel.addToCart(product)) {
+                    viewModel.searchProducts("") // Clear search after selection
+                    // showProductSelector = false // Allow multiple add
+                    Toast.makeText(context, "${product.name} ditambah", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Stok ${product.name} habis/tidak mencukupi", Toast.LENGTH_SHORT).show()
+                }
             },
             onCreateProduct = {
                 onNavigateToCreateProduct()
@@ -452,26 +458,20 @@ fun CartItemCard(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
-                        if (item.product.packageQty > 0 && item.qty >= item.product.packageQty) {
-                            Spacer(Modifier.width(8.dp))
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(4.dp)
-                            ) {
-                                Text(
-                                    "Paket",
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
                     }
-                    Text(
-                        text = formatCurrency(item.price),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = formatCurrency(item.price),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "• Stok: ${item.product.stock}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (item.product.stock <= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 IconButton(
                     onClick = onRemove,
@@ -651,29 +651,46 @@ fun ProductSelectorDialog(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(products, key = { it.id }) { product ->
+                                    val isOutOfStock = product.stock <= 0
                                     Card(
                                         onClick = { onProductSelected(product) },
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(12.dp),
-                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isOutOfStock) 
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                                            else 
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        ),
+                                        enabled = !isOutOfStock
                                     ) {
                                         Row(
                                             modifier = Modifier.padding(12.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text(product.name, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                                 Text(
-                                                    "Stok: ${product.stock}", 
+                                                    product.name, 
+                                                    fontWeight = FontWeight.Bold, 
+                                                    maxLines = 1, 
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = if (isOutOfStock) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    if (isOutOfStock) "Stok Habis" else "Stok: ${product.stock}", 
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = if (product.stock <= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    color = when {
+                                                        isOutOfStock -> MaterialTheme.colorScheme.error
+                                                        product.stock <= 5 -> MaterialTheme.colorScheme.error
+                                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                    }
                                                 )
                                             }
                                             Text(
                                                 formatCurrency(product.sellingPrice),
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = MaterialTheme.colorScheme.primary
+                                                color = if (isOutOfStock) MaterialTheme.colorScheme.primary.copy(alpha = 0.38f) else MaterialTheme.colorScheme.primary
                                             )
                                         }
                                     }

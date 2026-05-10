@@ -190,11 +190,18 @@ class SalesViewModel(
         }
     }
 
-    fun addToCart(product: ProductEntity) {
-        _uiState.update { currentState ->
-            val existingItem = currentState.cartItems.find { it.product.id == product.id }
+    fun addToCart(product: ProductEntity): Boolean {
+        val currentState = _uiState.value
+        val existingItem = currentState.cartItems.find { it.product.id == product.id }
+        val currentQty = existingItem?.qty ?: 0
+        
+        if (currentQty + 1 > product.stock) {
+            return false
+        }
+
+        _uiState.update { state ->
             val newCartItems = if (existingItem != null) {
-                currentState.cartItems.map {
+                state.cartItems.map {
                     if (it.product.id == product.id) {
                         val newQty = it.qty + 1
                         it.copy(
@@ -207,7 +214,7 @@ class SalesViewModel(
                     }
                 }
             } else {
-                currentState.cartItems + CartItem(
+                state.cartItems + CartItem(
                     product = product,
                     qty = 1,
                     price = getPricePerUnit(product, 1),
@@ -215,17 +222,26 @@ class SalesViewModel(
                     subtotal = calculateSubtotal(product, 1)
                 )
             }
-            recalculateState(currentState.copy(cartItems = newCartItems))
+            recalculateState(state.copy(cartItems = newCartItems))
         }
+        return true
     }
 
-    fun updateCartItemQty(productId: Long, qty: Int) {
+    fun updateCartItemQty(productId: Long, qty: Int): Boolean {
         if (qty <= 0) {
             removeFromCart(productId)
-            return
+            return true
         }
-        _uiState.update { currentState ->
-            val newCartItems = currentState.cartItems.map {
+        
+        val currentState = _uiState.value
+        val item = currentState.cartItems.find { it.product.id == productId } ?: return false
+        
+        if (qty > item.product.stock) {
+            return false
+        }
+
+        _uiState.update { state ->
+            val newCartItems = state.cartItems.map {
                 if (it.product.id == productId) {
                     it.copy(
                         qty = qty, 
@@ -236,8 +252,9 @@ class SalesViewModel(
                     it
                 }
             }
-            recalculateState(currentState.copy(cartItems = newCartItems))
+            recalculateState(state.copy(cartItems = newCartItems))
         }
+        return true
     }
 
     fun removeFromCart(productId: Long) {

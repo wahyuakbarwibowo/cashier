@@ -108,7 +108,39 @@ fun DigitalManagementScreen(
                     }
                 }
 
-                if (uiState.products.isEmpty()) {
+                if (uiState.managementProviders.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item {
+                            FilterChip(
+                                selected = uiState.selectedManagementProvider == null,
+                                onClick = { viewModel.setSelectedManagementProvider(null) },
+                                label = { Text("Semua Provider") }
+                            )
+                        }
+                        items(uiState.managementProviders) { provider ->
+                            FilterChip(
+                                selected = uiState.selectedManagementProvider == provider,
+                                onClick = { viewModel.setSelectedManagementProvider(provider) },
+                                label = { Text(provider) }
+                            )
+                        }
+                    }
+                }
+
+                val filteredProducts = remember(uiState.products, uiState.selectedManagementProvider) {
+                    if (uiState.selectedManagementProvider == null) {
+                        uiState.products
+                    } else {
+                        uiState.products.filter { it.provider == uiState.selectedManagementProvider }
+                    }
+                }
+
+                if (filteredProducts.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -116,12 +148,12 @@ fun DigitalManagementScreen(
                             .verticalScroll(rememberScrollState()),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Belum ada produk di kategori ini")
+                        Text("Belum ada produk untuk kriteria ini")
                     }
                 } else {
                     ProductList(
                         modifier = Modifier.weight(1f),
-                        products = uiState.products,
+                        products = filteredProducts,
                         onMove = { from, to -> viewModel.moveProduct(from, to) },
                         onDelete = { viewModel.deleteProduct(it) }
                     )
