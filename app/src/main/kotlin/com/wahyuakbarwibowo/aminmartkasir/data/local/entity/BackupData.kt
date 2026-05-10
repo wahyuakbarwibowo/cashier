@@ -1,21 +1,21 @@
 package com.wahyuakbarwibowo.aminmartkasir.data.local.entity
 
 data class BackupData(
-    val products: List<ProductEntity> = emptyList(),
-    val customers: List<CustomerEntity> = emptyList(),
-    val paymentMethods: List<PaymentMethodEntity> = emptyList(),
+    val products: List<ProductEntity>? = null,
+    val customers: List<CustomerEntity>? = null,
+    val paymentMethods: List<PaymentMethodEntity>? = null,
     val shopProfile: ShopProfileEntity? = null,
-    val sales: List<SaleEntity> = emptyList(),
-    val saleItems: List<SaleItemEntity> = emptyList(),
-    val suppliers: List<SupplierEntity> = emptyList(),
-    val purchases: List<PurchaseEntity> = emptyList(),
-    val purchaseItems: List<PurchaseItemEntity> = emptyList(),
-    val receivables: List<ReceivableEntity> = emptyList(),
-    val payables: List<PayableEntity> = emptyList(),
-    val phoneHistory: List<PhoneHistoryEntity> = emptyList(),
-    val digitalProducts: List<DigitalProductEntity> = emptyList(),
-    val digitalCategories: List<DigitalCategoryEntity> = emptyList(),
-    val expenses: List<ExpenseEntity> = emptyList(),
-    val customerPointsHistory: List<CustomerPointsHistoryEntity> = emptyList(),
-    val stockHistory: List<StockHistoryEntity> = emptyList()
+    val sales: List<SaleEntity>? = null,
+    val saleItems: List<SaleItemEntity>? = null,
+    val suppliers: List<SupplierEntity>? = null,
+    val purchases: List<PurchaseEntity>? = null,
+    val purchaseItems: List<PurchaseItemEntity>? = null,
+    val receivables: List<ReceivableEntity>? = null,
+    val payables: List<PayableEntity>? = null,
+    val phoneHistory: List<PhoneHistoryEntity>? = null,
+    val digitalProducts: List<DigitalProductEntity>? = null,
+    val digitalCategories: List<DigitalCategoryEntity>? = null,
+    val expenses: List<ExpenseEntity>? = null,
+    val customerPointsHistory: List<CustomerPointsHistoryEntity>? = null,
+    val stockHistory: List<StockHistoryEntity>? = null
 )

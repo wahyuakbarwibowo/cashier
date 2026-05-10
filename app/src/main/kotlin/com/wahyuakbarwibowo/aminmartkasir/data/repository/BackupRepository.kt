@@ -36,6 +36,7 @@ class BackupRepository(private val database: AppDatabase) {
         gson.toJson(backupData)
     }
 
+    @Suppress("SENSELESS_COMPARISON", "USELESS_ELVIS")
     suspend fun importData(json: String) = withContext(Dispatchers.IO) {
         val backupData = gson.fromJson(json, BackupData::class.java) ?: throw Exception("Format data tidak valid")
         
