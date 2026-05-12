@@ -28,6 +28,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.google.zxing.client.android.Intents
 import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
+import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProductSortOption
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProductViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 
@@ -136,6 +137,11 @@ fun ProductsScreen(
                     singleLine = true
                 )
 
+                ProductSortRow(
+                    currentSort = uiState.sortOption,
+                    onSortChange = { viewModel.setSortOption(it) }
+                )
+
                 if (uiState.isLoading && !uiState.isRefreshing) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
@@ -178,6 +184,52 @@ fun ProductsScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductSortRow(
+    currentSort: ProductSortOption,
+    onSortChange: (ProductSortOption) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.End
+    ) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = currentSort.label,
+                onValueChange = {},
+                readOnly = true,
+                singleLine = true,
+                label = { Text("Urutkan") },
+                modifier = Modifier
+                    .widthIn(min = 160.dp)
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                ProductSortOption.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.label) },
+                        onClick = {
+                            onSortChange(option)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }

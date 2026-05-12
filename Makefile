@@ -106,9 +106,15 @@ bundle-signed:
 
 # Install APK on device
 install:
-	$(ADB) install -r $(APK_DEBUG)
-	@echo ""
-	@echo "✓ App installed"
+	@DEVICE_COUNT=$$($(ADB) devices | awk 'NR>1 && $$2=="device" {count++} END {print count+0}'); \
+	if [ "$$DEVICE_COUNT" -eq 0 ]; then \
+		echo "⚠ Tidak ada device/emulator terhubung. APK sudah berhasil dibuild di $(APK_DEBUG)"; \
+		echo "  Jalankan 'make devices' lalu hubungkan device untuk install."; \
+	else \
+		$(ADB) install -r $(APK_DEBUG); \
+		echo ""; \
+		echo "✓ App installed"; \
+	fi
 
 # Run app on device
 run:

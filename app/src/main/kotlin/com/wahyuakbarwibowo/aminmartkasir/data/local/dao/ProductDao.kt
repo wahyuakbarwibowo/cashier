@@ -12,6 +12,18 @@ interface ProductDao {
     @Query("SELECT * FROM products ORDER BY id DESC LIMIT :limit OFFSET :offset")
     suspend fun getProducts(limit: Int, offset: Int): List<ProductEntity>
 
+    @Query("SELECT * FROM products ORDER BY name COLLATE NOCASE ASC LIMIT :limit OFFSET :offset")
+    suspend fun getProductsOrderByNameAsc(limit: Int, offset: Int): List<ProductEntity>
+
+    @Query("SELECT * FROM products ORDER BY name COLLATE NOCASE DESC LIMIT :limit OFFSET :offset")
+    suspend fun getProductsOrderByNameDesc(limit: Int, offset: Int): List<ProductEntity>
+
+    @Query("SELECT * FROM products ORDER BY stock ASC, name COLLATE NOCASE ASC LIMIT :limit OFFSET :offset")
+    suspend fun getProductsOrderByStockAsc(limit: Int, offset: Int): List<ProductEntity>
+
+    @Query("SELECT * FROM products ORDER BY stock DESC, name COLLATE NOCASE ASC LIMIT :limit OFFSET :offset")
+    suspend fun getProductsOrderByStockDesc(limit: Int, offset: Int): List<ProductEntity>
+
     @Query("SELECT * FROM products WHERE id = :id")
     suspend fun getProductById(id: Long): ProductEntity?
 

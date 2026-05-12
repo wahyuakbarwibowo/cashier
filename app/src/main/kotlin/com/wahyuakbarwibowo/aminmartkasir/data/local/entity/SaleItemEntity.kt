@@ -29,6 +29,8 @@ data class SaleItemEntity(
     val saleId: Long,
     val productId: Long? = null,
     val productName: String = "",
+    val variantId: Long? = null,
+    val variantName: String? = null,
     val qty: Int = 0,
     val price: Double = 0.0,
     val costPrice: Double = 0.0,

@@ -184,6 +184,38 @@ class PurchaseViewModel(
         }
     }
 
+    fun updateSupplier(supplier: com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity) {
+        viewModelScope.launch {
+            try {
+                supplierRepository.update(supplier)
+                _uiState.update {
+                    it.copy(
+                        selectedSupplier = supplier,
+                        successMessage = "Supplier ${supplier.name} berhasil diupdate"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    fun deleteSupplier(supplier: com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity) {
+        viewModelScope.launch {
+            try {
+                supplierRepository.delete(supplier)
+                _uiState.update {
+                    it.copy(
+                        selectedSupplier = if (it.selectedSupplier?.id == supplier.id) null else it.selectedSupplier,
+                        successMessage = "Supplier ${supplier.name} berhasil dihapus"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
     fun processPurchase() {
         viewModelScope.launch {
             try {

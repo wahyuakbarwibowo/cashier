@@ -22,12 +22,14 @@ class ViewModelFactory(
             modelClass.isAssignableFrom(ProductViewModel::class.java) -> {
                 ProductViewModel(
                     productRepository = ProductRepository(database.productDao()),
+                    productVariantRepository = ProductVariantRepository(database.productVariantDao()),
                     stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao())
                 ) as T
             }
             modelClass.isAssignableFrom(SalesViewModel::class.java) -> {
                 SalesViewModel(
                     productRepository = ProductRepository(database.productDao()),
+                    productVariantRepository = ProductVariantRepository(database.productVariantDao()),
                     customerRepository = CustomerRepository(database.customerDao()),
                     paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao()),
                     saleRepository = SaleRepository(database.saleDao(), database.saleItemDao()),

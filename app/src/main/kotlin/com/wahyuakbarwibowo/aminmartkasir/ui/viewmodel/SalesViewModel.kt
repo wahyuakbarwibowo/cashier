@@ -37,6 +37,7 @@ data class SalesTransactionUiState(
 
 data class CartItem(
     val product: ProductEntity,
+    val variant: ProductVariantEntity? = null,
     val qty: Int,
     val price: Double,
     val costPrice: Double,
@@ -45,6 +46,7 @@ data class CartItem(
 
 class SalesViewModel(
     private val productRepository: ProductRepository,
+    private val productVariantRepository: ProductVariantRepository,
     private val customerRepository: CustomerRepository,
     private val paymentMethodRepository: PaymentMethodRepository,
     private val saleRepository: SaleRepository,
@@ -190,24 +192,30 @@ class SalesViewModel(
         }
     }
 
-    fun addToCart(product: ProductEntity): Boolean {
+    suspend fun getVariantsByProductId(productId: Long): List<ProductVariantEntity> {
+        return productVariantRepository.getByProductIdOnce(productId)
+    }
+
+    fun addToCart(product: ProductEntity, variant: ProductVariantEntity? = null): Boolean {
         val currentState = _uiState.value
-        val existingItem = currentState.cartItems.find { it.product.id == product.id }
+        val existingItem = currentState.cartItems.find { it.product.id == product.id && it.variant?.id == variant?.id }
         val currentQty = existingItem?.qty ?: 0
-        
-        if (currentQty + 1 > product.stock) {
+        val availableStock = variant?.stock ?: product.stock
+
+        if (currentQty + 1 > availableStock) {
             return false
         }
 
         _uiState.update { state ->
             val newCartItems = if (existingItem != null) {
                 state.cartItems.map {
-                    if (it.product.id == product.id) {
+                    if (it.product.id == product.id && it.variant?.id == variant?.id) {
                         val newQty = it.qty + 1
+                        val unitPrice = variant?.sellingPrice ?: getPricePerUnit(product, newQty)
                         it.copy(
                             qty = newQty, 
-                            price = getPricePerUnit(product, newQty),
-                            subtotal = calculateSubtotal(product, newQty)
+                            price = unitPrice,
+                            subtotal = unitPrice * newQty
                         )
                     } else {
                         it
@@ -216,10 +224,11 @@ class SalesViewModel(
             } else {
                 state.cartItems + CartItem(
                     product = product,
+                    variant = variant,
                     qty = 1,
-                    price = getPricePerUnit(product, 1),
-                    costPrice = product.purchasePrice,
-                    subtotal = calculateSubtotal(product, 1)
+                    price = variant?.sellingPrice ?: getPricePerUnit(product, 1),
+                    costPrice = variant?.purchasePrice ?: product.purchasePrice,
+                    subtotal = variant?.sellingPrice ?: getPricePerUnit(product, 1)
                 )
             }
             recalculateState(state.copy(cartItems = newCartItems))
@@ -227,26 +236,28 @@ class SalesViewModel(
         return true
     }
 
-    fun updateCartItemQty(productId: Long, qty: Int): Boolean {
+    fun updateCartItemQty(productId: Long, variantId: Long?, qty: Int): Boolean {
         if (qty <= 0) {
-            removeFromCart(productId)
+            removeFromCart(productId, variantId)
             return true
         }
         
         val currentState = _uiState.value
-        val item = currentState.cartItems.find { it.product.id == productId } ?: return false
+        val item = currentState.cartItems.find { it.product.id == productId && it.variant?.id == variantId } ?: return false
+        val availableStock = item.variant?.stock ?: item.product.stock
         
-        if (qty > item.product.stock) {
+        if (qty > availableStock) {
             return false
         }
 
         _uiState.update { state ->
             val newCartItems = state.cartItems.map {
-                if (it.product.id == productId) {
+                if (it.product.id == productId && it.variant?.id == variantId) {
+                    val unitPrice = it.variant?.sellingPrice ?: getPricePerUnit(it.product, qty)
                     it.copy(
                         qty = qty, 
-                        price = getPricePerUnit(it.product, qty),
-                        subtotal = calculateSubtotal(it.product, qty)
+                        price = unitPrice,
+                        subtotal = unitPrice * qty
                     )
                 } else {
                     it
@@ -257,9 +268,9 @@ class SalesViewModel(
         return true
     }
 
-    fun removeFromCart(productId: Long) {
+    fun removeFromCart(productId: Long, variantId: Long?) {
         _uiState.update { currentState ->
-            val newCartItems = currentState.cartItems.filter { it.product.id != productId }
+            val newCartItems = currentState.cartItems.filterNot { it.product.id == productId && it.variant?.id == variantId }
             recalculateState(currentState.copy(cartItems = newCartItems))
         }
     }
@@ -337,6 +348,8 @@ class SalesViewModel(
                         saleId = 0,
                         productId = item.product.id,
                         productName = item.product.name,
+                        variantId = item.variant?.id,
+                        variantName = item.variant?.name,
                         qty = item.qty,
                         price = item.price,
                         costPrice = item.costPrice,
@@ -583,6 +596,8 @@ class SalesViewModel(
                         saleId = saleId,
                         productId = item.product.id,
                         productName = item.product.name,
+                        variantId = item.variant?.id,
+                        variantName = item.variant?.name,
                         qty = item.qty,
                         price = item.price,
                         costPrice = item.costPrice,

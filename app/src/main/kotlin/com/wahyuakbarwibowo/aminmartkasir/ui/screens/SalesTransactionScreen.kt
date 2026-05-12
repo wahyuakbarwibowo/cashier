@@ -176,15 +176,15 @@ fun SalesTransactionScreen(
                         contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 120.dp), // Extra bottom padding for dock
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(uiState.cartItems, key = { it.product.id }) { item ->
+                        items(uiState.cartItems, key = { "${it.product.id}-${it.variant?.id ?: 0L}" }) { item ->
                             CartItemCard(
                                 item = item,
                                 onIncreaseQty = { 
-                                    if (!viewModel.updateCartItemQty(item.product.id, item.qty + 1)) {
+                                    if (!viewModel.updateCartItemQty(item.product.id, item.variant?.id, item.qty + 1)) {
                                         Toast.makeText(context, "Stok tidak mencukupi", Toast.LENGTH_SHORT).show()
                                     }
-                                },                                onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.qty - 1) },
-                                onRemove = { viewModel.removeFromCart(item.product.id) },
+                                },                                onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.variant?.id, item.qty - 1) },
+                                onRemove = { viewModel.removeFromCart(item.product.id, item.variant?.id) },
                                 onEdit = {
                                     productToEdit = item.product
                                     showEditProductDialog = true
@@ -466,6 +466,14 @@ fun CartItemCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.width(8.dp))
+                        if (item.variant != null) {
+                            Text(
+                                text = "• ${item.variant.name}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
                         Text(
                             text = "• Stok: ${item.product.stock}",
                             style = MaterialTheme.typography.labelSmall,

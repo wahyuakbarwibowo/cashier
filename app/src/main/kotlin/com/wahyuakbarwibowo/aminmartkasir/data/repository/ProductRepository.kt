@@ -5,11 +5,29 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import kotlinx.coroutines.flow.Flow
 
 class ProductRepository(private val productDao: ProductDao) {
+    enum class ProductSort {
+        NEWEST,
+        NAME_ASC,
+        NAME_DESC,
+        STOCK_ASC,
+        STOCK_DESC
+    }
+
     val allProducts: Flow<List<ProductEntity>> = productDao.getAllProducts()
     val productCount: Flow<Int> = productDao.getProductCount()
 
     suspend fun getProducts(limit: Int, offset: Int): List<ProductEntity> {
         return productDao.getProducts(limit, offset)
+    }
+
+    suspend fun getProductsSorted(limit: Int, offset: Int, sort: ProductSort): List<ProductEntity> {
+        return when (sort) {
+            ProductSort.NEWEST -> productDao.getProducts(limit, offset)
+            ProductSort.NAME_ASC -> productDao.getProductsOrderByNameAsc(limit, offset)
+            ProductSort.NAME_DESC -> productDao.getProductsOrderByNameDesc(limit, offset)
+            ProductSort.STOCK_ASC -> productDao.getProductsOrderByStockAsc(limit, offset)
+            ProductSort.STOCK_DESC -> productDao.getProductsOrderByStockDesc(limit, offset)
+        }
     }
 
     suspend fun getProductById(id: Long): ProductEntity? {

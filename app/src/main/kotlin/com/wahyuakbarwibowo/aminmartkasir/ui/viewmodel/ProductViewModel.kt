@@ -3,8 +3,10 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductVariantEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductRepository
+import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductVariantRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -12,6 +14,14 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+
+enum class ProductSortOption(val label: String, val repositorySort: ProductRepository.ProductSort) {
+    NEWEST("Terbaru", ProductRepository.ProductSort.NEWEST),
+    NAME_ASC("Nama A-Z", ProductRepository.ProductSort.NAME_ASC),
+    NAME_DESC("Nama Z-A", ProductRepository.ProductSort.NAME_DESC),
+    STOCK_ASC("Stok Rendah", ProductRepository.ProductSort.STOCK_ASC),
+    STOCK_DESC("Stok Tinggi", ProductRepository.ProductSort.STOCK_DESC)
+}
 
 data class ProductUiState(
     val products: List<ProductEntity> = emptyList(),
@@ -21,6 +31,7 @@ data class ProductUiState(
     val isRefreshing: Boolean = false,
     val isLoadMoreLoading: Boolean = false,
     val canLoadMore: Boolean = true,
+    val sortOption: ProductSortOption = ProductSortOption.NEWEST,
     val searchQuery: String = "",
     val successMessage: String? = null,
     val error: String? = null
@@ -28,6 +39,7 @@ data class ProductUiState(
 
 class ProductViewModel(
     private val productRepository: ProductRepository,
+    private val productVariantRepository: ProductVariantRepository,
     private val stockHistoryRepository: StockHistoryRepository
 ) : ViewModel() {
 
@@ -63,7 +75,11 @@ class ProductViewModel(
         loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, products = emptyList(), canLoadMore = true) }
             try {
-                val initialProducts = productRepository.getProducts(pageSize, 0)
+                val initialProducts = productRepository.getProductsSorted(
+                    limit = pageSize,
+                    offset = 0,
+                    sort = _uiState.value.sortOption.repositorySort
+                )
                 if (initialProducts.size < pageSize) {
                     isLastPage = true
                 }
@@ -89,7 +105,11 @@ class ProductViewModel(
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val offset = currentPage * pageSize
-                val newProducts = productRepository.getProducts(pageSize, offset)
+                val newProducts = productRepository.getProductsSorted(
+                    limit = pageSize,
+                    offset = offset,
+                    sort = _uiState.value.sortOption.repositorySort
+                )
                 
                 if (newProducts.size < pageSize) {
                     isLastPage = true
@@ -129,6 +149,17 @@ class ProductViewModel(
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
             }
         }
+    }
+
+    fun setSortOption(sortOption: ProductSortOption) {
+        if (_uiState.value.sortOption == sortOption) return
+        _uiState.update {
+            it.copy(
+                sortOption = sortOption,
+                searchQuery = ""
+            )
+        }
+        loadInitialProducts()
     }
 
     fun refreshData() {
@@ -267,5 +298,16 @@ class ProductViewModel(
 
     fun clearMessages() {
         _uiState.update { it.copy(successMessage = null, error = null) }
+    }
+
+    suspend fun getVariantsByProductId(productId: Long): List<ProductVariantEntity> {
+        return productVariantRepository.getByProductIdOnce(productId)
+    }
+
+    suspend fun replaceVariants(productId: Long, variants: List<ProductVariantEntity>) {
+        productVariantRepository.deleteByProductId(productId)
+        variants.forEach { variant ->
+            productVariantRepository.insert(variant.copy(id = 0, productId = productId))
+        }
     }
 }

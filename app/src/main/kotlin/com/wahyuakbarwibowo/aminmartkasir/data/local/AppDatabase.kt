@@ -14,6 +14,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
 @Database(
     entities = [
         ProductEntity::class,
+        ProductVariantEntity::class,
         CustomerEntity::class,
         PaymentMethodEntity::class,
         ShopProfileEntity::class,
@@ -31,12 +32,13 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         CustomerPointsHistoryEntity::class,
         StockHistoryEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
+    abstract fun productVariantDao(): ProductVariantDao
     abstract fun customerDao(): CustomerDao
     abstract fun paymentMethodDao(): PaymentMethodDao
     abstract fun shopProfileDao(): ShopProfileDao

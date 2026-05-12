@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -48,6 +49,8 @@ fun PurchasesScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showAddItemDialog by remember { mutableStateOf(false) }
     var showAddSupplierDialog by remember { mutableStateOf(false) }
+    var showEditSupplierDialog by remember { mutableStateOf(false) }
+    var supplierToDelete by remember { mutableStateOf<SupplierEntity?>(null) }
 
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let { message ->
@@ -107,7 +110,9 @@ fun PurchasesScreen(
                             suppliers = uiState.suppliers,
                             selectedSupplier = uiState.selectedSupplier,
                             onSelectSupplier = { viewModel.setSelectedSupplier(it) },
-                            onAddSupplier = { showAddSupplierDialog = true }
+                            onAddSupplier = { showAddSupplierDialog = true },
+                            onEditSupplier = { showEditSupplierDialog = true },
+                            onDeleteSupplier = { supplierToDelete = it }
                         )
                     }
 
@@ -191,6 +196,48 @@ fun PurchasesScreen(
             }
         )
     }
+
+    val selectedSupplierForEdit = uiState.selectedSupplier
+    if (showEditSupplierDialog && selectedSupplierForEdit != null) {
+        EditSupplierDialog(
+            supplier = selectedSupplierForEdit,
+            onDismiss = { showEditSupplierDialog = false },
+            onConfirm = { name, phone, address ->
+                viewModel.updateSupplier(
+                    selectedSupplierForEdit.copy(
+                        name = name,
+                        phone = phone.ifBlank { null },
+                        address = address.ifBlank { null }
+                    )
+                )
+                showEditSupplierDialog = false
+            }
+        )
+    }
+
+    if (supplierToDelete != null) {
+        val supplier = supplierToDelete ?: return
+        AlertDialog(
+            onDismissRequest = { supplierToDelete = null },
+            title = { Text("Hapus Supplier") },
+            text = { Text("Yakin ingin menghapus supplier ${supplier.name}?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSupplier(supplier)
+                        supplierToDelete = null
+                    }
+                ) {
+                    Text("Hapus", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { supplierToDelete = null }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -199,7 +246,9 @@ private fun SupplierSelectorCard(
     suppliers: List<SupplierEntity>,
     selectedSupplier: SupplierEntity?,
     onSelectSupplier: (SupplierEntity?) -> Unit,
-    onAddSupplier: () -> Unit
+    onAddSupplier: () -> Unit,
+    onEditSupplier: () -> Unit,
+    onDeleteSupplier: (SupplierEntity) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -258,6 +307,24 @@ private fun SupplierSelectorCard(
                     }
                 }
             }
+            val activeSupplier = selectedSupplier
+            if (activeSupplier != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onEditSupplier) {
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Edit")
+                    }
+                    TextButton(onClick = { onDeleteSupplier(activeSupplier) }) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Hapus", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
         }
     }
 }
@@ -274,6 +341,61 @@ fun AddSupplierDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Tambah Supplier") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nama Supplier") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { if (it.isEmpty() || it.all { ch -> ch.isDigit() }) phone = it },
+                    label = { Text("Nomor Telepon") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("Alamat") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(name, phone, address) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Simpan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
+}
+
+@Composable
+fun EditSupplierDialog(
+    supplier: SupplierEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String) -> Unit
+) {
+    var name by remember(supplier.id) { mutableStateOf(supplier.name) }
+    var phone by remember(supplier.id) { mutableStateOf(supplier.phone.orEmpty()) }
+    var address by remember(supplier.id) { mutableStateOf(supplier.address.orEmpty()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Supplier") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
