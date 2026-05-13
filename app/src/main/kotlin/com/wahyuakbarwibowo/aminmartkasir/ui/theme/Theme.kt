@@ -29,6 +29,10 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = PinkOnSurfaceDark,
     error = PinkErrorDark,
     onError = PinkOnErrorDark,
+    errorContainer = PinkErrorContainerDark,
+    onErrorContainer = PinkOnErrorContainerDark,
+    surfaceVariant = PinkSurfaceVariantDark,
+    onSurfaceVariant = PinkOnSurfaceVariantDark,
     outline = PinkOutlineDark
 )
 
@@ -68,7 +72,8 @@ fun AminmartKasirTheme(
             val window = (view.context as Activity).window
             WindowCompat.setDecorFitsSystemWindows(window, false)
             WindowInsetsControllerCompat(window, view).apply {
-                isAppearanceLightStatusBars = darkTheme
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
             }
         }
     }

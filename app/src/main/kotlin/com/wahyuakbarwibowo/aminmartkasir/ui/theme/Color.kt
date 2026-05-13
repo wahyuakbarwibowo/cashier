@@ -35,6 +35,10 @@ val PinkOnSurfaceDark = Color(0xFFE8E8E8)
 val PinkErrorDark = Color(0xFFCF6679)
 val PinkOnErrorDark = Color(0xFF000000)
 val PinkOutlineDark = Color(0xFFFF66B2)
+val PinkSurfaceVariantDark = Color(0xFF2A1F27)
+val PinkOnSurfaceVariantDark = Color(0xFFE8D6DF)
+val PinkErrorContainerDark = Color(0xFF8C2F3F)
+val PinkOnErrorContainerDark = Color(0xFFFFDADF)
 
 // Legacy support (keeping old names for backward compatibility)
 val Purple80 = PinkPrimaryDark
