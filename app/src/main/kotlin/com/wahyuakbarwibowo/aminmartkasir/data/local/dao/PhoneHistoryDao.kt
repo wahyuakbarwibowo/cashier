@@ -21,6 +21,18 @@ interface PhoneHistoryDao {
     @Query("SELECT * FROM phone_history ORDER BY id DESC LIMIT 100")
     fun getPhoneHistoryByDateRange(): Flow<List<PhoneHistoryEntity>>
 
+    @Query("SELECT SUM(sellingPrice) FROM phone_history WHERE createdAt >= :startDate AND createdAt <= :endDate")
+    suspend fun getTotalDigitalRevenueByDateRange(startDate: String, endDate: String): Double?
+
+    @Query("SELECT SUM(profit) FROM phone_history WHERE createdAt >= :startDate AND createdAt <= :endDate")
+    suspend fun getTotalDigitalProfitByDateRange(startDate: String, endDate: String): Double?
+
+    @Query("SELECT SUM(sellingPrice) FROM phone_history")
+    suspend fun getTotalDigitalRevenueAllTime(): Double?
+
+    @Query("SELECT SUM(profit) FROM phone_history")
+    suspend fun getTotalDigitalProfitAllTime(): Double?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(phoneHistory: PhoneHistoryEntity): Long
 

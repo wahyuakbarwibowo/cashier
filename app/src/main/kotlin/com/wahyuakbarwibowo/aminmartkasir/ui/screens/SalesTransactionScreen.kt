@@ -48,6 +48,8 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.screens.LastTransactionData
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -72,6 +74,7 @@ fun SalesTransactionScreen(
     var successTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
     val cartListState = rememberLazyListState()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(editingSaleId) {
         if (editingSaleId != null) {
@@ -276,8 +279,10 @@ fun SalesTransactionScreen(
                 if (viewModel.addToCart(product)) {
                     viewModel.searchProducts("") // Clear search after selection
                     // showProductSelector = false // Allow multiple add
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) // Light tick
                     Toast.makeText(context, "${product.name} ditambah", Toast.LENGTH_SHORT).show()
                 } else {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress) // Heavy vibe on error
                     Toast.makeText(context, "Stok ${product.name} habis/tidak mencukupi", Toast.LENGTH_SHORT).show()
                 }
             },
@@ -338,6 +343,12 @@ fun SalesTransactionScreen(
                 }
             }
         )
+    }
+
+    LaunchedEffect(showSuccessDialog) {
+        if (showSuccessDialog) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress) // Strong vibe on checkout success
+        }
     }
 
     if (showSuccessDialog) {

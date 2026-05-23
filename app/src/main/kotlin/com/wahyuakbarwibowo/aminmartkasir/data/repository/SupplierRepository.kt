@@ -1,11 +1,15 @@
 package com.wahyuakbarwibowo.aminmartkasir.data.repository
 
+import androidx.room.withTransaction
+import com.wahyuakbarwibowo.aminmartkasir.data.local.AppDatabase
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.SupplierDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.PurchaseDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.PurchaseItemDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PurchaseEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PurchaseItemEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ExpenseEntity
 import kotlinx.coroutines.flow.Flow
 
 class SupplierRepository(
@@ -42,10 +46,12 @@ class SupplierRepository(
 }
 
 class PurchaseRepository(
-    private val purchaseDao: PurchaseDao,
-    private val purchaseItemDao: PurchaseItemDao,
-    private val productDao: com.wahyuakbarwibowo.aminmartkasir.data.local.dao.ProductDao
+    private val database: AppDatabase
 ) {
+    private val purchaseDao = database.purchaseDao()
+    private val purchaseItemDao = database.purchaseItemDao()
+    private val productDao = database.productDao()
+
     val allPurchases: Flow<List<PurchaseEntity>> = purchaseDao.getAllPurchases()
 
     suspend fun getPurchases(limit: Int, offset: Int): List<PurchaseEntity> {
@@ -60,27 +66,44 @@ class PurchaseRepository(
         return purchaseItemDao.getPurchaseItemsByPurchaseId(purchaseId)
     }
 
-    suspend fun insertPurchaseWithItems(purchase: PurchaseEntity, items: List<PurchaseItemEntity>): Long {
-        val purchaseId = purchaseDao.insert(purchase)
-        items.forEach { item ->
-            purchaseItemDao.insert(item.copy(purchaseId = purchaseId))
-            // Update product stock
-            item.productId?.let {
-                productDao.increaseStock(it, item.qty)
-            }
-        }
-        return purchaseId
-    }
-
-    suspend fun updatePurchaseWithItems(purchase: PurchaseEntity, items: List<PurchaseItemEntity>) {
-        purchaseDao.update(purchase)
-        purchaseItemDao.deleteByPurchaseId(purchase.id)
-        items.forEach { item ->
-            purchaseItemDao.insert(item)
-        }
-    }
-
     suspend fun deletePurchase(purchase: PurchaseEntity) {
         purchaseDao.delete(purchase)
+    }
+
+    /**
+     * Memproses pembelian stok dari supplier secara atomik di dalam sebuah Room Database Transaction.
+     */
+    suspend fun processPurchaseTransaction(
+        purchase: PurchaseEntity,
+        items: List<PurchaseItemEntity>,
+        expense: ExpenseEntity
+    ): Long = database.withTransaction {
+        val purchaseId = purchaseDao.insert(purchase)
+        
+        items.forEach { item ->
+            purchaseItemDao.insert(item.copy(purchaseId = purchaseId))
+            
+            item.productId?.let { productId ->
+                val product = productDao.getProductById(productId)
+                if (product != null) {
+                    productDao.increaseStock(productId, item.qty)
+                    database.stockHistoryDao().insert(
+                        StockHistoryEntity(
+                            productId = productId,
+                            productName = product.name,
+                            changeQty = item.qty,
+                            stockBefore = product.stock,
+                            stockAfter = product.stock + item.qty,
+                            reason = "Pembelian dari supplier",
+                            createdAt = purchase.createdAt ?: ""
+                        )
+                    )
+                }
+            }
+        }
+
+        database.expenseDao().insert(expense)
+        
+        purchaseId
     }
 }

@@ -63,7 +63,9 @@ class DashboardViewModel(
     private fun loadSalesData() {
         viewModelScope.launch {
             try {
-                val todaySales = saleRepository.getTotalSalesByDateRange()
+                val todayStart = dateFormat.format(Date()) + " 00:00:00"
+                val todayEnd = dateFormat.format(Date()) + " 23:59:59"
+                val todaySales = saleRepository.getTotalSalesByDateRange(todayStart, todayEnd)
                 _uiState.update { it.copy(todaySales = todaySales) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
@@ -74,8 +76,15 @@ class DashboardViewModel(
     private fun loadAnalyticsData() {
         viewModelScope.launch {
             try {
-                // 1. Weekly Sales
-                val allSales = saleRepository.allSales.first()
+                // 1. Weekly Sales (Load only the last 7 days from DB, highly optimized!)
+                val calMin = Calendar.getInstance()
+                calMin.add(Calendar.DAY_OF_YEAR, -6)
+                calMin.set(Calendar.HOUR_OF_DAY, 0)
+                calMin.set(Calendar.MINUTE, 0)
+                calMin.set(Calendar.SECOND, 0)
+                val minDateStr = dateFormat.format(calMin.time) + " 00:00:00"
+
+                val recentSales = saleRepository.getSalesSince(minDateStr)
                 val weeklyTrend = mutableListOf<Pair<String, Double>>()
                 val dayFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
                 
@@ -85,28 +94,14 @@ class DashboardViewModel(
                     val dateStr = dateFormat.format(cal.time)
                     val label = dayFormat.format(cal.time)
                     
-                    val dailyTotal = allSales.filter { it.createdAt?.startsWith(dateStr) == true }.sumOf { it.total }
+                    val dailyTotal = recentSales.filter { it.createdAt?.startsWith(dateStr) == true }.sumOf { it.total }
                     weeklyTrend.add(label to dailyTotal)
                 }
                 
-                // 2. Resolve Top Products with Real Names from Master Data
-                val allItems = mutableListOf<com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity>()
-                allSales.take(100).forEach { sale ->
-                    allItems.addAll(saleRepository.getSaleItemsOnce(sale.id))
-                }
-                
-                // Group by ID to find top sellers
-                val topById = allItems.filter { it.productId != null }.groupBy { it.productId!! }
-                    .mapValues { it.value.sumOf { item -> item.qty } }
-                    .toList()
-                    .sortedByDescending { it.second }
-                    .take(5)
-
-                // Fetch real names from Product Repository for these IDs
-                val resolvedTopProducts = topById.map { (productId, qty) ->
-                    val product = productRepository.getProductById(productId)
-                    val name = product?.name ?: allItems.firstOrNull { it.productId == productId }?.productName ?: "Produk #$productId"
-                    name to qty
+                // 2. Resolve Top Products via SQLite GROUP BY (Eliminating N+1 queries!)
+                val topProductsDto = saleRepository.getTopSellingProductsOnce(5)
+                val resolvedTopProducts = topProductsDto.map { dto ->
+                    dto.productName to dto.totalQty
                 }
 
                 _uiState.update { 

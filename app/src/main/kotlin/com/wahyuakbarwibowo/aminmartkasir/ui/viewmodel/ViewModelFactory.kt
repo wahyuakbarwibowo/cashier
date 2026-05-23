@@ -16,7 +16,7 @@ class ViewModelFactory(
                 DashboardViewModel(
                     productRepository = ProductRepository(database.productDao()),
                     customerRepository = CustomerRepository(database.customerDao()),
-                    saleRepository = SaleRepository(database.saleDao(), database.saleItemDao())
+                    saleRepository = SaleRepository(database)
                 ) as T
             }
             modelClass.isAssignableFrom(ProductViewModel::class.java) -> {
@@ -32,7 +32,7 @@ class ViewModelFactory(
                     productVariantRepository = ProductVariantRepository(database.productVariantDao()),
                     customerRepository = CustomerRepository(database.customerDao()),
                     paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao()),
-                    saleRepository = SaleRepository(database.saleDao(), database.saleItemDao()),
+                    saleRepository = SaleRepository(database),
                     stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao()),
                     customerPointsHistoryRepository = CustomerPointsHistoryRepository(database.customerPointsHistoryDao()),
                     receivableRepository = ReceivableRepository(database.receivableDao())
@@ -40,12 +40,12 @@ class ViewModelFactory(
             }
             modelClass.isAssignableFrom(SalesHistoryViewModel::class.java) -> {
                 SalesHistoryViewModel(
-                    saleRepository = SaleRepository(database.saleDao(), database.saleItemDao())
+                    saleRepository = SaleRepository(database)
                 ) as T
             }
             modelClass.isAssignableFrom(SaleDetailViewModel::class.java) -> {
                 SaleDetailViewModel(
-                    saleRepository = SaleRepository(database.saleDao(), database.saleItemDao())
+                    saleRepository = SaleRepository(database)
                 ) as T
             }
             modelClass.isAssignableFrom(PurchaseViewModel::class.java) -> {
@@ -55,11 +55,7 @@ class ViewModelFactory(
                         database.purchaseDao(),
                         database.purchaseItemDao()
                     ),
-                    purchaseRepository = PurchaseRepository(
-                        database.purchaseDao(),
-                        database.purchaseItemDao(),
-                        database.productDao()
-                    ),
+                    purchaseRepository = PurchaseRepository(database),
                     productRepository = ProductRepository(database.productDao()),
                     stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao()),
                     expenseRepository = ExpenseRepository(database.expenseDao())
@@ -117,6 +113,13 @@ class ViewModelFactory(
             modelClass.isAssignableFrom(BackupViewModel::class.java) -> {
                 BackupViewModel(
                     backupRepository = BackupRepository(database)
+                ) as T
+            }
+            modelClass.isAssignableFrom(ProfitLossViewModel::class.java) -> {
+                ProfitLossViewModel(
+                    saleRepository = SaleRepository(database),
+                    expenseRepository = ExpenseRepository(database.expenseDao()),
+                    phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao())
                 ) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

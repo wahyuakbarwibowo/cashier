@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ExpenseViewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SalesHistoryViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 import com.wahyuakbarwibowo.aminmartkasir.utils.ExcelExportUtils
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,7 @@ fun ReportsScreen(
     val expenseState by expenseViewModel.uiState.collectAsState()
     val digitalState by digitalTransactionViewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val cashierRevenue = remember(salesState.sales) { salesState.sales.sumOf { it.total } }
     val cashierCount = salesState.sales.size
@@ -69,14 +72,16 @@ fun ReportsScreen(
                 windowInsets = WindowInsets.statusBars,
                 actions = {
                     IconButton(onClick = {
-                        val file = ExcelExportUtils.exportFullReport(
-                            context,
-                            salesState.sales,
-                            digitalState.phoneHistory,
-                            expenseState.expenses
-                        )
-                        if (file != null) {
-                            ExcelExportUtils.shareFile(context, file)
+                        coroutineScope.launch {
+                            val file = ExcelExportUtils.exportFullReport(
+                                context,
+                                salesState.sales,
+                                digitalState.phoneHistory,
+                                expenseState.expenses
+                            )
+                            if (file != null) {
+                                ExcelExportUtils.shareFile(context, file)
+                            }
                         }
                     }) {
                         Icon(Icons.Default.Download, contentDescription = "Ekspor Excel")
@@ -143,7 +148,8 @@ fun ReportsScreen(
                     value = formatCurrency(estimatedNet),
                     subtitle = "Omzet kasir + omzet digital - pengeluaran",
                     icon = Icons.Default.Assessment,
-                    highlighted = true
+                    highlighted = true,
+                    isPositive = estimatedNet >= 0
                 )
             }
             item {
@@ -202,17 +208,36 @@ private fun SummaryStatCard(
     value: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    highlighted: Boolean = false
+    highlighted: Boolean = false,
+    isPositive: Boolean? = null
 ) {
-    val colors = if (highlighted) {
-        CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    } else {
-        CardDefaults.cardColors()
+    val containerColor = when {
+        isPositive == true -> Color(0xFFE8F5E9)
+        isPositive == false -> Color(0xFFFFEBEE)
+        highlighted -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    
+    val contentColor = when {
+        isPositive == true -> Color(0xFF2E7D32)
+        isPositive == false -> Color(0xFFC62828)
+        highlighted -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val valueColor = when {
+        isPositive == true -> Color(0xFF1B5E20)
+        isPositive == false -> Color(0xFFB71C1C)
+        highlighted -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = colors
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        )
     ) {
         Row(
             modifier = Modifier
@@ -225,23 +250,24 @@ private fun SummaryStatCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = contentColor
                 )
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Black,
+                    color = valueColor
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = contentColor.copy(alpha = 0.8f)
                 )
             }
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = contentColor
             )
         }
     }

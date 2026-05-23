@@ -6,6 +6,8 @@ import androidx.core.content.FileProvider
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ExpenseEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -13,26 +15,45 @@ import java.util.*
 
 object ExcelExportUtils {
 
+    private fun sanitizeCsvField(field: Any?): String {
+        if (field == null) return ""
+        val str = field.toString()
+        if (str.contains(",") || str.contains("\"") || str.contains("\n") || str.contains("\r")) {
+            return "\"" + str.replace("\"", "\"\"") + "\""
+        }
+        return str
+    }
+
     /**
      * Menggunakan format CSV agar 100% kompatibel dengan Android tanpa library tambahan
      * File CSV dapat dibuka langsung di Microsoft Excel
      */
-    fun exportFullReport(
+    suspend fun exportFullReport(
         context: Context,
         sales: List<SaleEntity>,
         digitalHistory: List<PhoneHistoryEntity>,
         expenses: List<ExpenseEntity>
-    ): File? {
+    ): File? = withContext(Dispatchers.IO) {
         try {
+            // Bersihkan file laporan lama di cache untuk menghindari kebocoran penyimpanan (storage leak)
+            try {
+                context.cacheDir.listFiles()?.forEach { file ->
+                    if (file.name.startsWith("Laporan_Aminmart_") && file.name.endsWith(".csv")) {
+                        file.delete()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             val sb = StringBuilder()
-            val delimiter = "," // Gunakan koma sebagai pemisah standar CSV
 
             // --- 1. SEKSI PENJUALAN RETAIL ---
             sb.append("LAPORAN PENJUALAN RETAIL\n")
             sb.append("ID,Tanggal,Total,Dibayar,Kembalian,Poin\n")
             sales.forEach { sale ->
-                sb.append("${sale.id},")
-                sb.append("${sale.createdAt},")
+                sb.append("${sanitizeCsvField(sale.id)},")
+                sb.append("${sanitizeCsvField(sale.createdAt)},")
                 sb.append("${sale.total},")
                 sb.append("${sale.paid},")
                 sb.append("${sale.change},")
@@ -45,15 +66,14 @@ object ExcelExportUtils {
             sb.append("LAPORAN TRANSAKSI DIGITAL\n")
             sb.append("ID,Tanggal,Kategori,Provider,Nomor,Harga Jual,Profit,Catatan\n")
             digitalHistory.forEach { trx ->
-                sb.append("${trx.id},")
-                sb.append("${trx.createdAt},")
-                sb.append("${trx.category},")
-                sb.append("${trx.provider},")
-                sb.append("'${trx.phoneNumber},") // Tanda petik agar nomor tidak terpotong nol-nya di Excel
+                sb.append("${sanitizeCsvField(trx.id)},")
+                sb.append("${sanitizeCsvField(trx.createdAt)},")
+                sb.append("${sanitizeCsvField(trx.category)},")
+                sb.append("${sanitizeCsvField(trx.provider)},")
+                sb.append("${sanitizeCsvField("'" + trx.phoneNumber)},") // Tanda petik agar nomor tidak terpotong nol-nya di Excel
                 sb.append("${trx.sellingPrice},")
                 sb.append("${trx.profit},")
-                val sanitizedNotes = trx.notes?.replace("\n", " ")?.replace(",", ";") ?: "-"
-                sb.append("$sanitizedNotes\n")
+                sb.append("${sanitizeCsvField(trx.notes ?: "-")}\n")
             }
 
             sb.append("\n\n")
@@ -62,12 +82,11 @@ object ExcelExportUtils {
             sb.append("LAPORAN PENGELUARAN\n")
             sb.append("ID,Tanggal,Kategori,Nominal,Catatan\n")
             expenses.forEach { exp ->
-                sb.append("${exp.id},")
-                sb.append("${exp.createdAt},")
-                sb.append("${exp.category},")
+                sb.append("${sanitizeCsvField(exp.id)},")
+                sb.append("${sanitizeCsvField(exp.createdAt)},")
+                sb.append("${sanitizeCsvField(exp.category)},")
                 sb.append("${exp.amount},")
-                val sanitizedNotes = exp.notes?.replace("\n", " ")?.replace(",", ";") ?: "-"
-                sb.append("$sanitizedNotes\n")
+                sb.append("${sanitizeCsvField(exp.notes ?: "-")}\n")
             }
 
             val fileName = "Laporan_Aminmart_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.csv"
@@ -76,10 +95,10 @@ object ExcelExportUtils {
             outputStream.write(sb.toString().toByteArray())
             outputStream.close()
             
-            return file
+            return@withContext file
         } catch (e: Exception) {
             e.printStackTrace()
-            return null
+            return@withContext null
         }
     }
 

@@ -83,12 +83,14 @@ class PrinterViewModel(
     }
     
     fun disconnectDevice() {
-        printerHelper?.disconnect()
-        _uiState.update { 
-            it.copy(
-                isConnected = false,
-                selectedDevice = null
-            ) 
+        viewModelScope.launch {
+            printerHelper?.disconnect()
+            _uiState.update { 
+                it.copy(
+                    isConnected = false,
+                    selectedDevice = null
+                ) 
+            }
         }
     }
     

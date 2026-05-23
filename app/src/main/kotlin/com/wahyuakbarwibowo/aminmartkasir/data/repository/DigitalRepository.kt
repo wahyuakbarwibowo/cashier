@@ -86,4 +86,20 @@ class PhoneHistoryRepository(private val phoneHistoryDao: PhoneHistoryDao) {
     suspend fun deleteById(id: Long) {
         phoneHistoryDao.deleteById(id)
     }
+
+    suspend fun getTotalDigitalRevenueByDateRange(startDate: String, endDate: String): Double {
+        return phoneHistoryDao.getTotalDigitalRevenueByDateRange(startDate, endDate) ?: 0.0
+    }
+
+    suspend fun getTotalDigitalProfitByDateRange(startDate: String, endDate: String): Double {
+        return phoneHistoryDao.getTotalDigitalProfitByDateRange(startDate, endDate) ?: 0.0
+    }
+
+    suspend fun getTotalDigitalRevenueAllTime(): Double {
+        return phoneHistoryDao.getTotalDigitalRevenueAllTime() ?: 0.0
+    }
+
+    suspend fun getTotalDigitalProfitAllTime(): Double {
+        return phoneHistoryDao.getTotalDigitalProfitAllTime() ?: 0.0
+    }
 }

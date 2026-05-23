@@ -28,4 +28,16 @@ interface ProductVariantDao {
 
     @Query("DELETE FROM product_variants WHERE productId = :productId")
     suspend fun deleteByProductId(productId: Long)
+
+    @Query("SELECT * FROM product_variants ORDER BY id ASC")
+    fun getAllVariantsForBackup(): Flow<List<ProductVariantEntity>>
+
+    @Query("UPDATE product_variants SET stock = stock - :qty WHERE id = :variantId")
+    suspend fun decreaseStock(variantId: Long, qty: Int)
+
+    @Query("UPDATE product_variants SET stock = stock + :qty WHERE id = :variantId")
+    suspend fun increaseStock(variantId: Long, qty: Int)
+
+    @Query("SELECT * FROM product_variants WHERE id = :id")
+    suspend fun getVariantById(id: Long): ProductVariantEntity?
 }

@@ -243,40 +243,15 @@ class PurchaseViewModel(
                     )
                 }
 
-                // Insert purchase and update stock
-                purchaseRepository.insertPurchaseWithItems(purchase, purchaseItems)
-
-                // Add to StockHistory and record Expense
-                currentState.cartItems.forEach { item ->
-                    val currentProduct = productRepository.getProductById(item.product.id)
-                    if (currentProduct != null) {
-                        // The stock was just increased by the repository, so the stock before was currentProduct.stock - item.qty
-                        val stockAfter = currentProduct.stock
-                        val stockBefore = (stockAfter - item.qty).coerceAtLeast(0)
-                        
-                        stockHistoryRepository.insert(
-                            StockHistoryEntity(
-                                productId = currentProduct.id,
-                                productName = currentProduct.name,
-                                changeQty = item.qty,
-                                stockBefore = stockBefore,
-                                stockAfter = stockAfter,
-                                reason = "Pembelian dari supplier",
-                                createdAt = dateFormat.format(Date())
-                            )
-                        )
-                    }
-                }
-
-                // Record the total purchase cost as an Expense
-                expenseRepository.insert(
-                    ExpenseEntity(
-                        category = "Pembelian Stok",
-                        amount = currentState.total,
-                        notes = "Pembelian barang ke supplier ${currentState.selectedSupplier?.name ?: "Tanpa Nama"}",
-                        createdAt = dateFormat.format(Date())
-                    )
+                val expense = ExpenseEntity(
+                    category = "Pembelian Stok",
+                    amount = currentState.total,
+                    notes = "Pembelian barang ke supplier ${currentState.selectedSupplier?.name ?: "Tanpa Nama"}",
+                    createdAt = dateFormat.format(Date())
                 )
+
+                // Panggil transaksi pembelian secara atomik
+                purchaseRepository.processPurchaseTransaction(purchase, purchaseItems, expense)
 
                 // Clear cart
                 clearCart()

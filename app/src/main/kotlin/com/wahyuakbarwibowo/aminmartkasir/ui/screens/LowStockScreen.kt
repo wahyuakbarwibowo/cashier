@@ -7,12 +7,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.widget.Toast
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProductViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 
@@ -23,6 +26,7 @@ fun LowStockScreen(
     viewModel: ProductViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     
     Scaffold(
         topBar = {
@@ -82,12 +86,37 @@ fun LowStockScreen(
                                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = if (product.stock <= 0) 1f else 0.8f)
                                 )
                             }
-                            Text(
-                                text = formatCurrency(product.sellingPrice),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = formatCurrency(product.sellingPrice),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                IconButton(
+                                    onClick = {
+                                        val message = "Halo, saya dari Aminmart ingin memesan produk ${product.name} karena stok kami hampir habis (${product.stock} tersisa). Terima kasih."
+                                        try {
+                                            val uri = android.net.Uri.parse("https://api.whatsapp.com/send?text=${java.net.URLEncoder.encode(message, "UTF-8")}")
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Gagal membuka WhatsApp", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Chat,
+                                        contentDescription = "Pesan Supplier via WhatsApp"
+                                    )
+                                }
+                            }
                         }
                     }
                 }

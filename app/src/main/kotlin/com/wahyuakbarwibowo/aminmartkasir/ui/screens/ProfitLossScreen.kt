@@ -12,18 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
-import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ExpenseViewModel
-import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProductViewModel
-import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SalesHistoryViewModel
+import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProfitLossViewModel
+import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProfitLossPeriod
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,58 +27,9 @@ fun ProfitLossScreen(
     onNavigateBack: () -> Unit,
     onOpenDrawer: () -> Unit,
     viewModelFactory: ViewModelProvider.Factory? = null,
-    salesHistoryViewModel: SalesHistoryViewModel = viewModel(factory = viewModelFactory),
-    expenseViewModel: ExpenseViewModel = viewModel(factory = viewModelFactory),
-    digitalTransactionViewModel: DigitalTransactionViewModel = viewModel(factory = viewModelFactory),
-    productViewModel: ProductViewModel = viewModel(factory = viewModelFactory)
+    profitLossViewModel: ProfitLossViewModel = viewModel(factory = viewModelFactory)
 ) {
-    val salesState by salesHistoryViewModel.uiState.collectAsState()
-    val expenseState by expenseViewModel.uiState.collectAsState()
-    val digitalState by digitalTransactionViewModel.uiState.collectAsState()
-    val productState by productViewModel.uiState.collectAsState()
-    var selectedPeriod by remember { mutableStateOf(ProfitLossPeriod.THIS_MONTH) }
-
-    val todayPattern = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
-    val monthPattern = remember { SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date()) }
-
-    fun isMatchPeriod(createdAt: String?): Boolean {
-        val value = createdAt.orEmpty()
-        return when (selectedPeriod) {
-            ProfitLossPeriod.TODAY -> value.startsWith(todayPattern)
-            ProfitLossPeriod.THIS_MONTH -> value.startsWith(monthPattern)
-            ProfitLossPeriod.ALL_TIME -> true
-        }
-    }
-
-    val cashierRevenue = remember(salesState.sales, selectedPeriod) {
-        salesState.sales.filter { isMatchPeriod(it.createdAt) }.sumOf { it.total }
-    }
-    
-    val cashierProfit = remember(salesState.sales, selectedPeriod) {
-        salesState.sales.filter { isMatchPeriod(it.createdAt) }.sumOf { it.profit }
-    }
-
-    val digitalRevenue = remember(digitalState.phoneHistory, selectedPeriod) {
-        digitalState.phoneHistory.filter { isMatchPeriod(it.createdAt) }.sumOf { it.sellingPrice }
-    }
-    val digitalProfit = remember(digitalState.phoneHistory, selectedPeriod) {
-        digitalState.phoneHistory.filter { isMatchPeriod(it.createdAt) }.sumOf { it.profit }
-    }
-    val totalExpense = remember(expenseState.expenses, selectedPeriod) {
-        expenseState.expenses.filter { isMatchPeriod(it.createdAt) }.sumOf { it.amount }
-    }
-
-    val estimatedCashFlow = cashierRevenue + digitalRevenue - totalExpense
-    val estimatedProfit = cashierProfit + digitalProfit - totalExpense
-
-    val expenseByCategory = remember(expenseState.expenses, selectedPeriod) {
-        expenseState.expenses
-            .filter { isMatchPeriod(it.createdAt) }
-            .groupBy { it.category }
-            .mapValues { (_, value) -> value.sumOf { it.amount } }
-            .toList()
-            .sortedByDescending { it.second }
-    }
+    val state by profitLossViewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -97,7 +44,7 @@ fun ProfitLossScreen(
             )
         }
     ) { paddingValues ->
-        if (salesState.isLoading || expenseState.isLoading || digitalState.isLoading) {
+        if (state.isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -123,8 +70,8 @@ fun ProfitLossScreen(
                     ProfitLossPeriod.entries.forEachIndexed { index, period ->
                         SegmentedButton(
                             shape = SegmentedButtonDefaults.itemShape(index = index, count = ProfitLossPeriod.entries.size),
-                            selected = selectedPeriod == period,
-                            onClick = { selectedPeriod = period },
+                            selected = state.selectedPeriod == period,
+                            onClick = { profitLossViewModel.setPeriod(period) },
                             label = { Text(period.label) }
                         )
                     }
@@ -134,38 +81,40 @@ fun ProfitLossScreen(
             item {
                 ProfitLossMetricCard(
                     title = "Arus Kas Estimasi",
-                    value = formatCurrency(estimatedCashFlow),
+                    value = formatCurrency(state.estimatedCashFlow),
                     description = "Omzet kasir + omzet digital - pengeluaran",
-                    icon = Icons.Default.SsidChart
+                    icon = Icons.Default.SsidChart,
+                    isPositive = state.estimatedCashFlow >= 0
                 )
             }
             item {
                 ProfitLossMetricCard(
                     title = "Laba Bersih Estimasi",
-                    value = formatCurrency(estimatedProfit),
+                    value = formatCurrency(state.estimatedProfit),
                     description = "Profit (Kasir + Digital) - Pengeluaran",
-                    icon = Icons.Default.Calculate
+                    icon = Icons.Default.Calculate,
+                    isPositive = state.estimatedProfit >= 0
                 )
             }
 
             item { HorizontalDivider() }
 
             item {
-                SummaryLine(label = "Omzet Kasir", value = formatCurrency(cashierRevenue))
+                SummaryLine(label = "Omzet Kasir", value = formatCurrency(state.cashierRevenue))
             }
             item {
-                SummaryLine(label = "Profit Kasir (Est)", value = formatCurrency(cashierProfit))
+                SummaryLine(label = "Profit Kasir (Est)", value = formatCurrency(state.cashierProfit))
             }
             item {
-                SummaryLine(label = "Omzet Digital", value = formatCurrency(digitalRevenue))
+                SummaryLine(label = "Omzet Digital", value = formatCurrency(state.digitalRevenue))
             }
             item {
-                SummaryLine(label = "Profit Digital", value = formatCurrency(digitalProfit))
+                SummaryLine(label = "Profit Digital", value = formatCurrency(state.digitalProfit))
             }
             item {
                 SummaryLine(
                     label = "Pengeluaran",
-                    value = formatCurrency(totalExpense),
+                    value = formatCurrency(state.totalExpense),
                     emphasized = true
                 )
             }
@@ -177,7 +126,7 @@ fun ProfitLossScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
-            if (expenseByCategory.isEmpty()) {
+            if (state.expenseByCategory.isEmpty()) {
                 item {
                     Text(
                         text = "Belum ada pengeluaran pada periode ini",
@@ -186,18 +135,12 @@ fun ProfitLossScreen(
                     )
                 }
             } else {
-                items(expenseByCategory) { (category, amount) ->
-                    SummaryLine(label = category, value = formatCurrency(amount))
+                items(state.expenseByCategory) { item ->
+                    SummaryLine(label = item.category, value = formatCurrency(item.totalAmount))
                 }
             }
         }
     }
-}
-
-private enum class ProfitLossPeriod(val label: String) {
-    TODAY("Hari Ini"),
-    THIS_MONTH("Bulan Ini"),
-    ALL_TIME("Semua")
 }
 
 @Composable
@@ -205,9 +148,34 @@ private fun ProfitLossMetricCard(
     title: String,
     value: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isPositive: Boolean? = null
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    val containerColor = when (isPositive) {
+        true -> Color(0xFFE8F5E9)
+        false -> Color(0xFFFFEBEE)
+        null -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    
+    val contentColor = when (isPositive) {
+        true -> Color(0xFF2E7D32)
+        false -> Color(0xFFC62828)
+        null -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val valueColor = when (isPositive) {
+        true -> Color(0xFF1B5E20)
+        false -> Color(0xFFB71C1C)
+        null -> MaterialTheme.colorScheme.onSurface
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        )
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -218,23 +186,25 @@ private fun ProfitLossMetricCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor
                 )
                 Text(
                     text = value,
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Black,
+                    color = valueColor
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = contentColor.copy(alpha = 0.8f)
                 )
             }
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = contentColor
             )
         }
     }

@@ -21,10 +21,20 @@ interface SaleDao {
     @Query("SELECT * FROM sales ORDER BY id DESC LIMIT :limit OFFSET :offset")
     suspend fun getSalesByDateRange(limit: Int, offset: Int): List<SaleEntity>
 
-    @Query("SELECT SUM(total) FROM sales")
-    suspend fun getTotalSalesByDateRange(): Double?
+    @Query("SELECT SUM(total) FROM sales WHERE createdAt >= :startDate AND createdAt <= :endDate")
+    suspend fun getTotalSalesByDateRange(startDate: String, endDate: String): Double?
 
-    // getTotalPointsEarnedByDateRange removed - use getAllSales and calculate manually
+    @Query("SELECT SUM(profit) FROM sales WHERE createdAt >= :startDate AND createdAt <= :endDate")
+    suspend fun getTotalProfitByDateRange(startDate: String, endDate: String): Double?
+
+    @Query("SELECT SUM(total) FROM sales")
+    suspend fun getTotalSalesAllTime(): Double?
+
+    @Query("SELECT SUM(profit) FROM sales")
+    suspend fun getTotalProfitAllTime(): Double?
+
+    @Query("SELECT * FROM sales WHERE createdAt >= :startDate ORDER BY id DESC")
+    suspend fun getSalesSince(startDate: String): List<SaleEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(sale: SaleEntity): Long

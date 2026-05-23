@@ -11,4 +11,9 @@ class ProductVariantRepository(private val dao: ProductVariantDao) {
     suspend fun update(variant: ProductVariantEntity) = dao.update(variant)
     suspend fun delete(variant: ProductVariantEntity) = dao.delete(variant)
     suspend fun deleteByProductId(productId: Long) = dao.deleteByProductId(productId)
+    
+    fun getAllVariantsForBackup(): Flow<List<ProductVariantEntity>> = dao.getAllVariantsForBackup()
+    suspend fun decreaseStock(variantId: Long, qty: Int) = dao.decreaseStock(variantId, qty)
+    suspend fun increaseStock(variantId: Long, qty: Int) = dao.increaseStock(variantId, qty)
+    suspend fun getVariantById(id: Long): ProductVariantEntity? = dao.getVariantById(id)
 }

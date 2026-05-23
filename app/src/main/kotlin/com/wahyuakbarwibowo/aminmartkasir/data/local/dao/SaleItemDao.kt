@@ -4,6 +4,11 @@ import androidx.room.*
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity
 import kotlinx.coroutines.flow.Flow
 
+data class ProductQuantityDto(
+    val productName: String,
+    val totalQty: Int
+)
+
 @Dao
 interface SaleItemDao {
     @Query("SELECT * FROM sales_items WHERE saleId = :saleId ORDER BY id ASC")
@@ -29,4 +34,14 @@ interface SaleItemDao {
 
     @Query("DELETE FROM sales_items WHERE saleId = :saleId")
     suspend fun deleteBySaleId(saleId: Long)
+
+    @Query("""
+        SELECT productName, SUM(qty) as totalQty 
+        FROM sales_items 
+        WHERE productId IS NOT NULL
+        GROUP BY productId 
+        ORDER BY totalQty DESC 
+        LIMIT :limit
+    """)
+    suspend fun getTopSellingProductsOnce(limit: Int): List<ProductQuantityDto>
 }

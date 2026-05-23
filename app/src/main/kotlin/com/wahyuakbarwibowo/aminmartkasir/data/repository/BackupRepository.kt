@@ -16,6 +16,7 @@ class BackupRepository(private val database: AppDatabase) {
     suspend fun exportData(): String = withContext(Dispatchers.IO) {
         val backupData = BackupData(
             products = database.productDao().getAllProducts().first(),
+            productVariants = database.productVariantDao().getAllVariantsForBackup().first(),
             customers = database.customerDao().getAllCustomers().first(),
             paymentMethods = database.paymentMethodDao().getAllPaymentMethods().first(),
             shopProfile = database.shopProfileDao().getShopProfile().first(),
@@ -39,12 +40,12 @@ class BackupRepository(private val database: AppDatabase) {
     @Suppress("SENSELESS_COMPARISON", "USELESS_ELVIS")
     suspend fun importData(json: String) = withContext(Dispatchers.IO) {
         val backupData = gson.fromJson(json, BackupData::class.java) ?: throw Exception("Format data tidak valid")
-        
-        // Clear all existing data first
-        database.clearAllTables()
 
         database.withTransaction {
             kotlin.runCatching {
+                // Clear all existing data first (inside transaction for safe rollback)
+                database.clearAllTables()
+
                 // Re-insert everything with sanitization for older versions
                 backupData.products?.forEach { product ->
                     val sanitized = if (product.lowStockThreshold == 0) {
@@ -56,6 +57,10 @@ class BackupRepository(private val database: AppDatabase) {
                         if (product.name == null) product.copy(name = "Produk Tanpa Nama") else product
                     }
                     database.productDao().insert(sanitized)
+                }
+
+                backupData.productVariants?.forEach { variant ->
+                    database.productVariantDao().insert(variant)
                 }
 
                 backupData.customers?.forEach { customer ->

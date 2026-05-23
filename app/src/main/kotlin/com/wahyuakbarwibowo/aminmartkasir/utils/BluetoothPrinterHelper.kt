@@ -9,6 +9,8 @@ import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.*
 
@@ -54,7 +56,7 @@ class BluetoothPrinterHelper(private val context: Context) {
         return bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
     }
     
-    fun connect(device: BluetoothDevice): Boolean {
+    suspend fun connect(device: BluetoothDevice): Boolean = withContext(Dispatchers.IO) {
         try {
             if (isConnected) disconnect()
             
@@ -69,15 +71,15 @@ class BluetoothPrinterHelper(private val context: Context) {
             // Initialize printer
             sendCommand(INIT)
             
-            return true
+            return@withContext true
         } catch (e: Exception) {
             e.printStackTrace()
             isConnected = false
-            return false
+            return@withContext false
         }
     }
     
-    fun disconnect() {
+    suspend fun disconnect() = withContext(Dispatchers.IO) {
         try {
             bluetoothSocket?.close()
             bluetoothSocket = null
@@ -108,7 +110,7 @@ class BluetoothPrinterHelper(private val context: Context) {
         }
     }
     
-    fun printReceipt(
+    suspend fun printReceipt(
         shopName: String,
         shopAddress: String?,
         shopPhone: String?,
@@ -122,8 +124,8 @@ class BluetoothPrinterHelper(private val context: Context) {
         paid: Double,
         change: Double,
         footerNote: String? = null
-    ) {
-        if (!isConnected) return
+    ) = withContext(Dispatchers.IO) {
+        if (!isConnected) return@withContext
         
         try {
             // Initialize
@@ -207,7 +209,7 @@ class BluetoothPrinterHelper(private val context: Context) {
         }
     }
 
-    fun printDigitalReceipt(
+    suspend fun printDigitalReceipt(
         shopName: String,
         shopAddress: String?,
         shopPhone: String?,
@@ -224,8 +226,8 @@ class BluetoothPrinterHelper(private val context: Context) {
         paid: Double,
         change: Double,
         footerNote: String? = null
-    ) {
-        if (!isConnected) return
+    ) = withContext(Dispatchers.IO) {
+        if (!isConnected) return@withContext
         
         try {
             // Initialize

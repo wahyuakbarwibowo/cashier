@@ -11,8 +11,20 @@ class ExpenseRepository(private val expenseDao: ExpenseDao) {
         return expenseDao.getExpenses(limit, offset)
     }
 
-    suspend fun getTotalExpensesByDateRange(): Double {
-        return expenseDao.getTotalExpensesByDateRange() ?: 0.0
+    suspend fun getTotalExpensesByDateRange(startDate: String, endDate: String): Double {
+        return expenseDao.getTotalExpensesByDateRange(startDate, endDate) ?: 0.0
+    }
+
+    suspend fun getTotalExpensesAllTime(): Double {
+        return expenseDao.getTotalExpensesAllTime() ?: 0.0
+    }
+
+    suspend fun getExpensesByCategoryByDateRange(startDate: String, endDate: String): List<com.wahyuakbarwibowo.aminmartkasir.data.local.dao.CategoryExpenseDto> {
+        return expenseDao.getExpensesByCategoryByDateRange(startDate, endDate)
+    }
+
+    suspend fun getExpensesByCategoryAllTime(): List<com.wahyuakbarwibowo.aminmartkasir.data.local.dao.CategoryExpenseDto> {
+        return expenseDao.getExpensesByCategoryAllTime()
     }
 
     suspend fun insert(expense: ExpenseEntity): Long {

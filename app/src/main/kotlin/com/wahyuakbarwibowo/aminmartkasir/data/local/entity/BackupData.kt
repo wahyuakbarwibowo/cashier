@@ -2,6 +2,7 @@ package com.wahyuakbarwibowo.aminmartkasir.data.local.entity
 
 data class BackupData(
     val products: List<ProductEntity>? = null,
+    val productVariants: List<ProductVariantEntity>? = null,
     val customers: List<CustomerEntity>? = null,
     val paymentMethods: List<PaymentMethodEntity>? = null,
     val shopProfile: ShopProfileEntity? = null,
