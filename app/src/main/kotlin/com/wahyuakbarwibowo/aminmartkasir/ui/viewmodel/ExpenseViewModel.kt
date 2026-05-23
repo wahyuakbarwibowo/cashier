@@ -44,7 +44,7 @@ class ExpenseViewModel(
             _uiState.update { it.copy(isLoading = true, expenses = emptyList(), canLoadMore = true) }
             try {
                 val initialExpenses = expenseRepository.getExpenses(pageSize, 0)
-                val total = expenseRepository.getTotalExpensesByDateRange()
+                val total = expenseRepository.getTotalExpensesAllTime()
                 
                 if (initialExpenses.size < pageSize) {
                     isLastPage = true
