@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.*
 
 data class SalesTransactionUiState(
     val cartItems: List<CartItem> = emptyList(),
@@ -58,8 +58,6 @@ class SalesViewModel(
     private val _uiState = MutableStateFlow(SalesTransactionUiState())
     val uiState: StateFlow<SalesTransactionUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    
     private var currentProductPage = 0
     private val pageSize = 20
     private var isLastProductPage = false
@@ -71,7 +69,7 @@ class SalesViewModel(
     }
 
     private fun loadInitialData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             combine(
                 customerRepository.allCustomers,
                 paymentMethodRepository.allPaymentMethods
@@ -96,7 +94,7 @@ class SalesViewModel(
         productLoadJob?.cancel()
         searchJob?.cancel()
         
-        productLoadJob = viewModelScope.launch {
+        productLoadJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(products = emptyList(), canLoadMore = true) }
             try {
                 val initialProducts = productRepository.getProducts(pageSize, 0)
@@ -119,7 +117,7 @@ class SalesViewModel(
     fun loadNextProductPage() {
         if (isLastProductPage || _uiState.value.isLoadMoreLoading || _uiState.value.searchQuery.isNotBlank()) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val offset = currentProductPage * pageSize
@@ -153,7 +151,7 @@ class SalesViewModel(
             return
         }
 
-        searchJob = viewModelScope.launch {
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 productRepository.searchProducts(query).collect { products ->
                     _uiState.update { it.copy(products = products, canLoadMore = false) }
@@ -165,7 +163,7 @@ class SalesViewModel(
     }
 
     fun refreshProducts() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshingProducts = true) }
             delay(500)
             loadInitialProducts()
@@ -320,7 +318,7 @@ class SalesViewModel(
     }
 
     fun processTransaction() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
                 if (currentState.cartItems.isEmpty()) {
@@ -340,7 +338,7 @@ class SalesViewModel(
                     pointsEarned = currentState.pointsEarned,
                     pointsRedeemed = currentState.pointsRedeemed,
                     profit = profit,
-                    createdAt = dateFormat.format(Date())
+                    createdAt = DateUtils.nowDateTime()
                 )
 
                 val saleItems = currentState.cartItems.map { item ->
@@ -372,7 +370,7 @@ class SalesViewModel(
                         stockBefore = before,
                         stockAfter = after,
                         reason = "", // Akan di-copy di repository dengan saleId yang sesuai
-                        createdAt = dateFormat.format(Date())
+                        createdAt = DateUtils.nowDateTime()
                     )
                 }
 
@@ -383,7 +381,7 @@ class SalesViewModel(
                         amount = currentState.total,
                         paidAmount = currentState.paid,
                         status = if (currentState.paid >= currentState.total) "paid" else "pending",
-                        createdAt = dateFormat.format(Date()),
+                        createdAt = DateUtils.nowDateTime(),
                         notes = ""
                     )
                 } else null
@@ -410,7 +408,7 @@ class SalesViewModel(
     }
 
     fun loadSaleIntoCart(saleId: Long) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val sale = saleRepository.getSaleById(saleId)
@@ -483,7 +481,7 @@ class SalesViewModel(
     }
 
     fun updateTransaction(saleId: Long, onUpdateComplete: () -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
                 if (currentState.cartItems.isEmpty()) {
@@ -519,7 +517,7 @@ class SalesViewModel(
                     pointsEarned = currentState.pointsEarned,
                     pointsRedeemed = currentState.pointsRedeemed,
                     profit = newProfit,
-                    createdAt = dateFormat.format(Date())
+                    createdAt = DateUtils.nowDateTime()
                 )
 
                 // Siapkan item penjualan baru

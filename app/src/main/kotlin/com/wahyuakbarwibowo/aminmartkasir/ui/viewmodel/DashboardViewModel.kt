@@ -3,9 +3,10 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.*
 
 data class DashboardUiState(
@@ -30,14 +31,12 @@ class DashboardViewModel(
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
     
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
     init {
         loadDashboardData()
     }
 
     private fun loadDashboardData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             combine(
                 productRepository.productCount,
                 customerRepository.customerCount,
@@ -61,10 +60,10 @@ class DashboardViewModel(
     }
 
     private fun loadSalesData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                val todayStart = dateFormat.format(Date()) + " 00:00:00"
-                val todayEnd = dateFormat.format(Date()) + " 23:59:59"
+                val todayStart = DateUtils.nowDate() + " 00:00:00"
+                val todayEnd = DateUtils.nowDate() + " 23:59:59"
                 val todaySales = saleRepository.getTotalSalesByDateRange(todayStart, todayEnd)
                 _uiState.update { it.copy(todaySales = todaySales) }
             } catch (e: Exception) {
@@ -74,7 +73,7 @@ class DashboardViewModel(
     }
 
     private fun loadAnalyticsData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 // 1. Weekly Sales (Load only the last 7 days from DB, highly optimized!)
                 val calMin = Calendar.getInstance()
@@ -82,17 +81,16 @@ class DashboardViewModel(
                 calMin.set(Calendar.HOUR_OF_DAY, 0)
                 calMin.set(Calendar.MINUTE, 0)
                 calMin.set(Calendar.SECOND, 0)
-                val minDateStr = dateFormat.format(calMin.time) + " 00:00:00"
+                val minDateStr = DateUtils.formatDate(calMin.time) + " 00:00:00"
 
                 val recentSales = saleRepository.getSalesSince(minDateStr)
                 val weeklyTrend = mutableListOf<Pair<String, Double>>()
-                val dayFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
-                
+
                 for (i in 6 downTo 0) {
                     val cal = Calendar.getInstance()
                     cal.add(Calendar.DAY_OF_YEAR, -i)
-                    val dateStr = dateFormat.format(cal.time)
-                    val label = dayFormat.format(cal.time)
+                    val dateStr = DateUtils.formatDate(cal.time)
+                    val label = DateUtils.formatDay(cal.time)
                     
                     val dailyTotal = recentSales.filter { it.createdAt?.startsWith(dateStr) == true }.sumOf { it.total }
                     weeklyTrend.add(label to dailyTotal)

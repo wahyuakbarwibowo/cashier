@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.CustomerEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.CustomerRepository
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 data class CustomerUiState(
     val customers: List<CustomerEntity> = emptyList(),
@@ -34,8 +34,6 @@ class CustomerViewModel(
     private var isLastPage = false
     private var loadJob: Job? = null
     private var searchJob: Job? = null
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-
     init {
         loadInitialData()
     }
@@ -46,7 +44,7 @@ class CustomerViewModel(
         loadJob?.cancel()
         searchJob?.cancel()
         
-        loadJob = viewModelScope.launch {
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, customers = emptyList(), canLoadMore = true) }
             try {
                 val initialList = customerRepository.getCustomers(pageSize, 0)
@@ -71,7 +69,7 @@ class CustomerViewModel(
     fun loadNextPage() {
         if (isLastPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading || _uiState.value.searchQuery.isNotBlank()) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val offset = currentPage * pageSize
@@ -105,7 +103,7 @@ class CustomerViewModel(
             return
         }
 
-        searchJob = viewModelScope.launch {
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, canLoadMore = false) }
             try {
                 customerRepository.searchCustomers(query).collect { list ->
@@ -118,7 +116,7 @@ class CustomerViewModel(
     }
 
     fun refreshData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshing = true, searchQuery = "") }
             delay(500)
             loadInitialData()
@@ -126,13 +124,13 @@ class CustomerViewModel(
     }
 
     fun addCustomer(name: String, phone: String, address: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val customer = CustomerEntity(
                     name = name,
                     phone = phone,
                     address = address,
-                    createdAt = dateFormat.format(Date())
+                    createdAt = DateUtils.nowDateTime()
                 )
                 customerRepository.insert(customer)
                 _uiState.update { it.copy(successMessage = "Pelanggan $name berhasil ditambahkan") }
@@ -144,9 +142,9 @@ class CustomerViewModel(
     }
 
     fun updateCustomer(customer: CustomerEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                customerRepository.update(customer.copy(updatedAt = dateFormat.format(Date())))
+                customerRepository.update(customer.copy(updatedAt = DateUtils.nowDateTime()))
                 _uiState.update { it.copy(successMessage = "Data pelanggan diperbarui") }
                 loadInitialData()
             } catch (e: Exception) {
@@ -156,7 +154,7 @@ class CustomerViewModel(
     }
 
     fun deleteCustomer(customer: CustomerEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 customerRepository.delete(customer)
                 _uiState.update { it.copy(successMessage = "Pelanggan dihapus") }

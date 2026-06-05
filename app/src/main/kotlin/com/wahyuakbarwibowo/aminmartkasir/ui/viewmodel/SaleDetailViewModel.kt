@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SaleRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -23,7 +24,7 @@ class SaleDetailViewModel(
     val uiState: StateFlow<SaleDetailUiState> = _uiState.asStateFlow()
 
     fun loadSaleDetail(saleId: Long) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val sale = saleRepository.getSaleById(saleId)

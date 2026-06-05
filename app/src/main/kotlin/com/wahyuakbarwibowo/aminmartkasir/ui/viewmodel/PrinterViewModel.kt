@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ShopProfileEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ShopProfileRepository
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -38,7 +39,7 @@ class PrinterViewModel(
     }
     
     private fun loadShopProfile() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             shopProfileRepository.shopProfile.collect { profile ->
                 _uiState.update { it.copy(shopProfile = profile) }
             }
@@ -70,7 +71,7 @@ class PrinterViewModel(
     }
     
     fun connectDevice(device: BluetoothDevice) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val success = printerHelper?.connect(device) ?: false
             _uiState.update { 
                 it.copy(
@@ -83,7 +84,7 @@ class PrinterViewModel(
     }
     
     fun disconnectDevice() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             printerHelper?.disconnect()
             _uiState.update { 
                 it.copy(
@@ -105,7 +106,7 @@ class PrinterViewModel(
         change: Double,
         autoDisconnect: Boolean = false
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isPrinting = true) }
             
             try {
@@ -164,7 +165,7 @@ class PrinterViewModel(
         change: Double,
         autoDisconnect: Boolean = false
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isPrinting = true) }
             
             try {

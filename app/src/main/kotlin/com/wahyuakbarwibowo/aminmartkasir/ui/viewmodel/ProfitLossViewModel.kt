@@ -6,9 +6,10 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.CategoryExpenseDto
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ExpenseRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PhoneHistoryRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SaleRepository
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.*
 
 enum class ProfitLossPeriod(val label: String) {
@@ -40,8 +41,6 @@ class ProfitLossViewModel(
     private val _uiState = MutableStateFlow(ProfitLossUiState())
     val uiState: StateFlow<ProfitLossUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
     init {
         loadData()
     }
@@ -52,7 +51,7 @@ class ProfitLossViewModel(
     }
 
     fun loadData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val period = _uiState.value.selectedPeriod
@@ -65,8 +64,8 @@ class ProfitLossViewModel(
 
                 when (period) {
                     ProfitLossPeriod.TODAY -> {
-                        val todayStart = dateFormat.format(Date()) + " 00:00:00"
-                        val todayEnd = dateFormat.format(Date()) + " 23:59:59"
+                        val todayStart = DateUtils.nowDate() + " 00:00:00"
+                        val todayEnd = DateUtils.nowDate() + " 23:59:59"
                         
                         cashierRev = saleRepository.getTotalSalesByDateRange(todayStart, todayEnd)
                         cashierProf = saleRepository.getTotalProfitByDateRange(todayStart, todayEnd)
@@ -76,9 +75,8 @@ class ProfitLossViewModel(
                         expCat = expenseRepository.getExpensesByCategoryByDateRange(todayStart, todayEnd)
                     }
                     ProfitLossPeriod.THIS_MONTH -> {
-                        val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
-                        val monthStart = monthFormat.format(Date()) + "-01 00:00:00"
-                        val monthEnd = monthFormat.format(Date()) + "-31 23:59:59"
+                        val monthStart = DateUtils.nowMonth() + "-01 00:00:00"
+                        val monthEnd = DateUtils.nowMonth() + "-31 23:59:59"
                         
                         cashierRev = saleRepository.getTotalSalesByDateRange(monthStart, monthEnd)
                         cashierProf = saleRepository.getTotalProfitByDateRange(monthStart, monthEnd)

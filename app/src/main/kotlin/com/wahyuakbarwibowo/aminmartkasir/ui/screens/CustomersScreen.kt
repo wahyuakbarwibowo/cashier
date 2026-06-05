@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.CustomerEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.CustomerViewModel
@@ -28,7 +29,7 @@ fun CustomersScreen(
     onOpenDrawer: () -> Unit,
     viewModel: CustomerViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     var showAddDialog by remember { mutableStateOf(false) }
     var customerToEdit by remember { mutableStateOf<CustomerEntity?>(null) }

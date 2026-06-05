@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider.Factory
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PrinterViewModel
@@ -32,7 +33,7 @@ fun BluetoothPrinterDialog(
     viewModelFactory: Factory? = null,
     viewModel: PrinterViewModel = viewModel(factory = viewModelFactory)
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showPermissionRationale by remember { mutableStateOf(false) }
     

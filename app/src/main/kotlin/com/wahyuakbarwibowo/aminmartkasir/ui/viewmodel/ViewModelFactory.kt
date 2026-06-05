@@ -9,117 +9,132 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
 class ViewModelFactory(
     private val database: AppDatabase
 ) : ViewModelProvider.Factory {
+
+    private val productRepository = ProductRepository(database.productDao())
+    private val productVariantRepository = ProductVariantRepository(database.productVariantDao())
+    private val customerRepository = CustomerRepository(database.customerDao())
+    private val paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao())
+    private val saleRepository = SaleRepository(database)
+    private val stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao())
+    private val customerPointsHistoryRepository = CustomerPointsHistoryRepository(database.customerPointsHistoryDao())
+    private val receivableRepository = ReceivableRepository(database.receivableDao())
+    private val payableRepository = PayableRepository(database.payableDao())
+    private val supplierRepository = SupplierRepository(database.supplierDao(), database.purchaseDao(), database.purchaseItemDao())
+    private val purchaseRepository = PurchaseRepository(database)
+    private val expenseRepository = ExpenseRepository(database.expenseDao())
+    private val digitalProductRepository = DigitalProductRepository(database.digitalProductDao())
+    private val digitalCategoryRepository = DigitalCategoryRepository(database.digitalCategoryDao())
+    private val phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao())
+    private val shopProfileRepository = ShopProfileRepository(database.shopProfileDao())
+    private val backupRepository = BackupRepository(database)
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
         return when {
             modelClass.isAssignableFrom(DashboardViewModel::class.java) -> {
                 DashboardViewModel(
-                    productRepository = ProductRepository(database.productDao()),
-                    customerRepository = CustomerRepository(database.customerDao()),
-                    saleRepository = SaleRepository(database)
+                    productRepository = productRepository,
+                    customerRepository = customerRepository,
+                    saleRepository = saleRepository
                 ) as T
             }
             modelClass.isAssignableFrom(ProductViewModel::class.java) -> {
                 ProductViewModel(
-                    productRepository = ProductRepository(database.productDao()),
-                    productVariantRepository = ProductVariantRepository(database.productVariantDao()),
-                    stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao())
+                    productRepository = productRepository,
+                    productVariantRepository = productVariantRepository,
+                    stockHistoryRepository = stockHistoryRepository
                 ) as T
             }
             modelClass.isAssignableFrom(SalesViewModel::class.java) -> {
                 SalesViewModel(
-                    productRepository = ProductRepository(database.productDao()),
-                    productVariantRepository = ProductVariantRepository(database.productVariantDao()),
-                    customerRepository = CustomerRepository(database.customerDao()),
-                    paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao()),
-                    saleRepository = SaleRepository(database),
-                    stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao()),
-                    customerPointsHistoryRepository = CustomerPointsHistoryRepository(database.customerPointsHistoryDao()),
-                    receivableRepository = ReceivableRepository(database.receivableDao())
+                    productRepository = productRepository,
+                    productVariantRepository = productVariantRepository,
+                    customerRepository = customerRepository,
+                    paymentMethodRepository = paymentMethodRepository,
+                    saleRepository = saleRepository,
+                    stockHistoryRepository = stockHistoryRepository,
+                    customerPointsHistoryRepository = customerPointsHistoryRepository,
+                    receivableRepository = receivableRepository
                 ) as T
             }
             modelClass.isAssignableFrom(SalesHistoryViewModel::class.java) -> {
                 SalesHistoryViewModel(
-                    saleRepository = SaleRepository(database)
+                    saleRepository = saleRepository
                 ) as T
             }
             modelClass.isAssignableFrom(SaleDetailViewModel::class.java) -> {
                 SaleDetailViewModel(
-                    saleRepository = SaleRepository(database)
+                    saleRepository = saleRepository
                 ) as T
             }
             modelClass.isAssignableFrom(PurchaseViewModel::class.java) -> {
                 PurchaseViewModel(
-                    supplierRepository = SupplierRepository(
-                        database.supplierDao(),
-                        database.purchaseDao(),
-                        database.purchaseItemDao()
-                    ),
-                    purchaseRepository = PurchaseRepository(database),
-                    productRepository = ProductRepository(database.productDao()),
-                    stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao()),
-                    expenseRepository = ExpenseRepository(database.expenseDao())
+                    supplierRepository = supplierRepository,
+                    purchaseRepository = purchaseRepository,
+                    productRepository = productRepository,
+                    stockHistoryRepository = stockHistoryRepository,
+                    expenseRepository = expenseRepository
                 ) as T
             }
             modelClass.isAssignableFrom(ExpenseViewModel::class.java) -> {
                 ExpenseViewModel(
-                    expenseRepository = ExpenseRepository(database.expenseDao())
+                    expenseRepository = expenseRepository
                 ) as T
             }
             modelClass.isAssignableFrom(DigitalTransactionViewModel::class.java) -> {
                 DigitalTransactionViewModel(
-                    digitalProductRepository = DigitalProductRepository(database.digitalProductDao()),
-                    digitalCategoryRepository = DigitalCategoryRepository(database.digitalCategoryDao()),
-                    phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao()),
-                    paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao()),
-                    customerRepository = CustomerRepository(database.customerDao()),
-                    receivableRepository = ReceivableRepository(database.receivableDao())
+                    digitalProductRepository = digitalProductRepository,
+                    digitalCategoryRepository = digitalCategoryRepository,
+                    phoneHistoryRepository = phoneHistoryRepository,
+                    paymentMethodRepository = paymentMethodRepository,
+                    customerRepository = customerRepository,
+                    receivableRepository = receivableRepository
                 ) as T
             }
             modelClass.isAssignableFrom(DigitalReportDetailViewModel::class.java) -> {
                 DigitalReportDetailViewModel(
-                    phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao())
+                    phoneHistoryRepository = phoneHistoryRepository
                 ) as T
             }
             modelClass.isAssignableFrom(StockHistoryViewModel::class.java) -> {
                 StockHistoryViewModel(
-                    stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao())
+                    stockHistoryRepository = stockHistoryRepository
                 ) as T
             }
             modelClass.isAssignableFrom(CustomerViewModel::class.java) -> {
                 CustomerViewModel(
-                    customerRepository = CustomerRepository(database.customerDao())
+                    customerRepository = customerRepository
                 ) as T
             }
             modelClass.isAssignableFrom(DebtViewModel::class.java) -> {
                 DebtViewModel(
-                    receivableRepository = ReceivableRepository(database.receivableDao()),
-                    payableRepository = PayableRepository(database.payableDao()),
-                    customerRepository = CustomerRepository(database.customerDao()),
-                    supplierRepository = SupplierRepository(database.supplierDao(), database.purchaseDao(), database.purchaseItemDao())
+                    receivableRepository = receivableRepository,
+                    payableRepository = payableRepository,
+                    customerRepository = customerRepository,
+                    supplierRepository = supplierRepository
                 ) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
                 SettingsViewModel(
-                    shopProfileRepository = ShopProfileRepository(database.shopProfileDao()),
-                    paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao())
+                    shopProfileRepository = shopProfileRepository,
+                    paymentMethodRepository = paymentMethodRepository
                 ) as T
             }
             modelClass.isAssignableFrom(PrinterViewModel::class.java) -> {
                 PrinterViewModel(
-                    shopProfileRepository = ShopProfileRepository(database.shopProfileDao())
+                    shopProfileRepository = shopProfileRepository
                 ) as T
             }
             modelClass.isAssignableFrom(BackupViewModel::class.java) -> {
                 BackupViewModel(
-                    backupRepository = BackupRepository(database)
+                    backupRepository = backupRepository
                 ) as T
             }
             modelClass.isAssignableFrom(ProfitLossViewModel::class.java) -> {
                 ProfitLossViewModel(
-                    saleRepository = SaleRepository(database),
-                    expenseRepository = ExpenseRepository(database.expenseDao()),
-                    phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao())
+                    saleRepository = saleRepository,
+                    expenseRepository = expenseRepository,
+                    phoneHistoryRepository = phoneHistoryRepository
                 ) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

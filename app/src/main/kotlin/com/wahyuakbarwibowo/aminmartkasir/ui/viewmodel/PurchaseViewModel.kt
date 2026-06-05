@@ -12,11 +12,11 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PurchaseRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SupplierRepository
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.*
 
 data class PurchaseUiState(
     val suppliers: List<com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity> = emptyList(),
@@ -51,14 +51,13 @@ class PurchaseViewModel(
     val uiState: StateFlow<PurchaseUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
     init {
         loadInitialData()
     }
 
     private fun loadInitialData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             combine(
                 supplierRepository.allSuppliers,
                 productRepository.allProducts,
@@ -97,7 +96,7 @@ class PurchaseViewModel(
     }
 
     fun refreshData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshing = true) }
             delay(500)
             loadInitialData()
@@ -168,7 +167,7 @@ class PurchaseViewModel(
     }
 
     fun addSupplier(name: String, phoneNumber: String, address: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val supplier = com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity(
                     name = name,
@@ -185,7 +184,7 @@ class PurchaseViewModel(
     }
 
     fun updateSupplier(supplier: com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 supplierRepository.update(supplier)
                 _uiState.update {
@@ -201,7 +200,7 @@ class PurchaseViewModel(
     }
 
     fun deleteSupplier(supplier: com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 supplierRepository.delete(supplier)
                 _uiState.update {
@@ -217,7 +216,7 @@ class PurchaseViewModel(
     }
 
     fun processPurchase() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
                 if (currentState.cartItems.isEmpty()) {
@@ -229,7 +228,7 @@ class PurchaseViewModel(
                     supplierId = currentState.selectedSupplier?.id,
                     supplier = currentState.selectedSupplier?.name,
                     total = currentState.total,
-                    createdAt = dateFormat.format(Date())
+                    createdAt = DateUtils.nowDateTime()
                 )
 
                 val purchaseItems = currentState.cartItems.map { item ->
@@ -247,7 +246,7 @@ class PurchaseViewModel(
                     category = "Pembelian Stok",
                     amount = currentState.total,
                     notes = "Pembelian barang ke supplier ${currentState.selectedSupplier?.name ?: "Tanpa Nama"}",
-                    createdAt = dateFormat.format(Date())
+                    createdAt = DateUtils.nowDateTime()
                 )
 
                 // Panggil transaksi pembelian secara atomik

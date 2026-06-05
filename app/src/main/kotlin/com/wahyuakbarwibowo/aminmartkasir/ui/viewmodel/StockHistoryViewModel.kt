@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -34,7 +35,7 @@ class StockHistoryViewModel(
     private fun loadInitialData() {
         currentPage = 0
         isLastPage = false
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, history = emptyList(), canLoadMore = true) }
             try {
                 val initialHistory = stockHistoryRepository.getStockHistory(pageSize, 0)
@@ -58,7 +59,7 @@ class StockHistoryViewModel(
     fun loadNextPage() {
         if (isLastPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val offset = currentPage * pageSize
@@ -83,7 +84,7 @@ class StockHistoryViewModel(
     }
 
     fun refreshData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshing = true) }
             kotlinx.coroutines.delay(500)
             loadInitialData()

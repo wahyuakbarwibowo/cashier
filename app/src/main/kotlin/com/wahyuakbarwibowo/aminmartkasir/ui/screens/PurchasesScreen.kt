@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PurchaseCartItem
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PurchaseViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
@@ -45,7 +46,7 @@ fun PurchasesScreen(
     onOpenDrawer: () -> Unit,
     viewModel: PurchaseViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showAddItemDialog by remember { mutableStateOf(false) }
     var showAddSupplierDialog by remember { mutableStateOf(false) }

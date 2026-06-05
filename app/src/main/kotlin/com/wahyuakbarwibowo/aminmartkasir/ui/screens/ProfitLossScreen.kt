@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProfitLossViewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProfitLossPeriod
@@ -29,7 +30,7 @@ fun ProfitLossScreen(
     viewModelFactory: ViewModelProvider.Factory? = null,
     profitLossViewModel: ProfitLossViewModel = viewModel(factory = viewModelFactory)
 ) {
-    val state by profitLossViewModel.uiState.collectAsState()
+    val state by profitLossViewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {

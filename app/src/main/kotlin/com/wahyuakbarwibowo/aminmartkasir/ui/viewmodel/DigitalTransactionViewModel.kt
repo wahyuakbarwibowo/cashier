@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.*
 
 data class DigitalTransactionUiState(
     val categories: List<DigitalCategoryEntity> = emptyList(),
@@ -52,7 +52,6 @@ class DigitalTransactionViewModel(
     private val _uiState = MutableStateFlow(DigitalTransactionUiState())
     val uiState: StateFlow<DigitalTransactionUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     private var searchJob: Job? = null
     private var loadDataJob: Job? = null
     
@@ -66,7 +65,7 @@ class DigitalTransactionViewModel(
     }
 
     private fun loadPaymentAndCustomers() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             combine(
                 paymentMethodRepository.allPaymentMethods,
                 customerRepository.allCustomers
@@ -79,7 +78,7 @@ class DigitalTransactionViewModel(
     }
 
     fun refreshData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshing = true, searchQuery = "", selectedCategory = null) }
             delay(500)
             loadData()
@@ -91,7 +90,7 @@ class DigitalTransactionViewModel(
         currentHistoryPage = 0
         isLastHistoryPage = false
         
-        loadDataJob = viewModelScope.launch {
+        loadDataJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             
             // Seed defaults if empty
@@ -136,7 +135,7 @@ class DigitalTransactionViewModel(
     fun loadNextHistoryPage() {
         if (isLastHistoryPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val offset = currentHistoryPage * pageSize
@@ -174,7 +173,7 @@ class DigitalTransactionViewModel(
 
     private fun loadProductsByCategory(category: String) {
         searchJob?.cancel()
-        searchJob = viewModelScope.launch {
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
             digitalProductRepository.getDigitalProductsByCategory(category).collect { products ->
                 val providers = products.map { it.provider }.distinct().sorted()
                 _uiState.update { it.copy(products = products, managementProviders = providers) }
@@ -222,7 +221,7 @@ class DigitalTransactionViewModel(
         _uiState.update { it.copy(searchQuery = query) }
         searchJob?.cancel()
         if (query.isNotBlank()) {
-            searchJob = viewModelScope.launch {
+            searchJob = viewModelScope.launch(Dispatchers.IO) {
                 digitalProductRepository.searchDigitalProducts(query).collect { products ->
                     _uiState.update { it.copy(products = products) }
                 }
@@ -233,7 +232,7 @@ class DigitalTransactionViewModel(
     }
 
     fun addCategory(categoryName: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentMaxOrder = _uiState.value.categories.maxOfOrNull { it.sortOrder } ?: -1
                 digitalCategoryRepository.insert(DigitalCategoryEntity(name = categoryName, sortOrder = currentMaxOrder + 1))
@@ -244,7 +243,7 @@ class DigitalTransactionViewModel(
     }
 
     fun addProduct(product: DigitalProductEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentMaxOrder = _uiState.value.allProducts
                     .filter { it.category == product.category }
@@ -271,7 +270,7 @@ class DigitalTransactionViewModel(
             }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isProcessing = true, error = null) }
             try {
                 val phoneHistory = PhoneHistoryEntity(
@@ -287,7 +286,7 @@ class DigitalTransactionViewModel(
                     profit = product.sellingPrice - product.costPrice,
                     notes = storedNotes,
                     paid = paid,
-                    createdAt = dateFormat.format(Date())
+                    createdAt = DateUtils.nowDateTime()
                 )
                 
                 val id = phoneHistoryRepository.insert(phoneHistory)
@@ -302,7 +301,7 @@ class DigitalTransactionViewModel(
                             amount = product.sellingPrice,
                             paidAmount = paid,
                             status = if (paid >= product.sellingPrice) "paid" else "pending",
-                            createdAt = dateFormat.format(Date()),
+                            createdAt = DateUtils.nowDateTime(),
                             notes = "Hutang dari Transaksi Digital ${product.name} ke $phoneNumber"
                         )
                     )
@@ -342,7 +341,7 @@ class DigitalTransactionViewModel(
     }
 
     fun deleteProduct(product: DigitalProductEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 digitalProductRepository.delete(product)
             } catch (e: Exception) {
@@ -352,7 +351,7 @@ class DigitalTransactionViewModel(
     }
 
     fun updateProduct(product: DigitalProductEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 digitalProductRepository.update(product)
             } catch (e: Exception) {
@@ -362,7 +361,7 @@ class DigitalTransactionViewModel(
     }
 
     fun deleteCategory(category: DigitalCategoryEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 digitalCategoryRepository.delete(category)
             } catch (e: Exception) {
@@ -383,7 +382,7 @@ class DigitalTransactionViewModel(
         _uiState.update { it.copy(categories = mutable) }
 
         // Persist to database
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             mutable.forEachIndexed { index, category ->
                 if (category.sortOrder != index) {
                     digitalCategoryRepository.update(category.copy(sortOrder = index))
@@ -416,7 +415,7 @@ class DigitalTransactionViewModel(
         }
 
         // Persist to database
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             mutable.forEachIndexed { index, product ->
                 if (product.sortOrder != index) {
                     digitalProductRepository.update(product.copy(sortOrder = index))

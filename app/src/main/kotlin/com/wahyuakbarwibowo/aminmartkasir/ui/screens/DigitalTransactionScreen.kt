@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModelProvider.Factory
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
@@ -63,7 +64,7 @@ fun DigitalTransactionScreen(
     viewModelFactory: Factory? = null,
     viewModel: DigitalTransactionViewModel = viewModel(factory = viewModelFactory)
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedProductForPayment by remember { mutableStateOf<DigitalProductEntity?>(null) }
     var productToEdit by remember { mutableStateOf<DigitalProductEntity?>(null) }
     var productToDelete by remember { mutableStateOf<DigitalProductEntity?>(null) }

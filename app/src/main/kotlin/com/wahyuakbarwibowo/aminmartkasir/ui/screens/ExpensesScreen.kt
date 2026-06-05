@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ExpenseEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ExpenseViewModel
@@ -31,7 +32,7 @@ fun ExpensesScreen(
     onOpenDrawer: () -> Unit,
     viewModel: ExpenseViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 

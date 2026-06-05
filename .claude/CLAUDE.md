@@ -4,79 +4,95 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Aminmart Cashier** — A Point of Sale (POS) + PPOB app for small retail businesses built with React Native (Expo) and SQLite. Fully offline operation. UI in Indonesian.
-
-### Key Features
-- **Retail POS**: Barcode scanner, package/unit dual pricing, stock validation, receipt printing (58mm thermal)
-- **Digital Services (PPOB)**: Pulsa, PLN, E-Wallet, BPJS, Transfer Bank, Game — with dynamic categories
-- **Financial**: Profit & loss reports, expense tracking, receivables/payables with WhatsApp collection
-- **Stock Management**: Low stock alerts, purchase entry, top products analytics
-- **Customer & Supplier**: Master data, loyalty points, debt tracking with due dates
-- **Reports**: Sales reports, digital reports, date range filters, interactive drill-down
-- **Backup/Restore**: Full JSON export/import with transaction safety
+**Aminmart Cashier** — Android POS + PPOB app for small retail businesses. Kotlin + Jetpack Compose + Room (SQLite). Fully offline. UI in Indonesian.
 
 ## Development Commands
 
 ```bash
-bun install          # Install dependencies
-bun start            # Start dev server
-bun android          # expo run:android
-bun ios              # expo run:ios
-bun web              # expo start --web
+make build          # Build debug APK
+make install        # Install debug APK to connected device
+make dev            # clean + build + install + run (full cycle)
+make run            # Launch app on connected device
+make test           # Run unit tests
+make lint           # Run lint checks
+make logs           # View app logcat (filters to this process)
+make db-pull        # Pull database file from device
+make db-clear       # Clear all app data on device
 ```
 
-For EAS builds, use `eas build` with profiles in `eas.json` (development, preview, production).
+Signed release:
+```bash
+make release-signed   # Requires signing.properties (see signing.properties.example)
+make bundle-signed    # Signed AAB
+```
+
+Package name: `com.wahyuakbarwibowo.aminmartkasir`
+DB name: `kasir_database` (Room, version 9)
 
 ## Architecture
 
+### Stack
+- **Language**: Kotlin 2.3.10
+- **UI**: Jetpack Compose (BOM 2024.12.01)
+- **Database**: Room 2.8.4 with KSP annotation processing
+- **Architecture**: MVVM
+- **Async**: Kotlin Coroutines
+- **Navigation**: Navigation Compose 2.8.5
+
 ### Code Structure
 
-- `src/screens/` - 26 feature screens (see `.claude/docs/screens.md`)
-- `src/database/` - 12 SQLite data layer files (see `.claude/docs/database.md`)
-- `src/navigation/` - Drawer navigator config and route types
-- `src/types/` - TypeScript interfaces (`database.ts`, `product.ts`, `purchase.ts`, `supplier.ts`)
-- `App.tsx` - Root component with DB initialization
-- `index.ts` - Entry point
+```
+app/src/main/kotlin/.../aminmartkasir/
+├── data/
+│   ├── local/
+│   │   ├── AppDatabase.kt       # Room DB singleton, version 9, fallbackToDestructiveMigration
+│   │   ├── dao/                 # 18 DAOs
+│   │   ├── entity/              # Room entities
+│   │   └── converter/           # TypeConverters
+│   └── repository/              # Repository per domain (15 repos)
+├── ui/
+│   ├── screens/                 # Compose screens
+│   ├── viewmodel/               # ViewModels + ViewModelFactory + UiState
+│   ├── components/              # Shared composables
+│   ├── navigation/              # Nav graph
+│   ├── scanner/                 # Barcode camera
+│   └── theme/
+├── utils/
+│   ├── BluetoothPrinterHelper.kt
+│   ├── CurrencyUtils.kt
+│   └── ExcelExportUtils.kt
+└── MainActivity.kt              # Entry: initializes DB, sets content
+```
 
-### Database Layer
+### Database
 
-**Critical**: `initDB.ts` uses singleton pattern with Promise locking (prevents race conditions on Android). Always use `getDB()` to access the database instance. Schema migrations are inline via try/catch `ALTER TABLE`.
+`AppDatabase` is a singleton (`@Volatile` + `synchronized`). Get instance via `AppDatabase.getDatabase(context)`. **Schema migrations use `fallbackToDestructiveMigration`** — adding entities/columns requires bumping `version` and wiping data on device during development.
 
-Full table reference in `.claude/docs/database.md`.
+18 entities including: `ProductEntity`, `ProductVariantEntity`, `SaleEntity`, `SaleItemEntity`, `PurchaseEntity`, `ReceivableEntity`, `PayableEntity`, `PhoneHistoryEntity`, `DigitalProductEntity`, `DigitalCategoryEntity`, `ExpenseEntity`, `CustomerPointsHistoryEntity`, `StockHistoryEntity`.
 
 ### State Management
 
-No Redux/Context — all state is component-local `useState`. Database operations are direct async calls. Screens use `useFocusEffect` to reload data on focus.
-
-### Navigation
-
-Flat drawer navigation only (no nested stacks). All routes in `DrawerNavigator.tsx`. Hidden screens use `drawerItemStyle: { display: 'none' }`. Custom drawer content with memoized `MenuItem` and `SectionHeader` components.
+All screen state lives in ViewModels (no shared state/global store). `ViewModelFactory` manually wires repositories into ViewModels — add new VMs there. `UiState.kt` defines sealed class for loading/success/error.
 
 ### Key Business Logic
 
-- **Package Pricing**: Dual unit/package pricing (`selling_price` vs `package_price`/`package_qty`). See `getPriceBreakdown()` in `SalesTransactionScreen.tsx`.
-- **Auto-Receivables**: When payment < total, a receivable is auto-created (`sales.ts:addSale`).
-- **Debt Payment Method**: Payment method containing "hutang" enables partial/zero payments creating receivables.
-- **Stock Validation**: Prevents transactions when stock is insufficient, with visual warnings in cart.
-- **Backdate Transactions**: Sales and digital transactions support custom date input.
-- **Thermal Printing**: Optimized receipt layout for 58mm thermal bluetooth printers via `expo-print`.
-- **Digital Categories**: Dynamic CRUD for digital service categories (PULSA, PLN, PDAM, VOUCHER, etc.).
-- **Profit & Loss**: Integrated report combining sales revenue, COGS, expenses, and receivables/payables.
+- **Auto-Receivables**: When sale payment < total, `SaleRepository` auto-creates a `ReceivableEntity`. Payment method containing "hutang" allows partial/zero payments.
+- **Product Variants**: `ProductVariantEntity` links to `ProductEntity`. Dual pricing: unit vs package (`package_price` / `package_qty`).
+- **Stock Validation**: `SalesViewModel` blocks checkout when stock insufficient.
+- **Backdate**: Sales and digital transactions accept custom dates.
+- **Thermal Printing**: `BluetoothPrinterHelper.kt` handles 58mm receipt layout via Android Bluetooth API.
+- **Digital Categories**: Dynamic CRUD in `DigitalCategoryDao` — categories (PULSA, PLN, PDAM, etc.) are user-managed, not hardcoded.
+- **Backup/Restore**: `BackupRepository` exports/imports full DB as JSON.
 
-## Detailed Documentation
+### Navigation
 
-- `.claude/docs/screens.md` - All 26 screens organized by module with route names
-- `.claude/docs/database.md` - All 12 database files and table schemas
+Single `NavHost` in `ui/navigation/`. All routes are flat (no nested graphs). Screens receive `navController` and `viewModelFactory` as params.
 
 ## Skills
 
-Custom skills available via slash commands:
-
-- `/commit` - Create a git commit with Conventional Commits format
-- `/pr` - Create a GitHub Pull Request from current branch to master
-
-Skill definitions in `.claude/skills/`.
+- `/commit` — Conventional Commits format commit
+- `/pr` — Create GitHub PR to master
 
 ## Language
 
-The app UI and user-facing text is in Indonesian. Code comments may also be in Indonesian.
+App UI and user-facing strings are in Indonesian. Code comments may also be in Indonesian.

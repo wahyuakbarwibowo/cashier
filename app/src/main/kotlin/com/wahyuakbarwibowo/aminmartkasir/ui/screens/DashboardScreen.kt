@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DashboardViewModel
 import java.text.NumberFormat
@@ -47,7 +48,7 @@ fun DashboardScreen(
     onOpenDrawer: () -> Unit,
     viewModel: DashboardViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
     // Updated Model producers construction
     val salesModelProducer = remember { CartesianChartModelProducer() }

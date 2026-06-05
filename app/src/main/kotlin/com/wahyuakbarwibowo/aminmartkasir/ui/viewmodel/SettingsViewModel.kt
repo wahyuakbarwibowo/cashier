@@ -6,6 +6,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PaymentMethodEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ShopProfileEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PaymentMethodRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ShopProfileRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -30,7 +31,7 @@ class SettingsViewModel(
     }
 
     private fun loadShopProfile() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             shopProfileRepository.shopProfile.collect { profile ->
                 _uiState.update { 
                     it.copy(
@@ -44,7 +45,7 @@ class SettingsViewModel(
     }
 
     private fun loadPaymentMethods() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             paymentMethodRepository.allPaymentMethods.collect { paymentMethods ->
                 _uiState.update { it.copy(paymentMethods = paymentMethods) }
             }
@@ -52,7 +53,7 @@ class SettingsViewModel(
     }
 
     fun updateShopProfile(profile: ShopProfileEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val existingProfile = shopProfileRepository.getShopProfileOnce()
                 if (existingProfile != null) {
@@ -67,7 +68,7 @@ class SettingsViewModel(
     }
 
     fun addPaymentMethod(paymentMethod: PaymentMethodEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentMax = _uiState.value.paymentMethods.maxOfOrNull { it.sortOrder } ?: -1
                 paymentMethodRepository.insert(paymentMethod.copy(sortOrder = currentMax + 1))
@@ -89,7 +90,7 @@ class SettingsViewModel(
         _uiState.update { it.copy(paymentMethods = mutable) }
 
         // Persist to database
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             mutable.forEachIndexed { index, method ->
                 if (method.sortOrder != index) {
                     paymentMethodRepository.update(method.copy(sortOrder = index))
@@ -99,7 +100,7 @@ class SettingsViewModel(
     }
 
     fun updatePaymentMethod(paymentMethod: PaymentMethodEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 paymentMethodRepository.update(paymentMethod)
             } catch (e: Exception) {
@@ -109,7 +110,7 @@ class SettingsViewModel(
     }
 
     fun deletePaymentMethod(paymentMethod: PaymentMethodEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 paymentMethodRepository.delete(paymentMethod)
             } catch (e: Exception) {

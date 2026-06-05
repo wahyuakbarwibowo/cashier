@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ReceivableEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DebtViewModel
@@ -33,7 +34,7 @@ fun ReceivableScreen(
     onOpenDrawer: () -> Unit,
     viewModel: DebtViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     var showPaymentDialog by remember { mutableStateOf<ReceivableEntity?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }

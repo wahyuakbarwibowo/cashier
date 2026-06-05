@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.BackupRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -22,7 +23,7 @@ class BackupViewModel(
     val uiState = _uiState.asStateFlow()
 
     fun exportData(onDataReady: (String) -> Unit) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, message = "Sedang mengekspor data...") }
             try {
                 val json = backupRepository.exportData()
@@ -35,7 +36,7 @@ class BackupViewModel(
     }
 
     fun importData(json: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, message = "Sedang mengimpor data...") }
             try {
                 backupRepository.importData(json)

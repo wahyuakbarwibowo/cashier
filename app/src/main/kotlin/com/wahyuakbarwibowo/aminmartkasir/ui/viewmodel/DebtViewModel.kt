@@ -10,11 +10,11 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.ReceivableRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PayableRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.CustomerRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SupplierRepository
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.*
 
 data class DebtUiState(
     val receivables: List<ReceivableEntity> = emptyList(),
@@ -44,14 +44,12 @@ class DebtViewModel(
     private val pageSize = 20
     private var isLastPage = false
     
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-
     init {
         loadInitialData()
     }
 
     private fun loadInitialData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             combine(
                 customerRepository.allCustomers,
                 supplierRepository.allSuppliers
@@ -72,7 +70,7 @@ class DebtViewModel(
     fun loadReceivables() {
         currentPage = 0
         isLastPage = false
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, canLoadMore = true) }
             try {
                 val status = _uiState.value.filterStatus
@@ -102,7 +100,7 @@ class DebtViewModel(
     fun loadNextPage() {
         if (isLastPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val status = _uiState.value.filterStatus
@@ -134,7 +132,7 @@ class DebtViewModel(
     }
 
     fun refreshData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshing = true) }
             delay(500)
             loadReceivables()
@@ -142,7 +140,7 @@ class DebtViewModel(
     }
 
     fun recordPayment(receivable: ReceivableEntity, amount: Double) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val newPaidAmount = receivable.paidAmount + amount
                 val newStatus = if (newPaidAmount >= receivable.amount) "paid" else "pending"
@@ -162,7 +160,7 @@ class DebtViewModel(
     }
 
     fun addReceivable(customerId: Long, amount: Double, dueDate: String?, notes: String?) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val receivable = ReceivableEntity(
                     customerId = customerId,
@@ -171,7 +169,7 @@ class DebtViewModel(
                     dueDate = dueDate,
                     status = "pending",
                     notes = notes,
-                    createdAt = dateFormat.format(Date())
+                    createdAt = DateUtils.nowDateTime()
                 )
                 receivableRepository.insert(receivable)
                 _uiState.update { it.copy(successMessage = "Hutang baru berhasil dicatat") }
@@ -183,7 +181,7 @@ class DebtViewModel(
     }
 
     fun deleteReceivable(receivable: ReceivableEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 receivableRepository.delete(receivable)
                 _uiState.update { it.copy(successMessage = "Data hutang dihapus") }

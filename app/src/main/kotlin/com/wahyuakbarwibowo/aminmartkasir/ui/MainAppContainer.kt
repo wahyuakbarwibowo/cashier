@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.MoreMenuSheet
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.primaryMenuItems
@@ -30,9 +31,9 @@ fun MainAppContainer(
     val navController = rememberNavController()
     var showMoreMenu by remember { mutableStateOf(false) }
     val dashboardViewModel: DashboardViewModel = viewModel(factory = viewModelFactory)
-    val dashboardState by dashboardViewModel.uiState.collectAsState()
+    val dashboardState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
     val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
-    val settingsState by settingsViewModel.uiState.collectAsState()
+    val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route

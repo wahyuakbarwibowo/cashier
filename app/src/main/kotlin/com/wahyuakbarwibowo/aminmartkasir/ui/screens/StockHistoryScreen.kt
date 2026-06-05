@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.StockHistoryViewModel
@@ -27,7 +28,7 @@ fun StockHistoryScreen(
     onOpenDrawer: () -> Unit,
     viewModel: StockHistoryViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     // Detect when scrolled to bottom for infinite scroll

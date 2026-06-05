@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SaleRepository
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -33,7 +35,7 @@ class SalesHistoryViewModel(
     val uiState: StateFlow<SalesHistoryUiState> = _uiState.asStateFlow()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val dateTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    
+
     private var currentPage = 0
     private val pageSize = 20
     private var isLastPage = false
@@ -47,7 +49,7 @@ class SalesHistoryViewModel(
         currentPage = 0
         isLastPage = false
         loadJob?.cancel()
-        loadJob = viewModelScope.launch {
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, sales = emptyList(), canLoadMore = true) }
             try {
                 val sales = saleRepository.getSales(pageSize, 0)
@@ -73,7 +75,7 @@ class SalesHistoryViewModel(
     fun loadNextPage() {
         if (isLastPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading) return
 
-        loadJob = viewModelScope.launch {
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val offset = currentPage * pageSize
@@ -99,7 +101,7 @@ class SalesHistoryViewModel(
     }
 
     fun refreshData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshing = true, startDate = "", endDate = "") }
             delay(500)
             loadInitialSales()
@@ -109,7 +111,7 @@ class SalesHistoryViewModel(
     fun loadSalesByDateRange(startDate: String, endDate: String) {
         // For date range, we usually load all or use a different paging strategy
         // Simplified: load all for the range for now to keep it predictable
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, startDate = startDate, endDate = endDate, canLoadMore = false) }
             try {
                 // This repository method needs to be checked if it supports pagination or not

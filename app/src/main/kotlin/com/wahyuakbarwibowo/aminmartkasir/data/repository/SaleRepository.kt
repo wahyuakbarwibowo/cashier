@@ -155,7 +155,6 @@ class SaleRepository(
                 if (variantId != null) {
                     val variant = database.productVariantDao().getVariantById(variantId)
                     if (variant != null) {
-                        database.productVariantDao().increaseStock(variantId, qty)
                         database.stockHistoryDao().insert(
                             StockHistoryEntity(
                                 productId = productId,
@@ -167,9 +166,9 @@ class SaleRepository(
                                 createdAt = updatedSale.createdAt ?: ""
                             )
                         )
+                        database.productVariantDao().increaseStock(variantId, qty)
                     }
                 } else {
-                    database.productDao().increaseStock(productId, qty)
                     database.stockHistoryDao().insert(
                         StockHistoryEntity(
                             productId = productId,
@@ -181,6 +180,7 @@ class SaleRepository(
                             createdAt = updatedSale.createdAt ?: ""
                         )
                     )
+                    database.productDao().increaseStock(productId, qty)
                 }
             }
         }
@@ -231,7 +231,6 @@ class SaleRepository(
                 if (variantId != null) {
                     val variant = database.productVariantDao().getVariantById(variantId)
                     if (variant != null) {
-                        database.productVariantDao().decreaseStock(variantId, qty)
                         database.stockHistoryDao().insert(
                             StockHistoryEntity(
                                 productId = productId,
@@ -243,9 +242,9 @@ class SaleRepository(
                                 createdAt = updatedSale.createdAt ?: ""
                             )
                         )
+                        database.productVariantDao().decreaseStock(variantId, qty)
                     }
                 } else {
-                    database.productDao().decreaseStock(productId, qty)
                     database.stockHistoryDao().insert(
                         StockHistoryEntity(
                             productId = productId,
@@ -257,6 +256,7 @@ class SaleRepository(
                             createdAt = updatedSale.createdAt ?: ""
                         )
                     )
+                    database.productDao().decreaseStock(productId, qty)
                 }
             }
         }

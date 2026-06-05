@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ExpenseViewModel
@@ -41,9 +42,9 @@ fun ReportsScreen(
     expenseViewModel: ExpenseViewModel = viewModel(factory = viewModelFactory),
     digitalTransactionViewModel: DigitalTransactionViewModel = viewModel(factory = viewModelFactory)
 ) {
-    val salesState by salesHistoryViewModel.uiState.collectAsState()
-    val expenseState by expenseViewModel.uiState.collectAsState()
-    val digitalState by digitalTransactionViewModel.uiState.collectAsState()
+    val salesState by salesHistoryViewModel.uiState.collectAsStateWithLifecycle()
+    val expenseState by expenseViewModel.uiState.collectAsStateWithLifecycle()
+    val digitalState by digitalTransactionViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 

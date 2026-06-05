@@ -4,11 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ExpenseEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ExpenseRepository
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.*
 
 data class ExpenseUiState(
     val expenses: List<ExpenseEntity> = emptyList(),
@@ -31,8 +31,6 @@ class ExpenseViewModel(
     private val pageSize = 20
     private var isLastPage = false
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-
     init {
         loadInitialExpenses()
     }
@@ -40,7 +38,7 @@ class ExpenseViewModel(
     private fun loadInitialExpenses() {
         currentPage = 0
         isLastPage = false
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, expenses = emptyList(), canLoadMore = true) }
             try {
                 val initialExpenses = expenseRepository.getExpenses(pageSize, 0)
@@ -69,7 +67,7 @@ class ExpenseViewModel(
     fun loadNextPage() {
         if (isLastPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val offset = currentPage * pageSize
@@ -94,7 +92,7 @@ class ExpenseViewModel(
     }
 
     fun refreshData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshing = true) }
             delay(500)
             loadInitialExpenses()
@@ -102,13 +100,13 @@ class ExpenseViewModel(
     }
 
     fun addExpense(category: String, amount: Double, notes: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val expense = ExpenseEntity(
                     category = category,
                     amount = amount,
                     notes = notes,
-                    createdAt = dateFormat.format(Date())
+                    createdAt = DateUtils.nowDateTime()
                 )
                 expenseRepository.insert(expense)
                 loadInitialExpenses()
@@ -119,7 +117,7 @@ class ExpenseViewModel(
     }
 
     fun deleteExpense(expense: ExpenseEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 expenseRepository.delete(expense)
                 loadInitialExpenses()

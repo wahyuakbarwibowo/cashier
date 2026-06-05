@@ -6,6 +6,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.wahyuakbarwibowo.aminmartkasir.data.local.converter.Converters
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.*
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
@@ -32,8 +34,8 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         CustomerPointsHistoryEntity::class,
         StockHistoryEntity::class
     ],
-    version = 9,
-    exportSchema = false
+    version = 10,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -60,6 +62,14 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        // Add new migrations here when bumping version. Never remove old ones.
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_createdAt ON sales (createdAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_phone_history_createdAt ON phone_history (createdAt)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -67,7 +77,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "kasir_database"
                 )
-                    .fallbackToDestructiveMigration(dropAllTables = true)
+                    // fallbackToDestructiveMigration removed — add Migration objects above
+                    .addMigrations(MIGRATION_9_10)
                     .build()
                 INSTANCE = instance
                 instance

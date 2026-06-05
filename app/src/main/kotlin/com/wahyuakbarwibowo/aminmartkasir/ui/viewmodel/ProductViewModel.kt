@@ -8,12 +8,12 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductVariantRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 enum class ProductSortOption(val label: String, val repositorySort: ProductRepository.ProductSort) {
     NEWEST("Terbaru", ProductRepository.ProductSort.NEWEST),
@@ -51,15 +51,13 @@ class ProductViewModel(
     private var isLastPage = false
     private var loadJob: Job? = null
     private var searchJob: Job? = null
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-
     init {
         loadInitialProducts()
         loadLowStockProducts()
     }
 
     private fun loadLowStockProducts() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             productRepository.getLowStockProducts().collect { lowStock ->
                 _uiState.update { it.copy(lowStockProducts = lowStock) }
             }
@@ -72,7 +70,7 @@ class ProductViewModel(
         loadJob?.cancel()
         searchJob?.cancel()
         
-        loadJob = viewModelScope.launch {
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, products = emptyList(), canLoadMore = true) }
             try {
                 val initialProducts = productRepository.getProductsSorted(
@@ -101,7 +99,7 @@ class ProductViewModel(
     fun loadNextPage() {
         if (isLastPage || _uiState.value.isLoadMoreLoading || _uiState.value.isLoading || _uiState.value.searchQuery.isNotBlank()) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoadMoreLoading = true) }
             try {
                 val offset = currentPage * pageSize
@@ -139,7 +137,7 @@ class ProductViewModel(
             return
         }
 
-        searchJob = viewModelScope.launch {
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, canLoadMore = false) }
             try {
                 productRepository.searchProducts(query).collect { products ->
@@ -163,7 +161,7 @@ class ProductViewModel(
     }
 
     fun refreshData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshing = true, searchQuery = "") }
             delay(500)
             loadInitialProducts()
@@ -171,7 +169,7 @@ class ProductViewModel(
     }
 
     fun loadProductById(id: Long) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val product = productRepository.getProductById(id)
@@ -183,7 +181,7 @@ class ProductViewModel(
     }
 
     fun addProduct(product: ProductEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val id = productRepository.insert(product)
                 
@@ -197,7 +195,7 @@ class ProductViewModel(
                             stockBefore = 0,
                             stockAfter = product.stock,
                             reason = "Stok awal produk baru",
-                            createdAt = dateFormat.format(Date())
+                            createdAt = DateUtils.nowDateTime()
                         )
                     )
                 }
@@ -211,7 +209,7 @@ class ProductViewModel(
     }
 
     fun updateProduct(product: ProductEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val oldProduct = productRepository.getProductById(product.id)
                 productRepository.update(product)
@@ -226,7 +224,7 @@ class ProductViewModel(
                             stockBefore = oldProduct.stock,
                             stockAfter = product.stock,
                             reason = "Update stok manual",
-                            createdAt = dateFormat.format(Date())
+                            createdAt = DateUtils.nowDateTime()
                         )
                     )
                 }
@@ -240,7 +238,7 @@ class ProductViewModel(
     }
 
     fun deleteProduct(product: ProductEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 productRepository.delete(product)
                 _uiState.update { it.copy(successMessage = "Produk berhasil dihapus") }
@@ -256,7 +254,7 @@ class ProductViewModel(
     }
 
     fun adjustStock(productId: Long, changeQty: Int, reason: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val product = productRepository.getProductById(productId)
                 if (product == null) {
@@ -280,7 +278,7 @@ class ProductViewModel(
                         stockBefore = product.stock,
                         stockAfter = newStock,
                         reason = reason,
-                        createdAt = dateFormat.format(Date())
+                        createdAt = DateUtils.nowDateTime()
                     )
                 )
 

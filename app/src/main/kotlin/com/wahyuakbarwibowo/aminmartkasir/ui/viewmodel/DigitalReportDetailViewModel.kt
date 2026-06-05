@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PhoneHistoryRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -21,7 +22,7 @@ class DigitalReportDetailViewModel(
     val uiState: StateFlow<DigitalReportDetailUiState> = _uiState.asStateFlow()
 
     fun loadDetail(reportId: Long) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val detail = phoneHistoryRepository.getPhoneHistoryById(reportId)

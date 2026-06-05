@@ -1,9 +1,13 @@
 package com.wahyuakbarwibowo.aminmartkasir.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "sales")
+@Entity(
+    tableName = "sales",
+    indices = [Index("createdAt")]
+)
 data class SaleEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

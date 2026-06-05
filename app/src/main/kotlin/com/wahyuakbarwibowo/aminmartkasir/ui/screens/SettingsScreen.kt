@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PaymentMethodEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ShopProfileEntity
@@ -30,7 +31,7 @@ fun SettingsScreen(
     onOpenDrawer: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
     var shopName by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }

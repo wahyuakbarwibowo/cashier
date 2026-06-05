@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModelProvider.Factory
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -64,7 +65,7 @@ fun SalesTransactionScreen(
     viewModelFactory: Factory? = null,
     viewModel: SalesViewModel = viewModel(factory = viewModelFactory)
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showProductSelector by remember { mutableStateOf(false) }
     var showPaymentMethodSelector by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
