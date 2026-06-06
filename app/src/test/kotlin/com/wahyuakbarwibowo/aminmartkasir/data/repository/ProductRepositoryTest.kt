@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.data.repository
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.ProductDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -178,7 +179,7 @@ class ProductRepositoryTest {
     }
 
     @Test
-    fun `searchProducts should return matching products`() {
+    fun `searchProducts should return matching products`() = runTest {
         // Given
         val query = "Test"
         val products = listOf(
@@ -204,10 +205,6 @@ class ProductRepositoryTest {
         val result = productRepository.searchProducts(query)
 
         // Then
-        assertEquals(products, (result as Flow<List<ProductEntity>>).let { 
-            runTest { 
-                it.first() 
-            } 
-        })
+        assertEquals(products, result.first())
     }
 }

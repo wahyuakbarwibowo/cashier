@@ -10,6 +10,13 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+
+sealed class BarcodeAddResult {
+    data class Added(val productName: String) : BarcodeAddResult()
+    data class OutOfStock(val productName: String) : BarcodeAddResult()
+    object NotFound : BarcodeAddResult()
+}
 
 data class SalesTransactionUiState(
     val cartItems: List<CartItem> = emptyList(),
@@ -32,7 +39,17 @@ data class SalesTransactionUiState(
     val isLoadMoreLoading: Boolean = false,
     val canLoadMore: Boolean = true,
     val editingSaleId: Long? = null,
+    val heldOrders: List<HeldOrder> = emptyList(),
     val error: String? = null
+)
+
+/** Transaksi yang ditahan (pending) di memori — pelanggan tunda bayar, kasir layani next. */
+data class HeldOrder(
+    val id: Long,
+    val label: String,
+    val items: List<CartItem>,
+    val customer: CustomerEntity?,
+    val createdAt: String
 )
 
 data class CartItem(
@@ -266,6 +283,34 @@ class SalesViewModel(
         return true
     }
 
+    /** Scan barcode dari layar kasir: cari produk via [code] lalu langsung tambah ke keranjang. */
+    fun addToCartByBarcode(code: String, onResult: (BarcodeAddResult) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val product = productRepository.getProductByCode(code.trim())
+            val result = when {
+                product == null -> BarcodeAddResult.NotFound
+                addToCart(product) -> BarcodeAddResult.Added(product.name)
+                else -> BarcodeAddResult.OutOfStock(product.name)
+            }
+            withContext(Dispatchers.Main) { onResult(result) }
+        }
+    }
+
+    /** Ubah harga jual satuan item di keranjang (harga sementara, hanya transaksi ini). */
+    fun updateCartItemPrice(productId: Long, variantId: Long?, newPrice: Double) {
+        if (newPrice < 0) return
+        _uiState.update { state ->
+            val newCartItems = state.cartItems.map {
+                if (it.product.id == productId && it.variant?.id == variantId) {
+                    it.copy(price = newPrice, subtotal = newPrice * it.qty)
+                } else {
+                    it
+                }
+            }
+            recalculateState(state.copy(cartItems = newCartItems))
+        }
+    }
+
     fun removeFromCart(productId: Long, variantId: Long?) {
         _uiState.update { currentState ->
             val newCartItems = currentState.cartItems.filterNot { it.product.id == productId && it.variant?.id == variantId }
@@ -454,7 +499,7 @@ class SalesViewModel(
     }
 
     fun clearCart() {
-        _uiState.update { 
+        _uiState.update {
             it.copy(
                 cartItems = emptyList(),
                 subtotal = 0.0,
@@ -467,8 +512,46 @@ class SalesViewModel(
                 selectedCustomer = null,
                 selectedPaymentMethod = null,
                 editingSaleId = null
-            ) 
+            )
         }
+    }
+
+    private var nextHeldId = 1L
+
+    /** Tahan keranjang saat ini sebagai transaksi pending, lalu kosongkan keranjang. */
+    fun holdCurrentCart(label: String) {
+        val state = _uiState.value
+        if (state.cartItems.isEmpty()) return
+        val held = HeldOrder(
+            id = nextHeldId++,
+            label = label.ifBlank { "Pesanan #${state.heldOrders.size + 1}" },
+            items = state.cartItems,
+            customer = state.selectedCustomer,
+            createdAt = DateUtils.nowDateTime()
+        )
+        _uiState.update { it.copy(heldOrders = it.heldOrders + held) }
+        clearCart()
+    }
+
+    /** Lanjutkan transaksi pending ke keranjang. Keranjang aktif harus kosong dulu. */
+    fun resumeHeldOrder(id: Long): Boolean {
+        val state = _uiState.value
+        if (state.cartItems.isNotEmpty()) return false
+        val held = state.heldOrders.find { it.id == id } ?: return false
+        _uiState.update {
+            recalculateState(
+                it.copy(
+                    cartItems = held.items,
+                    selectedCustomer = held.customer,
+                    heldOrders = it.heldOrders.filterNot { o -> o.id == id }
+                )
+            )
+        }
+        return true
+    }
+
+    fun deleteHeldOrder(id: Long) {
+        _uiState.update { it.copy(heldOrders = it.heldOrders.filterNot { o -> o.id == id }) }
     }
 
     fun calculatePoints() {

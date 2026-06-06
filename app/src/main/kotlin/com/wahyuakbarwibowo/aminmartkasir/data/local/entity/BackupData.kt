@@ -18,5 +18,6 @@ data class BackupData(
     val digitalCategories: List<DigitalCategoryEntity>? = null,
     val expenses: List<ExpenseEntity>? = null,
     val customerPointsHistory: List<CustomerPointsHistoryEntity>? = null,
-    val stockHistory: List<StockHistoryEntity>? = null
+    val stockHistory: List<StockHistoryEntity>? = null,
+    val shifts: List<ShiftEntity>? = null
 )

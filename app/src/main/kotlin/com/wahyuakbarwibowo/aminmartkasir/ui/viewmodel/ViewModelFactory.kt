@@ -27,6 +27,7 @@ class ViewModelFactory(
     private val phoneHistoryRepository = PhoneHistoryRepository(database.phoneHistoryDao())
     private val shopProfileRepository = ShopProfileRepository(database.shopProfileDao())
     private val backupRepository = BackupRepository(database)
+    private val shiftRepository = ShiftRepository(database.shiftDao())
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
@@ -135,6 +136,20 @@ class ViewModelFactory(
                     saleRepository = saleRepository,
                     expenseRepository = expenseRepository,
                     phoneHistoryRepository = phoneHistoryRepository
+                ) as T
+            }
+            modelClass.isAssignableFrom(GlobalSearchViewModel::class.java) -> {
+                GlobalSearchViewModel(
+                    productRepository = productRepository,
+                    customerRepository = customerRepository,
+                    saleRepository = saleRepository
+                ) as T
+            }
+            modelClass.isAssignableFrom(ShiftViewModel::class.java) -> {
+                ShiftViewModel(
+                    shiftRepository = shiftRepository,
+                    saleRepository = saleRepository,
+                    expenseRepository = expenseRepository
                 ) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

@@ -28,6 +28,7 @@ fun AppNavigation(
                 onNavigateToSales = { navController.navigate(Screen.SalesTransaction.route) },
                 onNavigateToLowStock = { navController.navigate(Screen.LowStock.route) },
                 onNavigateToDigital = { navController.navigate(Screen.DigitalTransaction.route) },
+                onNavigateToSearch = { navController.navigate(Screen.GlobalSearch.route) },
                 onOpenDrawer = onOpenDrawer,
                 viewModel = viewModel(factory = viewModelFactory)
             )
@@ -234,6 +235,30 @@ fun AppNavigation(
         composable(Screen.Customers.route) {
             CustomersScreen(
                 onOpenDrawer = onOpenDrawer,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
+
+        composable(Screen.GlobalSearch.route) {
+            GlobalSearchScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenProduct = { productId ->
+                    navController.navigate(Screen.ProductForm.createRoute(productId))
+                },
+                onOpenCustomers = { navController.navigate(Screen.Customers.route) },
+                onOpenSale = { saleId ->
+                    navController.navigate(Screen.SaleDetail.createRoute(saleId))
+                },
+                viewModelFactory = viewModelFactory,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
+
+        composable(Screen.Shift.route) {
+            ShiftScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
+                viewModelFactory = viewModelFactory,
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }

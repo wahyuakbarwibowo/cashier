@@ -58,6 +58,10 @@ class SaleRepository(
         return saleDao.getSalesSince(startDate)
     }
 
+    suspend fun searchSales(query: String, limit: Int = 20): List<SaleEntity> {
+        return saleDao.searchSales(query, limit)
+    }
+
     suspend fun deleteSale(sale: SaleEntity) {
         saleDao.delete(sale)
     }

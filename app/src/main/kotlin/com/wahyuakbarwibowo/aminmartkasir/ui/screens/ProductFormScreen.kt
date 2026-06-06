@@ -172,7 +172,8 @@ fun ProductFormScreen(
                     ) {
                         Icon(Icons.Default.Save, contentDescription = "Simpan")
                     }
-                }
+                },
+                windowInsets = WindowInsets.statusBars
             )
         }
     ) { paddingValues ->

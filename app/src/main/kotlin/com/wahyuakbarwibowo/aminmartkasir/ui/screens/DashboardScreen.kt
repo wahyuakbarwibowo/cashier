@@ -45,6 +45,7 @@ fun DashboardScreen(
     onNavigateToSales: () -> Unit,
     onNavigateToLowStock: () -> Unit,
     onNavigateToDigital: () -> Unit,
+    onNavigateToSearch: () -> Unit,
     onOpenDrawer: () -> Unit,
     viewModel: DashboardViewModel = viewModel()
 ) {
@@ -80,7 +81,12 @@ fun DashboardScreen(
                 title = { Text("Aminmart Kasir") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToSearch) {
+                        Icon(Icons.Default.Search, contentDescription = "Cari", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 },
                 windowInsets = WindowInsets.statusBars,

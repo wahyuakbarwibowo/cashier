@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
+import kotlin.math.ceil
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,6 +47,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.*
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import com.wahyuakbarwibowo.aminmartkasir.utils.RupiahVisualTransformation
 import com.wahyuakbarwibowo.aminmartkasir.ui.screens.LastTransactionData
 import java.math.BigDecimal
 import java.text.NumberFormat
@@ -71,11 +74,52 @@ fun SalesTransactionScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showPrinterDialog by remember { mutableStateOf(false) }
     var showEditProductDialog by remember { mutableStateOf(false) }
-    var productToEdit by remember { mutableStateOf<ProductEntity?>(null) }
+    var itemToEdit by remember { mutableStateOf<CartItem?>(null) }
+    var showHeldOrdersDialog by remember { mutableStateOf(false) }
     var successTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
     val cartListState = rememberLazyListState()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+
+    // Scan barcode langsung dari layar kasir -> auto tambah ke keranjang
+    val quickScanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        val scannedCode = result.contents
+        if (!scannedCode.isNullOrBlank()) {
+            viewModel.addToCartByBarcode(scannedCode) { res ->
+                when (res) {
+                    is BarcodeAddResult.Added -> {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        Toast.makeText(context, "${res.productName} ditambah", Toast.LENGTH_SHORT).show()
+                    }
+                    is BarcodeAddResult.OutOfStock -> {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        Toast.makeText(context, "Stok ${res.productName} habis/tidak mencukupi", Toast.LENGTH_SHORT).show()
+                    }
+                    is BarcodeAddResult.NotFound -> {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        Toast.makeText(context, "Produk barcode \"$scannedCode\" tidak ditemukan", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+    val quickScanPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val options = ScanOptions().apply {
+                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
+                setPrompt("Scan barcode produk")
+                setBeepEnabled(true)
+                setOrientationLocked(true)
+                setCaptureActivity(BarcodeCaptureActivity::class.java)
+                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
+            }
+            quickScanLauncher.launch(options)
+        } else {
+            Toast.makeText(context, "Izin kamera diperlukan untuk scan barcode", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LaunchedEffect(editingSaleId) {
         if (editingSaleId != null) {
@@ -104,12 +148,30 @@ fun SalesTransactionScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
                 windowInsets = WindowInsets.statusBars,
                 actions = {
+                    IconButton(onClick = { quickScanPermissionLauncher.launch(android.Manifest.permission.CAMERA) }) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode", tint = MaterialTheme.colorScheme.onPrimary)
+                    }
+                    if (uiState.heldOrders.isNotEmpty()) {
+                        BadgedBox(
+                            badge = { Badge { Text("${uiState.heldOrders.size}") } }
+                        ) {
+                            IconButton(onClick = { showHeldOrdersDialog = true }) {
+                                Icon(Icons.Default.ReceiptLong, contentDescription = "Pesanan ditahan", tint = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        }
+                    }
                     if (uiState.cartItems.isNotEmpty()) {
+                        IconButton(onClick = {
+                            viewModel.holdCurrentCart("")
+                            Toast.makeText(context, "Pesanan ditahan", Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(Icons.Default.PauseCircle, contentDescription = "Tahan pesanan", tint = MaterialTheme.colorScheme.onPrimary)
+                        }
                         IconButton(onClick = { viewModel.clearCart() }) {
                             Icon(Icons.Default.DeleteSweep, contentDescription = "Kosongkan", tint = MaterialTheme.colorScheme.onPrimary)
                         }
@@ -188,9 +250,14 @@ fun SalesTransactionScreen(
                                         Toast.makeText(context, "Stok tidak mencukupi", Toast.LENGTH_SHORT).show()
                                     }
                                 },                                onDecreaseQty = { viewModel.updateCartItemQty(item.product.id, item.variant?.id, item.qty - 1) },
+                                onSetQty = { newQty ->
+                                    if (!viewModel.updateCartItemQty(item.product.id, item.variant?.id, newQty)) {
+                                        Toast.makeText(context, "Stok tidak mencukupi", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
                                 onRemove = { viewModel.removeFromCart(item.product.id, item.variant?.id) },
                                 onEdit = {
-                                    productToEdit = item.product
+                                    itemToEdit = item
                                     showEditProductDialog = true
                                 }
                             )
@@ -402,24 +469,31 @@ fun SalesTransactionScreen(
         )
     }
 
-    if (showEditProductDialog && productToEdit != null) {
-        var newPrice by remember { mutableStateOf(productToEdit!!.sellingPrice.toLong().toString()) }
+    if (showEditProductDialog && itemToEdit != null) {
+        val editItem = itemToEdit!!
+        var newPrice by remember(editItem) { mutableStateOf(editItem.price.toLong().toString()) }
         AlertDialog(
-            onDismissRequest = { showEditProductDialog = false },
+            onDismissRequest = { showEditProductDialog = false; itemToEdit = null },
             confirmButton = {
-                Button(onClick = {
-                    showEditProductDialog = false
-                }) {
+                Button(
+                    onClick = {
+                        val priceValue = newPrice.toDoubleOrNull() ?: 0.0
+                        viewModel.updateCartItemPrice(editItem.product.id, editItem.variant?.id, priceValue)
+                        showEditProductDialog = false
+                        itemToEdit = null
+                    },
+                    enabled = newPrice.isNotBlank()
+                ) {
                     Text("Simpan")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEditProductDialog = false }) { Text("Batal") }
+                TextButton(onClick = { showEditProductDialog = false; itemToEdit = null }) { Text("Batal") }
             },
             title = { Text("Ubah Harga Sementara") },
             text = {
                 Column {
-                    Text(productToEdit!!.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(editItem.product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text("Hanya berlaku untuk transaksi ini", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(16.dp))
                     OutlinedTextField(
@@ -427,6 +501,7 @@ fun SalesTransactionScreen(
                         onValueChange = { if (it.all { ch -> ch.isDigit() }) newPrice = it },
                         label = { Text("Harga Baru") },
                         prefix = { Text("Rp ") },
+                        visualTransformation = RupiahVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -435,6 +510,97 @@ fun SalesTransactionScreen(
             }
         )
     }
+
+    if (showHeldOrdersDialog) {
+        HeldOrdersDialog(
+            heldOrders = uiState.heldOrders,
+            cartIsEmpty = uiState.cartItems.isEmpty(),
+            onResume = { id ->
+                if (viewModel.resumeHeldOrder(id)) {
+                    showHeldOrdersDialog = false
+                } else {
+                    Toast.makeText(context, "Kosongkan keranjang dulu sebelum lanjut pesanan", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDelete = { id -> viewModel.deleteHeldOrder(id) },
+            onDismiss = { showHeldOrdersDialog = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HeldOrdersDialog(
+    heldOrders: List<HeldOrder>,
+    cartIsEmpty: Boolean,
+    onResume: (Long) -> Unit,
+    onDelete: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    BasicAlertDialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f).padding(16.dp),
+        content = {
+            Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 4.dp) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Pesanan Ditahan", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
+                    }
+                    if (!cartIsEmpty) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Keranjang aktif masih berisi. Selesaikan/kosongkan dulu untuk melanjutkan pesanan.",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(heldOrders, key = { it.id }) { order ->
+                            val orderTotal = order.items.sumOf { it.subtotal }
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(order.label, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            "${order.items.size} item • ${formatCurrency(orderTotal)}" +
+                                                (order.customer?.let { " • ${it.name}" } ?: ""),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    IconButton(onClick = { onDelete(order.id) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                    Button(
+                                        onClick = { onResume(order.id) },
+                                        enabled = cartIsEmpty,
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) { Text("Lanjut") }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -442,9 +608,49 @@ fun CartItemCard(
     item: CartItem,
     onIncreaseQty: () -> Unit,
     onDecreaseQty: () -> Unit,
+    onSetQty: (Int) -> Unit,
     onRemove: () -> Unit,
     onEdit: () -> Unit
 ) {
+    var showQtyDialog by remember { mutableStateOf(false) }
+
+    if (showQtyDialog) {
+        var qtyText by remember { mutableStateOf(item.qty.toString()) }
+        AlertDialog(
+            onDismissRequest = { showQtyDialog = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val q = qtyText.toIntOrNull() ?: 0
+                        if (q > 0) onSetQty(q)
+                        showQtyDialog = false
+                    },
+                    enabled = (qtyText.toIntOrNull() ?: 0) > 0
+                ) { Text("Simpan") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQtyDialog = false }) { Text("Batal") }
+            },
+            title = { Text("Jumlah") },
+            text = {
+                Column {
+                    Text(item.product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Stok tersedia: ${item.variant?.stock ?: item.product.stock}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = qtyText,
+                        onValueChange = { if (it.all { ch -> ch.isDigit() } && it.length <= 5) qtyText = it },
+                        label = { Text("Jumlah") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -529,7 +735,11 @@ fun CartItemCard(
                     
                     Text(
                         text = item.qty.toString(),
-                        modifier = Modifier.widthIn(min = 32.dp),
+                        modifier = Modifier
+                            .widthIn(min = 32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { showQtyDialog = true }
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
@@ -759,15 +969,30 @@ fun PaymentMethodSelectorDialog(
     onProcess: (Double, PaymentMethodEntity) -> Unit
 ) {
     var paidText by remember { mutableStateOf(BigDecimal.valueOf(total).stripTrailingZeros().toPlainString()) }
-    var discountText by remember { mutableStateOf("0") }
+    var discountInput by remember { mutableStateOf("0") }
+    var discountIsPercent by remember { mutableStateOf(false) }
+    var appliedDiscountRp by remember { mutableStateOf(0.0) }
     var selectedMethod by remember { mutableStateOf<PaymentMethodEntity?>(paymentMethods.firstOrNull()) }
     var customerExpanded by remember { mutableStateOf(false) }
-    
-    val subtotalValue = total + (discountText.toDoubleOrNull() ?: 0.0) + (pointsRedeemed * 100.0)
-    val discountValue = discountText.toDoubleOrNull() ?: 0.0
-    val currentTotal = (subtotalValue - discountValue - (pointsRedeemed * 100.0)).coerceAtLeast(0.0)
+
+    // VM sudah mengurangi diskon + poin dari `total`, jadi total tagihan = total.
+    val currentTotal = total.coerceAtLeast(0.0)
+    // Subtotal (sebelum diskon) = total + diskon yang sudah diterapkan + nilai poin. Stabil saat diskon berubah.
+    val subtotalValue = total + appliedDiscountRp + (pointsRedeemed * 100.0)
     val paidValue = paidText.toDoubleOrNull() ?: 0.0
     val changeValue = paidValue - currentTotal
+
+    // Terapkan diskon (Rp atau %) ke VM. % dihitung dari subtotal yang stabil.
+    fun applyDiscount(rawInput: String, isPercent: Boolean) {
+        val rp = if (isPercent) {
+            val pct = (rawInput.toDoubleOrNull() ?: 0.0).coerceIn(0.0, 100.0)
+            subtotalValue * pct / 100.0
+        } else {
+            rawInput.toDoubleOrNull() ?: 0.0
+        }
+        appliedDiscountRp = rp
+        onDiscountChange(rp)
+    }
 
     BasicAlertDialog(
         onDismissRequest = onDismiss,
@@ -828,30 +1053,98 @@ fun PaymentMethodSelectorDialog(
                         }
                     }
 
-                    // Input paid and discount
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
-                            value = discountText,
-                            onValueChange = { if (it.all { ch -> ch.isDigit() }) {
-                                discountText = it
-                                onDiscountChange(it.toDoubleOrNull() ?: 0.0)
-                            }},
-                            label = { Text("Diskon") },
-                            prefix = { Text("Rp ") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
+                    // Diskon: toggle Rp / %
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = discountInput,
+                                onValueChange = {
+                                    if (it.all { ch -> ch.isDigit() }) {
+                                        discountInput = it
+                                        applyDiscount(it, discountIsPercent)
+                                    }
+                                },
+                                label = { Text("Diskon") },
+                                prefix = { Text(if (discountIsPercent) "" else "Rp ") },
+                                suffix = { if (discountIsPercent) Text("%") },
+                                visualTransformation = if (discountIsPercent) VisualTransformation.None else RupiahVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            SingleChoiceSegmentedButtonRow {
+                                SegmentedButton(
+                                    selected = !discountIsPercent,
+                                    onClick = {
+                                        discountIsPercent = false
+                                        discountInput = "0"
+                                        applyDiscount("0", false)
+                                    },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                                ) { Text("Rp") }
+                                SegmentedButton(
+                                    selected = discountIsPercent,
+                                    onClick = {
+                                        discountIsPercent = true
+                                        discountInput = "0"
+                                        applyDiscount("0", true)
+                                    },
+                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                                ) { Text("%") }
+                            }
+                        }
+                        if (discountIsPercent && appliedDiscountRp > 0) {
+                            Text(
+                                "Diskon = ${formatCurrency(appliedDiscountRp)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Dibayar
+                    OutlinedTextField(
+                        value = paidText,
+                        onValueChange = { if (it.all { ch -> ch.isDigit() }) paidText = it },
+                        label = { Text("Dibayar") },
+                        prefix = { Text("Rp ") },
+                        visualTransformation = RupiahVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+
+                    // Tombol uang cepat
+                    val cashSuggestions = remember(currentTotal) {
+                        val notes = listOf(5000.0, 10000.0, 20000.0, 50000.0, 100000.0)
+                        val roundUp50 = ceil(currentTotal / 50000.0) * 50000.0
+                        (notes.filter { it >= currentTotal } + roundUp50)
+                            .filter { it > 0 }
+                            .distinct()
+                            .sorted()
+                            .take(4)
+                    }
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AssistChip(
+                            onClick = { paidText = currentTotal.toLong().toString() },
+                            label = { Text("Uang Pas") }
                         )
-                        OutlinedTextField(
-                            value = paidText,
-                            onValueChange = { if (it.all { ch -> ch.isDigit() }) paidText = it },
-                            label = { Text("Dibayar") },
-                            prefix = { Text("Rp ") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1.5f),
-                            shape = RoundedCornerShape(12.dp),
-                            textStyle = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                        )
+                        cashSuggestions.forEach { amount ->
+                            AssistChip(
+                                onClick = { paidText = amount.toLong().toString() },
+                                label = { Text(formatCurrency(amount)) }
+                            )
+                        }
                     }
 
                     // Change Info

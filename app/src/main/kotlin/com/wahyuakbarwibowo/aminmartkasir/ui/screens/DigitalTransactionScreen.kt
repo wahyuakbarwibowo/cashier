@@ -83,7 +83,7 @@ fun DigitalTransactionScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
+                        Icon(Icons.Default.Menu, contentDescription = "Lainnya")
                     }
                 },
                 windowInsets = WindowInsets.statusBars,

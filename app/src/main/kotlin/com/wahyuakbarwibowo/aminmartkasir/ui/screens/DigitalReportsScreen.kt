@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -91,7 +92,7 @@ fun DigitalReportsScreen(
                 title = { Text("Riwayat Transaksi Digital") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Lainnya")
+                        Icon(Icons.Default.Menu, contentDescription = "Lainnya")
                     }
                 },
                 windowInsets = WindowInsets.statusBars

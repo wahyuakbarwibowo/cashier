@@ -32,9 +32,10 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         DigitalCategoryEntity::class,
         ExpenseEntity::class,
         CustomerPointsHistoryEntity::class,
-        StockHistoryEntity::class
+        StockHistoryEntity::class,
+        ShiftEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -57,6 +58,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun customerPointsHistoryDao(): CustomerPointsHistoryDao
     abstract fun stockHistoryDao(): StockHistoryDao
+    abstract fun shiftDao(): ShiftDao
 
     companion object {
         @Volatile
@@ -70,6 +72,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS shifts (
+                        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        openedAt TEXT NOT NULL,
+                        closedAt TEXT,
+                        openingCash REAL NOT NULL DEFAULT 0,
+                        countedCash REAL,
+                        totalSales REAL NOT NULL DEFAULT 0,
+                        totalExpenses REAL NOT NULL DEFAULT 0,
+                        expectedCash REAL,
+                        difference REAL,
+                        note TEXT,
+                        status TEXT NOT NULL DEFAULT 'open'
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -78,7 +102,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "kasir_database"
                 )
                     // fallbackToDestructiveMigration removed — add Migration objects above
-                    .addMigrations(MIGRATION_9_10)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11)
                     .build()
                 INSTANCE = instance
                 instance

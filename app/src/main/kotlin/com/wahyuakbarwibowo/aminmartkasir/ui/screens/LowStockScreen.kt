@@ -37,7 +37,8 @@ fun LowStockScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
-                }
+                },
+                windowInsets = WindowInsets.statusBars
             )
         }
     ) { paddingValues ->

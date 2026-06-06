@@ -30,6 +30,7 @@ val primaryMenuItems = listOf(
 
 val secondaryMenuItems = listOf(
     AppMenuItem(Screen.SalesHistory.route, "Riwayat Penjualan", Icons.AutoMirrored.Filled.ReceiptLong),
+    AppMenuItem(Screen.Shift.route, "Shift Kasir", Icons.Default.PointOfSale),
     AppMenuItem(Screen.Reports.route, "Laporan", Icons.Default.Assessment),
     AppMenuItem(Screen.ProfitLoss.route, "Laba Rugi", Icons.AutoMirrored.Filled.ShowChart),
     AppMenuItem(Screen.Customers.route, "Daftar Pelanggan", Icons.Default.People),

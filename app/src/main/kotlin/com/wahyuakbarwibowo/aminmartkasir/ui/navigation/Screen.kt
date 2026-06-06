@@ -37,4 +37,6 @@ sealed class Screen(val route: String) {
     object Backup : Screen("backup")
     object Receivable : Screen("receivable")
     object Customers : Screen("customers")
+    object GlobalSearch : Screen("global_search")
+    object Shift : Screen("shift")
 }
