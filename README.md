@@ -24,6 +24,8 @@
 *   **⌨️ Enhanced UX (Keyboard Avoidance)**: Optimasi seluruh layar input agar bidang isian tidak tertutup oleh keyboard virtual, memastikan pengalaman mengetik yang nyaman.
 *   **📅 Filter Rentang Tanggal**: Filter laporan dan riwayat berdasarkan periode waktu tertentu (Hari, Minggu, Bulan, Tahun).
 *   **💾 Backup & Restore**: Amankan data lokal Anda dengan fitur ekspor/impor database.
+*   **🕐 Manajemen Shift Kasir**: Buka/tutup shift dengan pencatatan kas awal, kas terhitung, kas seharusnya, dan selisih untuk rekonsiliasi laci kas.
+*   **🔍 Pencarian Global**: Pencarian lintas data (produk, transaksi, pelanggan, dll) langsung dari database dalam satu layar.
 
 ---
 
@@ -51,8 +53,8 @@
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/wahyuakbarwibowo/rn-cashier-app.git
-cd aminmart/app-cashier
+git clone https://github.com/wahyuakbarwibowo/aminmart-cashier-app.git
+cd aminmart-cashier-app
 ```
 
 ---
@@ -160,7 +162,7 @@ adb logcat -d > logs.txt
 ### Debug Database (Room)
 ```bash
 # Pull database dari device
-adb pull /data/data/com.wahyuakbarwibowo.aminmartkasir/databases/aminmart_kasir.db
+adb pull /data/data/com.wahyuakbarwibowo.aminmartkasir/databases/kasir_database
 
 # Buka dengan DB Browser for SQLite atau Android Studio Database Inspector
 ```
@@ -238,6 +240,7 @@ Sistem digital menggunakan tabel dinamis:
 *   `receivables`: Data piutang pelanggan.
 *   `payables`: Data hutang ke supplier.
 *   `expenses`: Data pengeluaran operasional.
+*   `shifts`: Sesi shift kasir (kas awal, kas terhitung, selisih, status open/closed).
 
 ---
 
@@ -248,9 +251,10 @@ app-cashier/
 │   ├── src/
 │   │   └── main/
 │   │       ├── kotlin/com/wahyuakbarwibowo/aminmartkasir/
-│   │       │   ├── ui/          # Compose UI screens
-│   │       │   ├── data/        # Room entities & DAOs
-│   │       │   ├── viewmodel/   # MVVM ViewModels
+│   │       │   ├── ui/          # Compose screens, viewmodels, components, navigation
+│   │       │   ├── data/        # Room entities, DAOs & repositories
+│   │       │   ├── utils/       # Printer, currency, Excel export helpers
+│   │       │   ├── MainApplication.kt
 │   │       │   └── MainActivity.kt
 │   │       └── res/             # Resources (strings, themes, etc.)
 │   └── build.gradle

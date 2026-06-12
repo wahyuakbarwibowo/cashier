@@ -27,7 +27,7 @@ make bundle-signed    # Signed AAB
 ```
 
 Package name: `com.wahyuakbarwibowo.aminmartkasir`
-DB name: `kasir_database` (Room, version 9)
+DB name: `kasir_database` (Room, version 11)
 
 ## Architecture
 
@@ -45,8 +45,8 @@ DB name: `kasir_database` (Room, version 9)
 app/src/main/kotlin/.../aminmartkasir/
 ├── data/
 │   ├── local/
-│   │   ├── AppDatabase.kt       # Room DB singleton, version 9, fallbackToDestructiveMigration
-│   │   ├── dao/                 # 18 DAOs
+│   │   ├── AppDatabase.kt       # Room DB singleton, version 11, explicit Migration objects
+│   │   ├── dao/                 # 19 DAOs
 │   │   ├── entity/              # Room entities
 │   │   └── converter/           # TypeConverters
 │   └── repository/              # Repository per domain (15 repos)
@@ -66,9 +66,9 @@ app/src/main/kotlin/.../aminmartkasir/
 
 ### Database
 
-`AppDatabase` is a singleton (`@Volatile` + `synchronized`). Get instance via `AppDatabase.getDatabase(context)`. **Schema migrations use `fallbackToDestructiveMigration`** — adding entities/columns requires bumping `version` and wiping data on device during development.
+`AppDatabase` is a singleton (`@Volatile` + `synchronized`). Get instance via `AppDatabase.getDatabase(context)`. Current `version = 11`. **Schema changes use real `Migration` objects** (registered via `.addMigrations(...)` in `getDatabase`) — `fallbackToDestructiveMigration` was removed, so adding entities/columns requires bumping `version` AND writing a `Migration(n, n+1)` object with the raw SQL. Do not wipe device data; data must survive upgrades.
 
-18 entities including: `ProductEntity`, `ProductVariantEntity`, `SaleEntity`, `SaleItemEntity`, `PurchaseEntity`, `ReceivableEntity`, `PayableEntity`, `PhoneHistoryEntity`, `DigitalProductEntity`, `DigitalCategoryEntity`, `ExpenseEntity`, `CustomerPointsHistoryEntity`, `StockHistoryEntity`.
+20 entities (19 DAOs) including: `ProductEntity`, `ProductVariantEntity`, `SaleEntity`, `SaleItemEntity`, `PurchaseEntity`, `ReceivableEntity`, `PayableEntity`, `PhoneHistoryEntity`, `DigitalProductEntity`, `DigitalCategoryEntity`, `ExpenseEntity`, `CustomerPointsHistoryEntity`, `StockHistoryEntity`, `ShiftEntity`.
 
 ### State Management
 
@@ -83,6 +83,8 @@ All screen state lives in ViewModels (no shared state/global store). `ViewModelF
 - **Thermal Printing**: `BluetoothPrinterHelper.kt` handles 58mm receipt layout via Android Bluetooth API.
 - **Digital Categories**: Dynamic CRUD in `DigitalCategoryDao` — categories (PULSA, PLN, PDAM, etc.) are user-managed, not hardcoded.
 - **Backup/Restore**: `BackupRepository` exports/imports full DB as JSON.
+- **Shift Management**: `ShiftEntity` tracks cash drawer sessions (opening/counted cash, expected vs difference, open/closed status).
+- **Global Search**: `GlobalSearchViewModel` runs DB-backed cross-entity search (products, sales, customers, etc.) from `GlobalSearchScreen`.
 
 ### Navigation
 
