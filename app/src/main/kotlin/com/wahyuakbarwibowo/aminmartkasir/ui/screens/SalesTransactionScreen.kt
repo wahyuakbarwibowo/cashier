@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -161,7 +162,7 @@ fun SalesTransactionScreen(
                             badge = { Badge { Text("${uiState.heldOrders.size}") } }
                         ) {
                             IconButton(onClick = { showHeldOrdersDialog = true }) {
-                                Icon(Icons.Default.ReceiptLong, contentDescription = "Pesanan ditahan", tint = MaterialTheme.colorScheme.onPrimary)
+                                Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = "Pesanan ditahan", tint = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
                     }
