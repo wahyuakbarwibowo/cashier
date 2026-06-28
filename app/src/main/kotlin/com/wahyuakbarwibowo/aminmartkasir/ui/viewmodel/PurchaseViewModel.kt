@@ -28,6 +28,7 @@ data class PurchaseUiState(
     val searchQuery: String = "",
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isProcessing: Boolean = false,
     val successMessage: String? = null,
     val error: String? = null
 )
@@ -216,6 +217,7 @@ class PurchaseViewModel(
     }
 
     fun processPurchase() {
+        if (_uiState.value.isProcessing) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
@@ -223,6 +225,7 @@ class PurchaseViewModel(
                     _uiState.update { it.copy(error = "Keranjang kosong") }
                     return@launch
                 }
+                _uiState.update { it.copy(isProcessing = true) }
 
                 val purchase = PurchaseEntity(
                     supplierId = currentState.selectedSupplier?.id,
@@ -256,12 +259,13 @@ class PurchaseViewModel(
                 clearCart()
                 _uiState.update {
                     it.copy(
+                        isProcessing = false,
                         successMessage = "Pembelian berhasil disimpan"
                     )
                 }
-                
+
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(isProcessing = false, error = e.message) }
             }
         }
     }

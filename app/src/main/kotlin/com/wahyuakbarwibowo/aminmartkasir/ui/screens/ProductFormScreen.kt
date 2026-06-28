@@ -58,6 +58,7 @@ fun ProductFormScreen(
     var showVariantDialog by remember { mutableStateOf(false) }
     var editingVariantIndex by remember { mutableStateOf<Int?>(null) }
     var formInitialized by remember(productId) { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
 
     val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         val scannedCode = result.contents
@@ -143,8 +144,10 @@ fun ProductFormScreen(
                 },
                 actions = {
                     IconButton(
-                        enabled = name.isNotBlank(),
+                        enabled = name.isNotBlank() && !isSaving,
                         onClick = {
+                            if (isSaving) return@IconButton
+                            isSaving = true
                             val product = ProductEntity(
                                 id = productId ?: 0,
                                 name = name,
@@ -158,7 +161,7 @@ fun ProductFormScreen(
                                 packageQty = packageQty.toIntOrNull() ?: 0,
                                 discount = discount.toDoubleOrNull() ?: 0.0
                             )
-                            
+
                             if (isEdit) {
                                 viewModel.updateProduct(product)
                                 scope.launch {

@@ -161,9 +161,13 @@ fun PurchasesScreen(
                             Button(
                                 onClick = { viewModel.processPurchase() },
                                 modifier = Modifier.fillMaxWidth(),
-                                enabled = uiState.cartItems.isNotEmpty()
+                                enabled = uiState.cartItems.isNotEmpty() && !uiState.isProcessing
                             ) {
-                                Text("Proses Pembelian")
+                                if (uiState.isProcessing) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Text("Proses Pembelian")
+                                }
                             }
                         }
                     }
