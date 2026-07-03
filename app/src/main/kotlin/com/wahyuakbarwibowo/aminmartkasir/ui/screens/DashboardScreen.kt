@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DashboardViewModel
-import java.text.NumberFormat
+import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils
 import java.util.*
 
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -127,7 +127,7 @@ fun DashboardScreen(
                         SummaryCard(
                             modifier = Modifier.weight(1f),
                             title = "Omzet Hari Ini",
-                            value = formatCurrency(uiState.todaySales),
+                            value = CurrencyUtils.formatCurrency(uiState.todaySales),
                             icon = Icons.AutoMirrored.Filled.TrendingUp,
                             backgroundColor = MaterialTheme.colorScheme.primaryContainer,
                             onClick = onNavigateToSales
@@ -435,11 +435,4 @@ fun QuickActionButton(
             )
         }
     }
-}
-
-fun formatCurrency(amount: Double): String {
-    val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    format.minimumFractionDigits = 0
-    format.maximumFractionDigits = 0
-    return format.format(amount)
 }
