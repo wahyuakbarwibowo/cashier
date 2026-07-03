@@ -18,6 +18,9 @@ object DateUtils {
         SimpleDateFormat("dd/MM", Locale.getDefault())
     }
 
+    /** Parse a stored "yyyy-MM-dd HH:mm:ss" DB timestamp. */
+    fun parseDateTime(value: String): Date = dateTimeFormat.get()!!.parse(value)!!
+
     fun nowDateTime(): String = dateTimeFormat.get()!!.format(Date())
     fun nowDate(): String = dateFormat.get()!!.format(Date())
     fun nowMonth(): String = monthFormat.get()!!.format(Date())

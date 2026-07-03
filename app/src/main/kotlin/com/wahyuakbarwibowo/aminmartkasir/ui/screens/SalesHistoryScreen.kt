@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.SalesHistoryViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -163,7 +164,7 @@ fun SaleHistoryCard(
                 Text(
                     text = sale.createdAt?.let { 
                         try {
-                            dateFormat.format(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(it)!!)
+                            dateFormat.format(DateUtils.parseDateTime(it))
                         } catch (e: Exception) {
                             it
                         }

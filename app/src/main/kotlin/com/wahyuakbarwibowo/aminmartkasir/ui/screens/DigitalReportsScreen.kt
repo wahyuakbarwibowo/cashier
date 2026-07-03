@@ -36,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -263,7 +264,7 @@ fun DigitalHistoryItem(
                 Text(
                     text = history.createdAt?.let { 
                         try {
-                            dateFormat.format(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(it)!!)
+                            dateFormat.format(DateUtils.parseDateTime(it))
                         } catch (e: Exception) {
                             it
                         }
