@@ -13,11 +13,17 @@ make build          # Build debug APK
 make install        # Install debug APK to connected device
 make dev            # clean + build + install + run (full cycle)
 make run            # Launch app on connected device
-make test           # Run unit tests
+make test           # Run all unit tests (gradlew testDebugUnitTest)
 make lint           # Run lint checks
 make logs           # View app logcat (filters to this process)
 make db-pull        # Pull database file from device
 make db-clear       # Clear all app data on device
+```
+
+Single test class/method (no make target — call gradle directly):
+```bash
+./gradlew testDebugUnitTest --tests "com.wahyuakbarwibowo.aminmartkasir.SomeTest"
+./gradlew testDebugUnitTest --tests "*.SomeTest.someMethod"
 ```
 
 Signed release:
@@ -33,11 +39,12 @@ DB name: `kasir_database` (Room, version 11)
 
 ### Stack
 - **Language**: Kotlin 2.3.10
-- **UI**: Jetpack Compose (BOM 2024.12.01)
+- **UI**: Jetpack Compose (BOM 2025.01.00), Material3 1.3.1
 - **Database**: Room 2.8.4 with KSP annotation processing
 - **Architecture**: MVVM
 - **Async**: Kotlin Coroutines
 - **Navigation**: Navigation Compose 2.8.5
+- **Charts**: Vico 2.0.0-alpha.27 (compose + compose-m3)
 
 ### Code Structure
 
