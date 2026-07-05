@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Versioning Convention
+
+`versionName` di `app/build.gradle` mengikuti `MAJOR.MINOR.PATCH`:
+- **MAJOR**: perubahan besar/breaking (redesign besar, migrasi arsitektur, dsb.)
+- **MINOR**: fitur baru yang backward-compatible
+- **PATCH**: bug fix saja, tanpa fitur baru
+
+`versionCode` naik +1 di setiap rilis ke Play Store, terlepas dari besar-kecilnya perubahan `versionName`. Tag git pakai format `vMAJOR.MINOR.PATCH` (mis. `v2.0.0`), dibuat saat versi tersebut dirilis.
+
 ## [Unreleased]
 
 ### Added
