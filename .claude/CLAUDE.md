@@ -73,7 +73,7 @@ app/src/main/kotlin/.../aminmartkasir/
 
 ### Database
 
-`AppDatabase` is a singleton (`@Volatile` + `synchronized`). Get instance via `AppDatabase.getDatabase(context)`. Current `version = 11`. **Schema changes use real `Migration` objects** (registered via `.addMigrations(...)` in `getDatabase`) — `fallbackToDestructiveMigration` was removed, so adding entities/columns requires bumping `version` AND writing a `Migration(n, n+1)` object with the raw SQL. Do not wipe device data; data must survive upgrades.
+`AppDatabase` is a singleton (`@Volatile` + `synchronized`). Get instance via `AppDatabase.getDatabase(context)`. Current `version = 11`. **Schema changes use real `Migration` objects** (registered via `.addMigrations(...)` in `getDatabase`) for version 9 and above — adding entities/columns requires bumping `version` AND writing a `Migration(n, n+1)` object with the raw SQL. Do not wipe device data; data must survive upgrades. Versions 1-8 predate this policy and have no schema snapshots, so `.fallbackToDestructiveMigrationFrom(1..8)` is scoped to just those legacy starting versions to unblock devices stuck there — never widen that range going forward.
 
 20 entities (19 DAOs) including: `ProductEntity`, `ProductVariantEntity`, `SaleEntity`, `SaleItemEntity`, `PurchaseEntity`, `ReceivableEntity`, `PayableEntity`, `PhoneHistoryEntity`, `DigitalProductEntity`, `DigitalCategoryEntity`, `ExpenseEntity`, `CustomerPointsHistoryEntity`, `StockHistoryEntity`, `ShiftEntity`.
 

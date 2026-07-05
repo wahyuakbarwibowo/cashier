@@ -101,8 +101,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "kasir_database"
                 )
-                    // fallbackToDestructiveMigration removed — add Migration objects above
                     .addMigrations(MIGRATION_9_10, MIGRATION_10_11)
+                    // Versi 1-8 mendahului histori Migration object (dulu pakai fallbackToDestructiveMigration
+                    // tanpa batas); tidak ada schema snapshot untuk menulis migrasi asli, jadi scope destructive
+                    // fallback hanya untuk versi lama ini. Versi 9+ tetap wajib Migration object di atas.
+                    .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8)
                     .build()
                 INSTANCE = instance
                 instance

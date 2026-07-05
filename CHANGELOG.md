@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-07-05
+
+### Fixed
+- Crash `IllegalStateException: A migration from 8 to 11 was required but not found` pada device yang masih di skema DB versi lama (1-8, pra-histori Migration object)
+
+---
+
 ### Added
 - Unit test setup with Mockito and Kotlin Coroutines Test
 - `signing.properties.example` for release signing configuration guidance
