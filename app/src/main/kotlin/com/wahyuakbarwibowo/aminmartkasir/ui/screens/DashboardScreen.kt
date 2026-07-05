@@ -152,16 +152,16 @@ fun DashboardScreen(
                             title = "Total Produk",
                             value = uiState.totalProducts.toString(),
                             icon = Icons.Default.Inventory2,
-                            backgroundColor = Color(0xFFE8F5E9),
+                            backgroundColor = MaterialTheme.colorScheme.tertiaryContainer,
                             onClick = onNavigateToProducts
                         )
-                        
+
                         SummaryCard(
                             modifier = Modifier.weight(1f),
                             title = "Total Pelanggan",
                             value = uiState.totalCustomers.toString(),
                             icon = Icons.Default.Groups,
-                            backgroundColor = Color(0xFFE1F5FE),
+                            backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
                             onClick = onNavigateToCustomers
                         )
                     }
@@ -350,11 +350,13 @@ fun SummaryCard(
     backgroundColor: Color,
     onClick: () -> Unit = {}
 ) {
+    val contentColor = contentColorFor(backgroundColor)
     Card(
         modifier = modifier,
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = backgroundColor
+            containerColor = backgroundColor,
+            contentColor = contentColor
         ),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -368,14 +370,14 @@ fun SummaryCard(
             Surface(
                 modifier = Modifier.size(32.dp),
                 shape = CircleShape,
-                color = Color.White.copy(alpha = 0.5f)
+                color = contentColor.copy(alpha = 0.15f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = contentColor
                     )
                 }
             }
@@ -388,8 +390,7 @@ fun SummaryCard(
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onSurface
+                fontWeight = FontWeight.Black
             )
         }
     }
