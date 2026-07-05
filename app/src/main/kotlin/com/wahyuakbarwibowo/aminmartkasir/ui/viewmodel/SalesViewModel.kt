@@ -362,6 +362,13 @@ class SalesViewModel(
         }
     }
 
+    /** Simpan payment method "Hutang" virtual (id=-1, dibuat sementara di UI) sebagai row nyata agar bisa di-resolve lagi saat edit transaksi. */
+    private suspend fun persistIfVirtual(method: PaymentMethodEntity?): PaymentMethodEntity? {
+        if (method == null || method.id != -1L) return method
+        val id = paymentMethodRepository.insert(method.copy(id = 0))
+        return method.copy(id = id)
+    }
+
     fun processTransaction() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -371,12 +378,14 @@ class SalesViewModel(
                     return@launch
                 }
 
+                val selectedPaymentMethod = persistIfVirtual(currentState.selectedPaymentMethod)
+
                 val totalCost = currentState.cartItems.sumOf { it.costPrice * it.qty }
                 val profit = currentState.total - totalCost
 
                 val sale = SaleEntity(
                     customerId = currentState.selectedCustomer?.id,
-                    paymentMethodId = currentState.selectedPaymentMethod?.id,
+                    paymentMethodId = selectedPaymentMethod?.id,
                     total = currentState.total,
                     paid = currentState.paid,
                     change = currentState.change,
@@ -419,7 +428,7 @@ class SalesViewModel(
                     )
                 }
 
-                val receivable = if (currentState.selectedPaymentMethod?.name?.contains("Hutang", ignoreCase = true) == true) {
+                val receivable = if (selectedPaymentMethod?.name?.contains("Hutang", ignoreCase = true) == true) {
                     ReceivableEntity(
                         saleId = 0,
                         customerId = currentState.selectedCustomer?.id,
@@ -582,6 +591,8 @@ class SalesViewModel(
                 // Get existing sale items
                 val existingItems = saleRepository.getSaleItemsOnce(saleId)
 
+                val selectedPaymentMethod = persistIfVirtual(currentState.selectedPaymentMethod)
+
                 // Siapkan pemulihan stok barang lama
                 val stockRestores = existingItems.mapNotNull { item ->
                     item.productId?.let { Triple(it, item.variantId, item.qty) }
@@ -589,11 +600,11 @@ class SalesViewModel(
 
                 val totalCost = currentState.cartItems.sumOf { it.costPrice * it.qty }
                 val newProfit = currentState.total - totalCost
-                
+
                 // Siapkan entitas Sale yang diperbarui
                 val updatedSale = existingSale.copy(
                     customerId = currentState.selectedCustomer?.id,
-                    paymentMethodId = currentState.selectedPaymentMethod?.id,
+                    paymentMethodId = selectedPaymentMethod?.id,
                     total = currentState.total,
                     paid = currentState.paid,
                     change = currentState.change,
@@ -623,6 +634,18 @@ class SalesViewModel(
                     Triple(item.product.id, item.variant?.id, item.qty)
                 }
 
+                val receivable = if (selectedPaymentMethod?.name?.contains("Hutang", ignoreCase = true) == true) {
+                    ReceivableEntity(
+                        saleId = saleId,
+                        customerId = currentState.selectedCustomer?.id,
+                        amount = currentState.total,
+                        paidAmount = currentState.paid,
+                        status = if (currentState.paid >= currentState.total) "paid" else "pending",
+                        createdAt = DateUtils.nowDateTime(),
+                        notes = "Hutang dari transaksi #$saleId"
+                    )
+                } else null
+
                 // Jalankan transaksi pembaruan penjualan secara atomik!
                 saleRepository.updateSaleTransaction(
                     saleId = saleId,
@@ -634,7 +657,8 @@ class SalesViewModel(
                     stockDecreases = stockDecreases,
                     pointsEarnedNew = currentState.pointsEarned,
                     pointsRedeemedNew = currentState.pointsRedeemed,
-                    customerIdNew = currentState.selectedCustomer?.id
+                    customerIdNew = currentState.selectedCustomer?.id,
+                    receivable = receivable
                 )
 
                 clearCart()

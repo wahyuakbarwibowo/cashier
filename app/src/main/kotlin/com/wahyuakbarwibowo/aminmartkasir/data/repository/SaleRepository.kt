@@ -150,7 +150,8 @@ class SaleRepository(
         stockDecreases: List<Triple<Long, Long?, Int>>, // productId to variantId ke quantity baru untuk dikurangi
         pointsEarnedNew: Int,
         pointsRedeemedNew: Int,
-        customerIdNew: Long?
+        customerIdNew: Long?,
+        receivable: ReceivableEntity?
     ) = database.withTransaction {
         // 1. Kembalikan stok lama
         stockRestores.forEach { (productId, variantId, qty) ->
@@ -293,6 +294,20 @@ class SaleRepository(
                     )
                 )
             }
+        }
+
+        // 7. Reconcile piutang (receivable) sesuai status hutang terbaru dari sale yang diedit
+        val existingReceivable = database.receivableDao().getReceivableBySaleId(saleId)
+        if (receivable != null) {
+            if (existingReceivable != null) {
+                database.receivableDao().update(
+                    receivable.copy(id = existingReceivable.id, createdAt = existingReceivable.createdAt)
+                )
+            } else {
+                database.receivableDao().insert(receivable)
+            }
+        } else if (existingReceivable != null) {
+            database.receivableDao().delete(existingReceivable)
         }
     }
 }
