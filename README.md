@@ -1,5 +1,7 @@
 # 🛒 Aminmart Cashier (Retail & PPOB)
 
+**Versi:** 2.0.0
+
 **Aminmart Cashier** adalah aplikasi Point of Sales (POS) berbasis **Kotlin** & **Jetpack Compose** yang intuitif, cepat, dan modern. Dirancang khusus untuk memenuhi kebutuhan toko retail, minimarket, serta agen pulsa & PPOB dalam satu platform yang terintegrasi.
 
 ---
@@ -31,7 +33,7 @@
 
 ## 🛠️ Tech Stack
 *   **Language**: Kotlin 2.3.10
-*   **UI Toolkit**: Jetpack Compose (Compose BOM 2024.12.01)
+*   **UI Toolkit**: Jetpack Compose (Compose BOM 2025.01.00), Material3 1.3.1
 *   **Database**: Room 2.8.4 (SQLite)
 *   **Architecture**: MVVM
 *   **Async**: Kotlin Coroutines 1.10.1
@@ -47,14 +49,14 @@
 - **Android Studio** (Meerkat atau lebih baru)
 - **JDK 17** atau lebih baru
 - **Android SDK** (API 35)
-- **Device Android** (min. Android 7.0 / API 24) atau Emulator
+- **Device Android** (min. Android 8.0 / API 26) atau Emulator
 
 ---
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/wahyuakbarwibowo/aminmart-cashier-app.git
-cd aminmart-cashier-app
+git clone https://github.com/wahyuakbarwibowo/cashier.git
+cd cashier
 ```
 
 ---
