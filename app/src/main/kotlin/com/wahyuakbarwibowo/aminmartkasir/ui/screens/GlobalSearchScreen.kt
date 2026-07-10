@@ -1,5 +1,9 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
+import android.Manifest
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,12 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.zxing.client.android.Intents
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.GlobalSearchViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 
@@ -39,8 +49,34 @@ fun GlobalSearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        val scannedCode = result.contents
+        if (!scannedCode.isNullOrBlank()) {
+            viewModel.search(scannedCode)
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val options = ScanOptions().apply {
+                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
+                setPrompt("Scan barcode produk")
+                setBeepEnabled(true)
+                setOrientationLocked(true)
+                setCaptureActivity(BarcodeCaptureActivity::class.java)
+                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
+            }
+            barcodeLauncher.launch(options)
+        } else {
+            Toast.makeText(context, "Izin kamera diperlukan untuk scan barcode", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -52,9 +88,16 @@ fun GlobalSearchScreen(
                         placeholder = { Text("Cari produk, pelanggan, transaksi...") },
                         singleLine = true,
                         trailingIcon = {
-                            if (uiState.query.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.search("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Hapus")
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                }) {
+                                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
+                                }
+                                if (uiState.query.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.search("") }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Hapus")
+                                    }
                                 }
                             }
                         },
