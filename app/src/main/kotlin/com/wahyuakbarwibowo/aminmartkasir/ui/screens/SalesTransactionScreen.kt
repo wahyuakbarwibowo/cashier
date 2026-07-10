@@ -391,7 +391,7 @@ fun SalesTransactionScreen(
                 }
                 
                 successTransactionData = LastTransactionData(
-                    transactionId = if (uiState.editingSaleId != null) "TRX-${uiState.editingSaleId}" else "", 
+                    transactionId = if (uiState.editingSaleId != null) "TRX-${uiState.editingSaleId}" else "",
                     items = receiptItems,
                     subtotal = uiState.subtotal,
                     discount = uiState.discount,
@@ -406,9 +406,11 @@ fun SalesTransactionScreen(
                         showSuccessDialog = true
                     }
                 } else {
-                    viewModel.processTransaction()
-                    showPaymentMethodSelector = false
-                    showSuccessDialog = true
+                    viewModel.processTransaction { saleId ->
+                        successTransactionData = successTransactionData?.copy(transactionId = "TRX-$saleId")
+                        showPaymentMethodSelector = false
+                        showSuccessDialog = true
+                    }
                 }
             }
         )

@@ -369,7 +369,7 @@ class SalesViewModel(
         return method.copy(id = id)
     }
 
-    fun processTransaction() {
+    fun processTransaction(onComplete: (saleId: Long) -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
@@ -441,7 +441,7 @@ class SalesViewModel(
                 } else null
 
                 // Panggil checkout transaksi secara atomik
-                saleRepository.checkoutSaleTransaction(
+                val saleId = saleRepository.checkoutSaleTransaction(
                     sale = sale,
                     items = saleItems,
                     stockUpdates = stockUpdates,
@@ -454,6 +454,8 @@ class SalesViewModel(
 
                 // Clear cart
                 clearCart()
+
+                onComplete(saleId)
                 
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
