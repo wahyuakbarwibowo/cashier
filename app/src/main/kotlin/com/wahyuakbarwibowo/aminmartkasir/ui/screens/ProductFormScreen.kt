@@ -102,6 +102,11 @@ fun ProductFormScreen(
         }
     }
 
+    // Helper for harga beli satuan: bagi rata tanpa dibulatkan ke atas, dipangkas 2 desimal
+    fun divideExact(price: Double, qty: Int): String {
+        return formatDouble(Math.round(price / qty * 100) / 100.0)
+    }
+
     // Helper to filter only digits for input
     fun onNumberChange(value: String, onValueChange: (String) -> Unit) {
         if (value.isEmpty() || value.all { it.isDigit() }) {
@@ -316,12 +321,12 @@ fun ProductFormScreen(
                 OutlinedTextField(
                     value = purchasePackagePrice,
                     onValueChange = { onNumberChange(it) { 
-                        purchasePackagePrice = it 
-                        // Auto calculate unit price
+                        purchasePackagePrice = it
+                        // Auto calculate unit price (tanpa pembulatan)
                         val p = it.toDoubleOrNull() ?: 0.0
                         val q = purchasePackageQty.toIntOrNull() ?: 0
                         if (q > 0) {
-                            purchasePrice = roundUpTo500(p / q)
+                            purchasePrice = divideExact(p, q)
                         }
                     } },
                     label = { Text("Harga Beli Paket") },
@@ -336,12 +341,12 @@ fun ProductFormScreen(
                 OutlinedTextField(
                     value = purchasePackageQty,
                     onValueChange = { onNumberChange(it) { 
-                        purchasePackageQty = it 
-                        // Auto calculate unit price
+                        purchasePackageQty = it
+                        // Auto calculate unit price (tanpa pembulatan)
                         val p = purchasePackagePrice.toDoubleOrNull() ?: 0.0
                         val q = it.toIntOrNull() ?: 0
                         if (q > 0) {
-                            purchasePrice = roundUpTo500(p / q)
+                            purchasePrice = divideExact(p, q)
                         }
                     } },
                     label = { Text("Isi Paket") },
