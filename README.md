@@ -246,6 +246,14 @@ Sistem digital menggunakan tabel dinamis:
 
 ---
 
+## ☁️ Roadmap: Sync Online (Supabase)
+Aplikasi ini **fully offline** (Room/SQLite lokal per-device). Ada rencana
+draft untuk sync antar device/toko via Supabase — belum dikerjakan, lihat:
+*   [`docs/SUPABASE_MIGRATION.md`](docs/SUPABASE_MIGRATION.md) — rencana, trade-off, dan estimasi biaya.
+*   [`docs/supabase_schema.sql`](docs/supabase_schema.sql) — skema Postgres + RLS per-toko.
+
+---
+
 ## 📁 Project Structure
 ```
 app-cashier/
