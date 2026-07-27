@@ -138,6 +138,7 @@ class ProductViewModel(
         }
 
         searchJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(500)
             _uiState.update { it.copy(isLoading = true, canLoadMore = false) }
             try {
                 productRepository.searchProducts(query).collect { products ->

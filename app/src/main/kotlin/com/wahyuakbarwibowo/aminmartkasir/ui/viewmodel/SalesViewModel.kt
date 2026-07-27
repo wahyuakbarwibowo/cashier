@@ -477,8 +477,10 @@ class SalesViewModel(
                 val cartItems = items.mapNotNull { item ->
                     val product = item.productId?.let { productRepository.getProductById(it) }
                     if (product != null) {
+                        val variant = item.variantId?.let { productVariantRepository.getVariantById(it) }
                         CartItem(
                             product = product,
+                            variant = variant,
                             qty = item.qty,
                             price = item.price,
                             costPrice = item.costPrice,
