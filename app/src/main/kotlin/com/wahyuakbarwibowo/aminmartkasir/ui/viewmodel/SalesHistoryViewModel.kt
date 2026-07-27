@@ -136,6 +136,11 @@ class SalesHistoryViewModel(
         }
     }
 
+    fun clearDateFilter() {
+        _uiState.update { it.copy(startDate = "", endDate = "") }
+        loadInitialSales()
+    }
+
     fun getSaleItems(saleId: Long): Flow<List<SaleItemEntity>> {
         return saleRepository.getSaleItems(saleId)
     }
