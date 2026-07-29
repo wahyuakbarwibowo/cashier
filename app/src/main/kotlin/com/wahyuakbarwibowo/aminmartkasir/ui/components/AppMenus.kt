@@ -40,6 +40,7 @@ val secondaryMenuItems = listOf(
     AppMenuItem(Screen.Receivable.route, "Buku Hutang", Icons.AutoMirrored.Filled.MenuBook),
     AppMenuItem(Screen.DigitalManagement.route, "Kelola Produk Digital", Icons.Default.AppRegistration),
     AppMenuItem(Screen.Purchases.route, "Pembelian", Icons.Default.LocalShipping),
+    AppMenuItem(Screen.HppCalculator.route, "Hitung HPP", Icons.Default.Calculate),
     AppMenuItem(Screen.Backup.route, "Backup & Restore", Icons.Default.Backup),
     AppMenuItem(Screen.Settings.route, "Pengaturan", Icons.Default.Settings)
 )

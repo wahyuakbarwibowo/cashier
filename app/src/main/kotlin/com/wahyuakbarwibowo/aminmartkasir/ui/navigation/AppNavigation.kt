@@ -254,6 +254,14 @@ fun AppNavigation(
             )
         }
 
+        composable(Screen.HppCalculator.route) {
+            HppCalculatorScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenDrawer = onOpenDrawer,
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
+
         composable(Screen.Shift.route) {
             ShiftScreen(
                 onNavigateBack = { navController.popBackStack() },
