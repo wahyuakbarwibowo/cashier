@@ -582,41 +582,35 @@ private fun AddPurchaseItemDialog(
         title = { Text("Tambah Item Pembelian") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Search Field with Scan Icon
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchQueryChange,
-                    label = { Text("Cari Produk") },
-                    placeholder = { Text("Nama atau kode produk...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        }) {
-                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
+                // Cari & pilih produk sekaligus (autocomplete)
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     OutlinedTextField(
-                        value = selectedProduct?.name ?: "",
-                        onValueChange = {},
+                        value = searchQuery,
+                        onValueChange = {
+                            onSearchQueryChange(it)
+                            selectedProduct = null
+                            expanded = true
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
-                        readOnly = true,
-                        label = { Text("Pilih Produk") },
-                        placeholder = { Text("Pilih dari daftar") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+                            .menuAnchor(MenuAnchorType.PrimaryEditable, true),
+                        label = { Text("Cari & Pilih Produk") },
+                        placeholder = { Text("Nama atau kode produk...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
+                            }
+                        },
+                        singleLine = true
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
+                        expanded = expanded && searchQuery.isNotBlank(),
                         onDismissRequest = { expanded = false }
                     ) {
                         if (products.isEmpty()) {
@@ -628,7 +622,7 @@ private fun AddPurchaseItemDialog(
                         } else {
                             products.forEach { product ->
                                 DropdownMenuItem(
-                                    text = { 
+                                    text = {
                                         Column {
                                             Text(product.name, fontWeight = FontWeight.Bold)
                                             if (!product.code.isNullOrBlank()) {
@@ -638,6 +632,7 @@ private fun AddPurchaseItemDialog(
                                     },
                                     onClick = {
                                         selectedProduct = product
+                                        onSearchQueryChange(product.name)
                                         if (priceText.isBlank() || priceText == "0") {
                                             priceText = if (product.purchasePrice > 0) {
                                                 product.purchasePrice.toLong().toString()
