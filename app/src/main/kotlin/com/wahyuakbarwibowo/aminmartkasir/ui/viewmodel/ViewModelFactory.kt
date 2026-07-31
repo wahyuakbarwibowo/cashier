@@ -145,11 +145,6 @@ class ViewModelFactory(
                     saleRepository = saleRepository
                 ) as T
             }
-            modelClass.isAssignableFrom(HppCalculatorViewModel::class.java) -> {
-                HppCalculatorViewModel(
-                    productRepository = productRepository
-                ) as T
-            }
             modelClass.isAssignableFrom(ShiftViewModel::class.java) -> {
                 ShiftViewModel(
                     shiftRepository = shiftRepository,
