@@ -20,8 +20,10 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SupplierEntity
@@ -547,7 +549,17 @@ private fun AddPurchaseItemDialog(
     var selectedProduct by remember { mutableStateOf<ProductEntity?>(null) }
     var qtyText by remember { mutableStateOf("1") }
     var priceText by remember { mutableStateOf("") }
+    var searchFieldValue by remember {
+        mutableStateOf(TextFieldValue(searchQuery, TextRange(searchQuery.length)))
+    }
     val context = LocalContext.current
+
+    // ponytail: sync only when text changes from outside typing (e.g. barcode scan), so cursor keeps its place
+    LaunchedEffect(searchQuery) {
+        if (searchQuery != searchFieldValue.text) {
+            searchFieldValue = TextFieldValue(searchQuery, TextRange(searchQuery.length))
+        }
+    }
 
     val qty = qtyText.toIntOrNull() ?: 0
     val price = priceText.toDoubleOrNull() ?: 0.0
@@ -588,9 +600,10 @@ private fun AddPurchaseItemDialog(
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     OutlinedTextField(
-                        value = searchQuery,
+                        value = searchFieldValue,
                         onValueChange = {
-                            onSearchQueryChange(it)
+                            searchFieldValue = it
+                            onSearchQueryChange(it.text)
                             selectedProduct = null
                             expanded = true
                         },
@@ -632,6 +645,7 @@ private fun AddPurchaseItemDialog(
                                     },
                                     onClick = {
                                         selectedProduct = product
+                                        searchFieldValue = TextFieldValue(product.name, TextRange(product.name.length))
                                         onSearchQueryChange(product.name)
                                         if (priceText.isBlank() || priceText == "0") {
                                             priceText = if (product.purchasePrice > 0) {
