@@ -85,6 +85,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		email,
 		password,
 		email_confirm: true,
+		app_metadata: { approved: true },
 		user_metadata: {
 			full_name: body.full_name?.trim() ?? '',
 			role: targetRole,
