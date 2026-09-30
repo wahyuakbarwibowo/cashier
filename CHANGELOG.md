@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-30
+
+### Added
+- Daftar akun dari aplikasi; akun baru berstatus pending sampai disetujui
+- Layar Kelola Pegawai: setujui/tolak pendaftar, tambah akun kasir, nonaktifkan pegawai
+- Badge jumlah pendaftar yang menunggu persetujuan di menu Lainnya
+- Layar Kelola Tenant untuk super admin (tambah, ubah, nonaktifkan, hapus toko)
+- Migrasi Supabase `0002_account_approval.sql` (wajib dijalankan sebelum rilis)
+
+### Fixed
+- Tambah produk digital gagal tanpa keterangan; kini ada pesan kategori belum dipilih, field wajib, dan error penyimpanan
+
 ## [2.2.1] - 2026-08-23
 
 ### Fixed
