@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalCategoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.DigitalTransactionViewModel
@@ -46,8 +47,18 @@ fun DigitalManagementScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showAddProductDialog by remember { mutableStateOf(false) }
-    
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar("Gagal menyimpan: $it")
+            viewModel.clearMessages()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Kelola Produk Digital") },
@@ -89,7 +100,9 @@ fun DigitalManagementScreen(
                     title = "Produk (${uiState.selectedCategory ?: "Pilih Kategori"})", 
                     onAdd = { 
                         if (uiState.selectedCategory != null) {
-                            showAddProductDialog = true 
+                            showAddProductDialog = true
+                        } else {
+                            scope.launch { snackbarHostState.showSnackbar("Pilih atau tambah kategori dulu") }
                         }
                     }
                 )
@@ -338,7 +351,10 @@ fun AddDigitalProductDialog(
         onDismissRequest = onDismiss,
         title = { Text("Tambah Produk Digital") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text("Kategori: $category", style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nama Produk") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = provider, onValueChange = { provider = it }, label = { Text("Provider (Telkomsel/PLN/dll)") }, modifier = Modifier.fillMaxWidth())
@@ -352,7 +368,7 @@ fun AddDigitalProductDialog(
                     visualTransformation = RupiahVisualTransformation(),
                 )
                 OutlinedTextField(
-                    value = sellingPrice, 
+                    value = sellingPrice,
                     onValueChange = { if (it.all { ch -> ch.isDigit() }) sellingPrice = it }, 
                     label = { Text("Harga Jual") }, 
                     modifier = Modifier.fillMaxWidth(),
@@ -360,6 +376,13 @@ fun AddDigitalProductDialog(
                     prefix = { Text("Rp ") },
                     visualTransformation = RupiahVisualTransformation(),
                 )
+                if (name.isBlank() || costPrice.isBlank() || sellingPrice.isBlank()) {
+                    Text(
+                        "Nama, harga modal, dan harga jual wajib diisi",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
