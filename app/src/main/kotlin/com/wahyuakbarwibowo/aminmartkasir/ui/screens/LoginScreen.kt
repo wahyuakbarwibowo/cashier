@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,9 @@ fun LoginScreen(modifier: Modifier = Modifier) {
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var isRegister by remember { mutableStateOf(false) }
+    var fullName by remember { mutableStateOf("") }
+    var infoMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Surface(modifier = modifier.fillMaxSize()) {
@@ -59,7 +63,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                 )
                 Text("AminMart Kasir", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "Masuk untuk melanjutkan",
+                    if (isRegister) "Daftar akun baru" else "Masuk untuk melanjutkan",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -72,6 +76,16 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                     )
                 }
 
+                if (isRegister) {
+                    OutlinedTextField(
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        label = { Text("Nama Lengkap") },
+                        singleLine = true,
+                        enabled = !isLoading && SupabaseProvider.isConfigured,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -83,13 +97,16 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text(if (isRegister) "Password (min. 6 karakter)" else "Password") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     enabled = !isLoading && SupabaseProvider.isConfigured,
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                infoMessage?.let {
+                    Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                }
                 errorMessage?.let {
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
@@ -98,11 +115,23 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                     onClick = {
                         isLoading = true
                         errorMessage = null
+                        infoMessage = null
                         scope.launch {
-                            val result = AuthManager.signIn(email, password)
-                            if (result.isFailure) {
-                                errorMessage = result.exceptionOrNull()?.message
-                                    ?: "Gagal masuk. Coba lagi."
+                            if (isRegister) {
+                                val result = AuthManager.signUp(fullName, email, password)
+                                if (result.isSuccess) {
+                                    isRegister = false
+                                    password = ""
+                                    infoMessage = "Pendaftaran berhasil. Akun bisa dipakai setelah disetujui admin."
+                                } else {
+                                    errorMessage = result.exceptionOrNull()?.message ?: "Pendaftaran gagal."
+                                }
+                            } else {
+                                val result = AuthManager.signIn(email, password)
+                                if (result.isFailure) {
+                                    errorMessage = result.exceptionOrNull()?.message
+                                        ?: "Gagal masuk. Coba lagi."
+                                }
                             }
                             isLoading = false
                         }
@@ -110,6 +139,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                     enabled = !isLoading &&
                         email.isNotBlank() &&
                         password.isNotBlank() &&
+                        (!isRegister || (fullName.isNotBlank() && password.length >= 6)) &&
                         SupabaseProvider.isConfigured,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -119,8 +149,19 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Masuk")
+                        Text(if (isRegister) "Daftar" else "Masuk")
                     }
+                }
+
+                TextButton(
+                    onClick = {
+                        isRegister = !isRegister
+                        errorMessage = null
+                        infoMessage = null
+                    },
+                    enabled = !isLoading
+                ) {
+                    Text(if (isRegister) "Sudah punya akun? Masuk" else "Belum punya akun? Daftar")
                 }
             }
         }

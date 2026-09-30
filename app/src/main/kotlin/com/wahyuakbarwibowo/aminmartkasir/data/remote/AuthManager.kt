@@ -13,6 +13,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.io.IOException
 
 object AuthManager {
@@ -25,6 +27,7 @@ object AuthManager {
 
     private const val PREFS_NAME = "auth_session"
     private const val KEY_REFRESH_TOKEN = "refresh_token"
+    const val PENDING_MESSAGE = "Akun menunggu persetujuan admin."
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -67,7 +70,7 @@ object AuthManager {
                 val userId = SupabaseProvider.client.auth.currentSessionOrNull()?.user?.id
                     ?: error("Sesi tidak valid")
                 val profile = fetchProfile(userId)
-                if (profile != null && profile.isActive) {
+                if (profile != null && profile.isActive && profile.isApproved) {
                     _state.value = UiState.Authenticated(profile)
                 } else {
                     clearLocalSession()
@@ -99,10 +102,36 @@ object AuthManager {
                 clearLocalSession()
                 return Result.failure(IllegalStateException("Akun dinonaktifkan. Hubungi admin."))
             }
+            if (!profile.isApproved) {
+                SupabaseProvider.client.auth.signOut()
+                clearLocalSession()
+                return Result.failure(IllegalStateException(PENDING_MESSAGE))
+            }
             _state.value = UiState.Authenticated(profile)
             Result.success(Unit)
         } catch (e: RestException) {
             Result.failure(Exception("Email atau password salah."))
+        } catch (e: IOException) {
+            Result.failure(Exception("Tidak ada koneksi internet."))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Daftar akun baru; akun berstatus pending sampai disetujui. */
+    suspend fun signUp(fullName: String, email: String, password: String): Result<Unit> {
+        return try {
+            SupabaseProvider.client.auth.signUpWith(Email) {
+                this.email = email.trim()
+                this.password = password
+                data = buildJsonObject { put("full_name", fullName.trim()) }
+            }
+            // Jangan biarkan akun pending tetap login
+            SupabaseProvider.client.auth.signOut()
+            clearLocalSession()
+            Result.success(Unit)
+        } catch (e: RestException) {
+            Result.failure(Exception(e.error.ifBlank { "Pendaftaran gagal." }))
         } catch (e: IOException) {
             Result.failure(Exception("Tidak ada koneksi internet."))
         } catch (e: Exception) {

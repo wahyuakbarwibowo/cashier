@@ -15,6 +15,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.AccountManager
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.UserRole
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.MoreMenuSheet
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.primaryMenuItems
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.secondaryMenuItems
@@ -35,6 +38,14 @@ fun MainAppContainer(
     val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     
+    val pendingApprovalCount by AccountManager.pendingCount.collectAsStateWithLifecycle()
+    val authState by AuthManager.state.collectAsStateWithLifecycle()
+    val role = (authState as? AuthManager.UiState.Authenticated)?.profile?.role
+    // Cek pendaftar baru saat app dibuka & tiap kali menu Lainnya dibuka
+    LaunchedEffect(role, showMoreMenu) {
+        if (role == UserRole.SUPER_ADMIN || role == UserRole.ADMIN) AccountManager.refreshPendingCount()
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -117,7 +128,7 @@ fun MainAppContainer(
                             BottomNavIcon(
                                 icon = Icons.Default.MoreHoriz,
                                 contentDescription = "Lainnya",
-                                badgeCount = moreMenuBadgeCount
+                                badgeCount = moreMenuBadgeCount + pendingApprovalCount
                             )
                         },
                         label = { Text("Lainnya") }
@@ -147,6 +158,7 @@ fun MainAppContainer(
             MoreMenuSheet(
                 currentRoute = currentRoute,
                 settingsBadgeCount = moreMenuBadgeCount,
+                pendingApprovalCount = pendingApprovalCount,
                 onNavigate = { route ->
                     navigateTo(route)
                     showMoreMenu = false

@@ -265,5 +265,9 @@ fun AppNavigation(
         composable(Screen.Tenants.route) {
             TenantScreen(onOpenDrawer = onOpenDrawer)
         }
+
+        composable(Screen.Staff.route) {
+            StaffScreen(onOpenDrawer = onOpenDrawer)
+        }
     }
 }

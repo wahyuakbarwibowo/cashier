@@ -68,6 +68,7 @@ val secondaryMenuGroups = listOf(
         "Sistem",
         listOf(
             AppMenuItem(Screen.Tenants.route, "Kelola Tenant", Icons.Default.Store),
+            AppMenuItem(Screen.Staff.route, "Kelola Pegawai", Icons.Default.ManageAccounts),
             AppMenuItem(Screen.Backup.route, "Backup & Restore", Icons.Default.Backup),
             AppMenuItem(Screen.Settings.route, "Pengaturan", Icons.Default.Settings)
         )
@@ -81,6 +82,7 @@ val secondaryMenuItems = secondaryMenuGroups.flatMap { it.items }
 fun MoreMenuSheet(
     currentRoute: String?,
     settingsBadgeCount: Int = 0,
+    pendingApprovalCount: Int = 0,
     onNavigate: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -104,7 +106,12 @@ fun MoreMenuSheet(
         )
         Spacer(Modifier.height(16.dp))
         val authState by AuthManager.state.collectAsStateWithLifecycle()
-        val isSuperAdmin = (authState as? AuthManager.UiState.Authenticated)?.profile?.role == UserRole.SUPER_ADMIN
+        val role = (authState as? AuthManager.UiState.Authenticated)?.profile?.role
+        fun allowed(route: String) = when (route) {
+            Screen.Tenants.route -> role == UserRole.SUPER_ADMIN
+            Screen.Staff.route -> role == UserRole.SUPER_ADMIN || role == UserRole.ADMIN
+            else -> true
+        }
         secondaryMenuGroups.forEach { group ->
             Text(
                 text = group.title,
@@ -112,7 +119,7 @@ fun MoreMenuSheet(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
             )
-            group.items.filter { it.route != Screen.Tenants.route || isSuperAdmin }.forEach { item ->
+            group.items.filter { allowed(it.route) }.forEach { item ->
                 Surface(
                     onClick = { onNavigate(item.route) },
                     tonalElevation = if (currentRoute == item.route) 2.dp else 0.dp,
@@ -124,9 +131,14 @@ fun MoreMenuSheet(
                         leadingContent = { Icon(item.icon, contentDescription = null) },
                         trailingContent = {
                             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                if (item.route == Screen.Settings.route && settingsBadgeCount > 0) {
+                                val badge = when (item.route) {
+                                    Screen.Settings.route -> settingsBadgeCount
+                                    Screen.Staff.route -> pendingApprovalCount
+                                    else -> 0
+                                }
+                                if (badge > 0) {
                                     Badge(modifier = Modifier.padding(end = if (currentRoute == item.route) 8.dp else 0.dp)) {
-                                        Text(settingsBadgeCount.toString())
+                                        Text(badge.toString())
                                     }
                                 }
                                 if (currentRoute == item.route) {

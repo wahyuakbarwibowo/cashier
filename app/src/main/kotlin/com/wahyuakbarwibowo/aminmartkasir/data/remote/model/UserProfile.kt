@@ -10,5 +10,6 @@ data class UserProfile(
     val email: String,
     @SerialName("full_name") val fullName: String = "",
     val role: UserRole,
-    @SerialName("is_active") val isActive: Boolean = true
+    @SerialName("is_active") val isActive: Boolean = true,
+    @SerialName("is_approved") val isApproved: Boolean = true
 )
