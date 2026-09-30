@@ -261,5 +261,9 @@ fun AppNavigation(
                 viewModel = viewModel(factory = viewModelFactory)
             )
         }
+
+        composable(Screen.Tenants.route) {
+            TenantScreen(onOpenDrawer = onOpenDrawer)
+        }
     }
 }

@@ -10,6 +10,10 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.UserRole
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -63,6 +67,7 @@ val secondaryMenuGroups = listOf(
     AppMenuGroup(
         "Sistem",
         listOf(
+            AppMenuItem(Screen.Tenants.route, "Kelola Tenant", Icons.Default.Store),
             AppMenuItem(Screen.Backup.route, "Backup & Restore", Icons.Default.Backup),
             AppMenuItem(Screen.Settings.route, "Pengaturan", Icons.Default.Settings)
         )
@@ -98,6 +103,8 @@ fun MoreMenuSheet(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(16.dp))
+        val authState by AuthManager.state.collectAsStateWithLifecycle()
+        val isSuperAdmin = (authState as? AuthManager.UiState.Authenticated)?.profile?.role == UserRole.SUPER_ADMIN
         secondaryMenuGroups.forEach { group ->
             Text(
                 text = group.title,
@@ -105,7 +112,7 @@ fun MoreMenuSheet(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
             )
-            group.items.forEach { item ->
+            group.items.filter { it.route != Screen.Tenants.route || isSuperAdmin }.forEach { item ->
                 Surface(
                     onClick = { onNavigate(item.route) },
                     tonalElevation = if (currentRoute == item.route) 2.dp else 0.dp,
