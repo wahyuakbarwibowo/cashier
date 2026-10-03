@@ -1,5 +1,7 @@
 # 🛒 Aminmart Cashier (Retail & PPOB)
 
+![Aminmart Logo](assets/aminmart-logo.png)
+
 **Versi:** 3.0.0
 
 **Aminmart Cashier** adalah aplikasi Point of Sales (POS) berbasis **Kotlin** & **Jetpack Compose** yang intuitif, cepat, dan modern. Dirancang khusus untuk memenuhi kebutuhan toko retail, minimarket, serta agen pulsa & PPOB dalam satu platform yang terintegrasi.
