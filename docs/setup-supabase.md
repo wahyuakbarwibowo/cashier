@@ -28,6 +28,10 @@ contoh dengan email akun Anda.
 Fungsi `delete-user` memakai service-role key di sisi Supabase untuk menghapus
 akun Auth. Key tersebut tidak disimpan dalam APK.
 
+**Status saat ini:** source fungsi sudah ada di repo, tetapi belum di-deploy ke
+project Supabase. Karena itu, hapus akun dari aplikasi belum aktif sampai
+perintah deploy di bawah berhasil dijalankan.
+
 ```bash
 supabase login
 supabase link --project-ref PROJECT_REF
