@@ -1,9 +1,10 @@
 package com.wahyuakbarwibowo.aminmartkasir.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "products")
+@Entity(tableName = "products", indices = [Index(value = ["remoteId"], unique = true)])
 data class ProductEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -19,5 +20,9 @@ data class ProductEntity(
     val stock: Int = 0,
     val lowStockThreshold: Int = 5,
     val createdAt: String? = null,
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+    val remoteId: String? = null,
+    val syncUpdatedAt: Long = 0,
+    val isSynced: Boolean = false,
+    val isDeleted: Boolean = false
 )

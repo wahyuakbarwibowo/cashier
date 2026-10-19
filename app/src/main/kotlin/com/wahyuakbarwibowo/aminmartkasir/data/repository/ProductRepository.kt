@@ -47,15 +47,22 @@ class ProductRepository(private val productDao: ProductDao) {
     }
 
     suspend fun insert(product: ProductEntity): Long {
-        return productDao.insert(product)
+        return productDao.insert(product.copy(isSynced = false, isDeleted = false, syncUpdatedAt = System.currentTimeMillis()))
     }
 
     suspend fun update(product: ProductEntity) {
-        productDao.update(product)
+        val existing = productDao.getProductById(product.id)
+        productDao.update(product.copy(
+            remoteId = existing?.remoteId,
+            createdAt = existing?.createdAt,
+            isDeleted = false,
+            isSynced = false,
+            syncUpdatedAt = System.currentTimeMillis()
+        ))
     }
 
     suspend fun delete(product: ProductEntity) {
-        productDao.delete(product)
+        productDao.delete(product.id)
     }
 
     suspend fun deleteById(id: Long) {

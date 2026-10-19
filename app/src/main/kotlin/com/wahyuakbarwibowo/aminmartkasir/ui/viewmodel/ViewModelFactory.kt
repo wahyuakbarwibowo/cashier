@@ -11,6 +11,7 @@ class ViewModelFactory(
 ) : ViewModelProvider.Factory {
 
     private val productRepository = ProductRepository(database.productDao())
+    private val productSyncRepository = ProductSyncRepository(database.productDao())
     private val productVariantRepository = ProductVariantRepository(database.productVariantDao())
     private val customerRepository = CustomerRepository(database.customerDao())
     private val paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao())
@@ -43,7 +44,8 @@ class ViewModelFactory(
                 ProductViewModel(
                     productRepository = productRepository,
                     productVariantRepository = productVariantRepository,
-                    stockHistoryRepository = stockHistoryRepository
+                    stockHistoryRepository = stockHistoryRepository,
+                    productSyncRepository = productSyncRepository
                 ) as T
             }
             modelClass.isAssignableFrom(SalesViewModel::class.java) -> {

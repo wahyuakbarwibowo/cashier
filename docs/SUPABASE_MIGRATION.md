@@ -1,9 +1,21 @@
-# Migrasi ke Supabase (Rencana)
+# Migrasi dan Sinkronisasi Supabase
 
-Status: **sebagian**. Cadangan seluruh data kasir kini bisa disimpan/dipulihkan
-manual lewat Supabase per toko. Sinkronisasi per entity antarperangkat sesuai
-rencana di bawah belum dikerjakan. Tujuan tetap offline-first: Room lokal tetap
-dipakai, sementara Supabase/Postgres menyediakan data cloud.
+Status: **pilot produk aktif di kode**. Sinkronisasi manual dua arah untuk produk
+tersedia dari layar Produk, dan backup seluruh data tetap tersedia per toko.
+Sebelum digunakan, jalankan migrasi `supabase/migrations/0004_products.sql` di
+project Supabase. Entitas lain belum disinkronkan per baris. Room tetap dipakai
+untuk transaksi offline.
+
+Pilot memakai UUID per produk, tombstone untuk penghapusan, dan waktu perubahan
+epoch milidetik. Jika cloud memiliki versi lebih baru, versi cloud menang; jika
+waktunya sama, perubahan lokal menang. Sync manual berjalan asynchronous pada
+IO dispatcher, jadi UI dan transaksi lokal tetap bisa dipakai. Produk lokal yang
+belum pernah sync akan masuk ke toko dari akun yang sedang login.
+
+Setelah login berhasil sekali, profil tersimpan untuk membuka app offline dan
+layar menampilkan status offline. Login pertama tetap membutuhkan internet.
+Ketika jaringan pulih, tekan ikon cloud di layar Produk untuk mengirim perubahan
+tertunda dan mengambil produk terbaru.
 
 ## Kenapa Supabase
 
@@ -77,8 +89,8 @@ menyentuh entity di atas).
 
 1. **Dependency**: `io.github.jan-tennert.supabase:postgrest-kt`,
    `:realtime-kt` (kalau butuh live update), `:auth-kt`.
-2. **Auth**: login toko (email/password atau magic link) sebelum sync aktif.
-   Kalau belum login → app tetap jalan 100% offline seperti sekarang.
+2. **Auth**: login toko sebelum sinkronisasi aktif. Login pertama membutuhkan
+   internet; sesi yang pernah aktif dapat membuka data Room saat offline.
 3. **Migration Room**: tambah kolom `remote_id TEXT`, `updated_at INTEGER`,
    `is_synced INTEGER DEFAULT 0` ke entity yang di-sync (lihat kebijakan migrasi
    di `.claude/CLAUDE.md` — versi DB naik, tulis `Migration` object, jangan
@@ -99,8 +111,8 @@ menyentuh entity di atas).
 
 1. Setup project Supabase + skema tabel untuk entity prioritas tinggi + RLS.
 2. Tambah Auth (login toko) di app — tanpa sync dulu, cuma supaya ada `shop_id`.
-3. Implementasi push/pull untuk `ProductEntity` saja dulu (paling sederhana,
-   tidak ada relasi child). Validasi alur end-to-end.
+3. Implementasi push/pull untuk `ProductEntity` (pilot; jalankan migrasi
+   `0004_products.sql` sebelum sync pertama).
 4. Lanjut ke `SaleEntity` + `SaleItemEntity` (ada relasi parent-child, lebih
    rawan konflik) baru entity sisanya.
 5. Entity prioritas rendah menyusul kalau memang dibutuhkan.
@@ -113,9 +125,8 @@ menyentuh entity di atas).
 - Buka cabang baru tinggal login, tidak perlu backup-restore manual.
 
 **Rugi / risiko:**
-- App jadi butuh koneksi internet untuk fitur sync (walau tetap bisa transaksi
-  offline, data numpuk sampai online lagi → resiko lupa sync = data beda antar
-  device untuk sementara).
+- Sinkronisasi butuh koneksi internet dan dipicu manual. Data lokal tetap bisa
+  dipakai offline, tetapi antarperangkat belum sama sampai tombol sync ditekan.
 - Nambah kompleksitas: auth, RLS policy, migration Room, error handling saat
   sync gagal (retry, partial failure).
 - Last-write-wins bisa "menimpa" perubahan device lain kalau 2 kasir edit data

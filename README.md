@@ -6,14 +6,14 @@
 
 **Aminmart Cashier** adalah aplikasi Point of Sales (POS) berbasis **Kotlin** & **Jetpack Compose** yang intuitif, cepat, dan modern. Dirancang khusus untuk memenuhi kebutuhan toko retail, minimarket, serta agen pulsa & PPOB dalam satu platform yang terintegrasi.
 
-Sejak v3.0.0 aplikasi berjalan sebagai **SaaS multi-tenant**: kasir dan admin menggunakan satu aplikasi Android, login via **Supabase Auth**, dengan Room untuk penyimpanan lokal dan operasi offline.
+Sejak v3.0.0 aplikasi berjalan sebagai **SaaS multi-tenant**: kasir dan admin menggunakan satu aplikasi Android, login via **Supabase Auth**, dengan Room untuk penyimpanan lokal dan operasi offline. Setelah login berhasil setidaknya sekali, sesi dan profil tersimpan agar kasir tetap dapat membuka data lokal saat koneksi terputus.
 
 ---
 
 ### ✨ Fitur Utama
 *   **🔐 Login & Multi-Role**: Autentikasi email/password via Supabase dengan role `super_admin` (pemilik), `admin` (pemilik toko), dan `kasir`; sesi tetap aktif antar buka aplikasi.
 *   **🛡️ Manajemen Admin di Android**: Kelola toko, akun pegawai, role, persetujuan, status aktif, dan penghapusan akun sesuai hak akses.
-*   **Retail POS**: Manajemen stok barang, barcode scanner (via kamera), transaksi kasir kilat.
+*   **Retail POS**: Manajemen stok barang, barcode scanner (via kamera), transaksi kasir kilat; data produk dapat disinkronkan manual antar perangkat melalui Supabase.
 *   **PPOB & Layanan Digital**: Transaksi Pulsa, PLN, E-Wallet, BPJS, Transfer Bank, dan Game.
 *   **📉 Laporan Laba Rugi (Profit & Loss)**: Analisis keuntungan bersih yang sudah terintegrasi dengan omset penjualan, HPP, pengeluaran, serta pantauan saldo **Hutang & Piutang**.
 *   **🤝 Manajemen Hutang & Piutang**: Lacak piutang pelanggan dan hutang ke supplier secara mendetail dengan sistem jatuh tempo dan fitur **Tagih via WhatsApp**.
@@ -40,7 +40,7 @@ Sejak v3.0.0 aplikasi berjalan sebagai **SaaS multi-tenant**: kasir dan admin me
 ## 🛠️ Tech Stack
 *   **Language**: Kotlin 2.3.10
 *   **UI Toolkit**: Jetpack Compose (Compose BOM 2025.01.00), Material3 1.3.1
-*   **Database**: Room 2.8.4 (SQLite) + Supabase Postgres (auth & profil)
+*   **Database**: Room 2.8.4 (SQLite, sumber data offline) + Supabase Postgres (auth, profil, backup, dan sinkronisasi produk)
 *   **Auth/Backend**: supabase-kt 3.7.0 (`auth-kt`, `postgrest-kt`, `functions-kt`) + Supabase Edge Functions
 *   **Architecture**: MVVM
 *   **Async**: Kotlin Coroutines 1.10.1
@@ -275,8 +275,8 @@ Sejak v3.0.0 fondasi SaaS sudah aktif:
 *   **Admin di Android**: kelola tenant dan pegawai tersedia di menu aplikasi sesuai role.
 *   **Aksi sensitif**: penghapusan akun memakai Edge Function agar service-role key tidak disimpan di aplikasi.
 *   **Setup Supabase**: [`docs/setup-supabase.md`](docs/setup-supabase.md)
-*   **Roadmap berikutnya**: sinkronisasi data transaksi/produk Room ↔ Supabase
-    (rencana awal di [`docs/SUPABASE_MIGRATION.md`](docs/SUPABASE_MIGRATION.md)).
+*   **Sinkronisasi produk**: tekan ikon cloud di layar produk untuk push/pull produk toko. Proses berjalan asynchronous; transaksi dan perubahan lokal tetap bisa digunakan saat sync berjalan atau gagal. Jalankan migrasi `0004_products.sql` terlebih dahulu; detail status dan batas pilot ada di [`docs/SUPABASE_MIGRATION.md`](docs/SUPABASE_MIGRATION.md).
+*   **Data lain**: transaksi, pelanggan, pembelian, dan entitas selain produk belum disinkronkan per baris; backup cloud seluruh database tetap tersedia melalui layar Backup.
 
 ---
 

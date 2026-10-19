@@ -13,7 +13,11 @@ import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 class ProductRepositoryTest {
 
@@ -48,14 +52,19 @@ class ProductRepositoryTest {
         )
         val generatedId = 1L
 
-        `when`(productDao.insert(product)).thenReturn(generatedId)
+        whenever(productDao.insert(any())).thenReturn(generatedId)
 
         // When
         val result = productRepository.insert(product)
 
         // Then
         assertEquals(generatedId, result)
-        verify(productDao).insert(product)
+        val inserted = argumentCaptor<ProductEntity>()
+        verify(productDao).insert(inserted.capture())
+        assertEquals(product.name, inserted.firstValue.name)
+        assertEquals(false, inserted.firstValue.isSynced)
+        assertEquals(false, inserted.firstValue.isDeleted)
+        assertEquals(true, inserted.firstValue.syncUpdatedAt > 0)
     }
 
     @Test
@@ -119,11 +128,18 @@ class ProductRepositoryTest {
             updatedAt = null
         )
 
+        whenever(productDao.getProductById(product.id)).thenReturn(product.copy(remoteId = "remote-1", createdAt = "created"))
+
         // When
         productRepository.update(product)
 
         // Then
-        verify(productDao).update(product)
+        val updated = argumentCaptor<ProductEntity>()
+        verify(productDao).update(updated.capture())
+        assertEquals("remote-1", updated.firstValue.remoteId)
+        assertEquals("created", updated.firstValue.createdAt)
+        assertEquals(false, updated.firstValue.isSynced)
+        assertEquals(true, updated.firstValue.syncUpdatedAt > 0)
     }
 
     @Test
@@ -149,7 +165,7 @@ class ProductRepositoryTest {
         productRepository.delete(product)
 
         // Then
-        verify(productDao).delete(product)
+        verify(productDao).delete(eq(product.id), any())
     }
 
     @Test
@@ -162,7 +178,7 @@ class ProductRepositoryTest {
         productRepository.decreaseStock(productId, quantity)
 
         // Then
-        verify(productDao).decreaseStock(productId, quantity)
+        verify(productDao).decreaseStock(eq(productId), eq(quantity), any())
     }
 
     @Test
@@ -175,7 +191,7 @@ class ProductRepositoryTest {
         productRepository.increaseStock(productId, quantity)
 
         // Then
-        verify(productDao).increaseStock(productId, quantity)
+        verify(productDao).increaseStock(eq(productId), eq(quantity), any())
     }
 
     @Test

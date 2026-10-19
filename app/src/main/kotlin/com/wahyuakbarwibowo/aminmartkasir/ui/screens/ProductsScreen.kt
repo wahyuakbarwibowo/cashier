@@ -86,6 +86,13 @@ fun ProductsScreen(
         }
     }
 
+    LaunchedEffect(uiState.successMessage, uiState.error) {
+        (uiState.error ?: uiState.successMessage)?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            viewModel.clearMessages()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -93,6 +100,15 @@ fun ProductsScreen(
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
                         Icon(Icons.Default.Menu, contentDescription = "Lainnya")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.syncProducts() }, enabled = !uiState.isSyncing) {
+                        if (uiState.isSyncing) {
+                            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.CloudSync, contentDescription = "Sinkronkan produk")
+                        }
                     }
                 },
                 windowInsets = WindowInsets.statusBars

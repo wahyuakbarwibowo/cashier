@@ -35,7 +35,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         StockHistoryEntity::class,
         ShiftEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -94,6 +94,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE products ADD COLUMN remoteId TEXT")
+                db.execSQL("ALTER TABLE products ADD COLUMN syncUpdatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE products ADD COLUMN isSynced INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE products ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_products_remoteId ON products (remoteId)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -101,7 +111,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "kasir_database"
                 )
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     // Versi 1-8 mendahului histori Migration object (dulu pakai fallbackToDestructiveMigration
                     // tanpa batas); tidak ada schema snapshot untuk menulis migrasi asli, jadi scope destructive
                     // fallback hanya untuk versi lama ini. Versi 9+ tetap wajib Migration object di atas.

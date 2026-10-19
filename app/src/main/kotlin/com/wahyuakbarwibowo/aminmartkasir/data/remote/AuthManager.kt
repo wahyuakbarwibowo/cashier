@@ -7,6 +7,9 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,11 +25,12 @@ object AuthManager {
     sealed interface UiState {
         data object Loading : UiState
         data object SignedOut : UiState
-        data class Authenticated(val profile: UserProfile) : UiState
+        data class Authenticated(val profile: UserProfile, val isOffline: Boolean = false) : UiState
     }
 
     private const val PREFS_NAME = "auth_session"
     private const val KEY_REFRESH_TOKEN = "refresh_token"
+    private const val KEY_CACHED_PROFILE = "cached_profile"
     const val PENDING_MESSAGE = "Akun menunggu persetujuan admin."
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -35,11 +39,14 @@ object AuthManager {
     val state: StateFlow<UiState> = _state
 
     private lateinit var prefs: android.content.SharedPreferences
+    private val json = Json
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val cachedProfile = readCachedProfile()
+        if (cachedProfile != null) _state.value = UiState.Authenticated(cachedProfile, isOffline = true)
         if (!SupabaseProvider.isConfigured) {
-            _state.value = UiState.SignedOut
+            if (cachedProfile == null) _state.value = UiState.SignedOut
             return
         }
 
@@ -61,7 +68,7 @@ object AuthManager {
     private fun restoreSession() {
         val refreshToken = prefs.getString(KEY_REFRESH_TOKEN, null)
         if (refreshToken == null) {
-            _state.value = UiState.SignedOut
+            if (readCachedProfile() == null) _state.value = UiState.SignedOut
             return
         }
         scope.launch {
@@ -71,13 +78,18 @@ object AuthManager {
                     ?: error("Sesi tidak valid")
                 val profile = fetchProfile(userId)
                 if (profile != null && profile.isActive && profile.isApproved) {
+                    cacheProfile(profile)
                     _state.value = UiState.Authenticated(profile)
                 } else {
                     clearLocalSession()
+                    clearCachedProfile()
                     _state.value = UiState.SignedOut
                 }
+            } catch (e: IOException) {
+                if (readCachedProfile() == null) _state.value = UiState.SignedOut
             } catch (_: Exception) {
-                // Offline / token kedaluwarsa -> minta login ulang
+                clearLocalSession()
+                clearCachedProfile()
                 _state.value = UiState.SignedOut
             }
         }
@@ -108,6 +120,7 @@ object AuthManager {
                 return Result.failure(IllegalStateException(PENDING_MESSAGE))
             }
             _state.value = UiState.Authenticated(profile)
+            cacheProfile(profile)
             Result.success(Unit)
         } catch (e: RestException) {
             Result.failure(Exception("Email atau password salah."))
@@ -146,6 +159,7 @@ object AuthManager {
             // abaikan; tetap bersihkan sesi lokal
         }
         clearLocalSession()
+        clearCachedProfile()
         _state.value = UiState.SignedOut
     }
 
@@ -158,5 +172,17 @@ object AuthManager {
 
     private fun clearLocalSession() {
         prefs.edit().remove(KEY_REFRESH_TOKEN).apply()
+    }
+
+    private fun cacheProfile(profile: UserProfile) {
+        prefs.edit().putString(KEY_CACHED_PROFILE, json.encodeToString<UserProfile>(profile)).apply()
+    }
+
+    private fun readCachedProfile(): UserProfile? = runCatching {
+        prefs.getString(KEY_CACHED_PROFILE, null)?.let { json.decodeFromString<UserProfile>(it) }
+    }.getOrNull()
+
+    private fun clearCachedProfile() {
+        prefs.edit().remove(KEY_CACHED_PROFILE).apply()
     }
 }

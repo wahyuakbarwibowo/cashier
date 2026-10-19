@@ -8,6 +8,8 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductVariantRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
+import com.wahyuakbarwibowo.aminmartkasir.data.repository.ProductSyncRepository
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
 import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -34,13 +36,15 @@ data class ProductUiState(
     val sortOption: ProductSortOption = ProductSortOption.NEWEST,
     val searchQuery: String = "",
     val successMessage: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val isSyncing: Boolean = false
 )
 
 class ProductViewModel(
     private val productRepository: ProductRepository,
     private val productVariantRepository: ProductVariantRepository,
-    private val stockHistoryRepository: StockHistoryRepository
+    private val stockHistoryRepository: StockHistoryRepository,
+    private val productSyncRepository: ProductSyncRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProductUiState())
@@ -166,6 +170,26 @@ class ProductViewModel(
             _uiState.update { it.copy(isRefreshing = true, searchQuery = "") }
             delay(500)
             loadInitialProducts()
+        }
+    }
+
+    fun syncProducts() {
+        if (_uiState.value.isSyncing) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val profile = (AuthManager.state.value as? AuthManager.UiState.Authenticated)?.profile
+            val storeId = profile?.storeId
+            if (storeId.isNullOrBlank()) {
+                _uiState.update { it.copy(error = "Akun belum terhubung ke toko.") }
+                return@launch
+            }
+            _uiState.update { it.copy(isSyncing = true, error = null) }
+            try {
+                val count = productSyncRepository.sync(storeId)
+                _uiState.update { it.copy(isSyncing = false, successMessage = "Sinkronisasi selesai ($count produk dikirim)") }
+                loadInitialProducts()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSyncing = false, error = e.message ?: "Sinkronisasi gagal.") }
+            }
         }
     }
 
