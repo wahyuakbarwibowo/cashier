@@ -9,9 +9,36 @@ import kotlinx.coroutines.withContext
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 
 import androidx.room.withTransaction
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.SupabaseProvider
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 
 class BackupRepository(private val database: AppDatabase) {
     private val gson = Gson()
+
+    @Serializable
+    private data class CloudBackup(
+        @SerialName("store_id") val storeId: String,
+        val data: JsonElement
+    )
+
+    suspend fun saveCloudBackup(storeId: String) = withContext(Dispatchers.IO) {
+        val backup = CloudBackup(storeId, Json.parseToJsonElement(exportData()))
+        SupabaseProvider.client.postgrest.from("store_backups").upsert(backup) {
+            onConflict = "store_id"
+        }
+    }
+
+    suspend fun restoreCloudBackup(storeId: String) = withContext(Dispatchers.IO) {
+        val backup = SupabaseProvider.client.postgrest.from("store_backups")
+            .select { filter { eq("store_id", storeId) } }
+            .decodeList<CloudBackup>()
+            .firstOrNull() ?: throw IllegalStateException("Cadangan cloud belum tersedia.")
+        importData(backup.data.toString())
+    }
 
     suspend fun exportData(): String = withContext(Dispatchers.IO) {
         val backupData = BackupData(

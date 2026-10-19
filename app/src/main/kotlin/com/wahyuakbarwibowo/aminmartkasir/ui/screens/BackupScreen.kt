@@ -45,6 +45,8 @@ fun BackupScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var jsonToSave by remember { mutableStateOf<String?>(null) }
+    var confirmCloudSave by remember { mutableStateOf(false) }
+    var confirmCloudRestore by remember { mutableStateOf(false) }
 
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -119,6 +121,38 @@ fun BackupScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Cadangan Cloud", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Cadangan disimpan untuk toko pada akun yang sedang login. Pemulihan mengganti seluruh data lokal.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Button(
+                        onClick = { confirmCloudSave = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Simpan ke Cloud")
+                    }
+                    OutlinedButton(
+                        onClick = { confirmCloudRestore = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Icon(Icons.Default.CloudDownload, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Pulihkan dari Cloud")
+                    }
+                }
+            }
+
             if (uiState.isLoading) {
                 CircularProgressIndicator()
                 Text(uiState.message ?: "Mohon tunggu...", style = MaterialTheme.typography.bodySmall)
@@ -180,6 +214,42 @@ fun BackupScreen(
                 TextButton(onClick = { viewModel.clearMessage() }) {
                     Text("OK")
                 }
+            }
+        )
+    }
+
+    if (confirmCloudRestore) {
+        AlertDialog(
+            onDismissRequest = { confirmCloudRestore = false },
+            title = { Text("Pulihkan dari cloud?") },
+            text = { Text("Semua data lokal akan diganti dengan cadangan cloud toko ini.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmCloudRestore = false
+                    viewModel.restoreCloudBackup()
+                }) { Text("Pulihkan") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmCloudRestore = false }) { Text("Batal") }
+            }
+        )
+    }
+
+    if (confirmCloudSave) {
+        AlertDialog(
+            onDismissRequest = { confirmCloudSave = false },
+            title = { Text("Simpan cadangan ke cloud?") },
+            text = {
+                Text("Seluruh data lokal akan dikaitkan ke toko akun ini dan mengganti cadangan cloud toko tersebut.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmCloudSave = false
+                    viewModel.saveCloudBackup()
+                }) { Text("Simpan") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmCloudSave = false }) { Text("Batal") }
             }
         )
     }

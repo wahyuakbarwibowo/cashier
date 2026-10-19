@@ -73,7 +73,7 @@ cd cashier
 
 Aplikasi meminta login saat pertama dibuka, jadi backend Supabase perlu disiapkan:
 
-1. Buat project Supabase dan jalankan `supabase/migrations/0001_init.sql`
+1. Buat project Supabase dan jalankan semua file `supabase/migrations/*.sql` berurutan.
 2. Salin template secret lalu isi URL & anon key:
    ```bash
    cp supabase.properties.example supabase.properties

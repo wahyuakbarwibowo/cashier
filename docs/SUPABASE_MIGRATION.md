@@ -1,8 +1,9 @@
 # Migrasi ke Supabase (Rencana)
 
-Status: **draft, belum dikerjakan**. Tujuan: aplikasi tetap offline-first (Room lokal
-tetap ada), tapi data bisa sync ke cloud (Supabase/Postgres) untuk multi-device /
-multi-toko dan pantauan owner dari jarak jauh.
+Status: **sebagian**. Cadangan seluruh data kasir kini bisa disimpan/dipulihkan
+manual lewat Supabase per toko. Sinkronisasi per entity antarperangkat sesuai
+rencana di bawah belum dikerjakan. Tujuan tetap offline-first: Room lokal tetap
+dipakai, sementara Supabase/Postgres menyediakan data cloud.
 
 ## Kenapa Supabase
 

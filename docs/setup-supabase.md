@@ -35,9 +35,9 @@ lalu men-deploy web admin ke Vercel.
 ## 2. Jalankan skema SQL
 
 1. Buka **SQL Editor** di dashboard Supabase.
-2. Jalankan isi file `supabase/migrations/0001_init.sql`.
-3. Skrip ini membuat tabel `stores`, `profiles`, enum role, trigger
-   pembuatan profil otomatis, helper, dan semua kebijakan RLS.
+2. Jalankan file di `supabase/migrations/` berurutan berdasarkan nomor.
+3. Migrasi membuat tabel akun/toko, kebijakan RLS, dan penyimpanan cadangan
+   data kasir per toko.
 
 ## 3. Jadikan diri Anda super admin
 

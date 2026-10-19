@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.BackupRepository
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +44,34 @@ class BackupViewModel(
                 _uiState.update { it.copy(isLoading = false, message = "Impor berhasil! Data telah diperbarui.", isSuccess = true) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, message = "Gagal impor: ${e.message}", isSuccess = false) }
+            }
+        }
+    }
+
+    fun saveCloudBackup() = runCloudBackup("Menyimpan cadangan ke cloud...") { storeId ->
+        backupRepository.saveCloudBackup(storeId)
+        "Cadangan berhasil disimpan ke cloud."
+    }
+
+    fun restoreCloudBackup() = runCloudBackup("Memulihkan data dari cloud...") { storeId ->
+        backupRepository.restoreCloudBackup(storeId)
+        "Data berhasil dipulihkan dari cloud."
+    }
+
+    private fun runCloudBackup(message: String, action: suspend (String) -> String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isLoading = true, message = message) }
+            try {
+                val profile = (AuthManager.state.value as? AuthManager.UiState.Authenticated)?.profile
+                    ?: throw IllegalStateException("Silakan login untuk menggunakan cadangan cloud.")
+                val storeId = profile.storeId
+                    ?: throw IllegalStateException("Akun belum terhubung ke toko.")
+                val result = action(storeId)
+                _uiState.update { it.copy(isLoading = false, message = result, isSuccess = true) }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isLoading = false, message = "Gagal: ${e.message}", isSuccess = false)
+                }
             }
         }
     }
