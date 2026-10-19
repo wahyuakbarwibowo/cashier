@@ -44,9 +44,19 @@ class StaffViewModel : ViewModel() {
             AccountManager.setActive(user.id, active)
         }
 
-    fun createStaff(fullName: String, email: String, password: String, storeId: String?) =
+    fun setRole(user: UserProfile, role: UserRole) =
+        run("Gagal mengubah peran", "Peran ${user.displayName} diubah") {
+            AccountManager.setRole(user.id, role)
+        }
+
+    fun deleteUser(user: UserProfile) =
+        run("Gagal menghapus akun", "Akun ${user.displayName} dihapus") {
+            AccountManager.deleteUser(user.id)
+        }
+
+    fun createStaff(fullName: String, email: String, password: String, storeId: String?, role: UserRole) =
         run("Gagal menambah pegawai", "Akun $email dibuat") {
-            AccountManager.createStaff(fullName, email, password, storeId ?: me?.storeId ?: error("Toko belum dipilih"))
+            AccountManager.createStaff(fullName, email, password, storeId ?: me?.storeId ?: error("Toko belum dipilih"), role)
         }
 
     fun clearMessage() = _uiState.update { it.copy(message = null) }

@@ -9,7 +9,7 @@ alter table public.profiles add column is_approved boolean not null default fals
 -- Akun yang sudah ada dianggap sudah disetujui
 update public.profiles set is_approved = true;
 
--- Akun yang dibuat lewat service role (web admin) boleh langsung disetujui
+-- Akun yang dibuat lewat service role boleh langsung disetujui
 -- dengan app_metadata { "approved": true }; app_metadata tidak bisa diisi
 -- oleh klien saat signup, jadi aman.
 create or replace function public.handle_new_user()

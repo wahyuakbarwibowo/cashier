@@ -35,6 +35,8 @@ fun StaffScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var approving by remember { mutableStateOf<UserProfile?>(null) }
+    var editingRole by remember { mutableStateOf<UserProfile?>(null) }
+    var deleting by remember { mutableStateOf<UserProfile?>(null) }
     var showAdd by remember { mutableStateOf(false) }
     val storeNames = remember(uiState.stores) { uiState.stores.associate { it.id to it.name } }
 
@@ -108,7 +110,10 @@ fun StaffScreen(
                     StaffCard(
                         user = user,
                         storeName = if (viewModel.isSuperAdmin) storeNames[user.storeId] else null,
-                        onToggle = { viewModel.setActive(user, !user.isActive) }
+                        canDelete = viewModel.isSuperAdmin || user.role != UserRole.SUPER_ADMIN,
+                        onToggle = { viewModel.setActive(user, !user.isActive) },
+                        onEditRole = { editingRole = user },
+                        onDelete = { deleting = user }
                     )
                 }
             }
@@ -130,11 +135,38 @@ fun StaffScreen(
     if (showAdd) {
         AddStaffDialog(
             stores = if (viewModel.isSuperAdmin) uiState.stores else emptyList(),
+            allowAdminRole = viewModel.isSuperAdmin,
             onDismiss = { showAdd = false },
-            onConfirm = { name, email, password, storeId ->
-                viewModel.createStaff(name, email, password, storeId)
+            onConfirm = { name, email, password, storeId, role ->
+                viewModel.createStaff(name, email, password, storeId, role)
                 showAdd = false
             }
+        )
+    }
+
+    editingRole?.let { user ->
+        RoleDialog(
+            user = user,
+            onDismiss = { editingRole = null },
+            onConfirm = { role ->
+                viewModel.setRole(user, role)
+                editingRole = null
+            }
+        )
+    }
+
+    deleting?.let { user ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            title = { Text("Hapus akun ${user.displayName}?") },
+            text = { Text("Akun ini akan dihapus permanen dan tidak bisa login lagi.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteUser(user)
+                    deleting = null
+                }) { Text("Hapus", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Batal") } }
         )
     }
 }
@@ -167,7 +199,15 @@ private fun PendingCard(user: UserProfile, storeName: String?, onApprove: () -> 
 }
 
 @Composable
-private fun StaffCard(user: UserProfile, storeName: String?, onToggle: () -> Unit) {
+private fun StaffCard(
+    user: UserProfile,
+    storeName: String?,
+    canDelete: Boolean,
+    onToggle: () -> Unit,
+    onEditRole: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
     Card(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -182,8 +222,50 @@ private fun StaffCard(user: UserProfile, storeName: String?, onToggle: () -> Uni
             if (user.role != UserRole.SUPER_ADMIN) {
                 Switch(checked = user.isActive, onCheckedChange = { onToggle() })
             }
+            Box {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Aksi pegawai")
+                }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    if (user.role != UserRole.SUPER_ADMIN) {
+                        DropdownMenuItem(
+                            text = { Text("Ubah peran") },
+                            onClick = { expanded = false; onEditRole() }
+                        )
+                    }
+                    if (canDelete) {
+                        DropdownMenuItem(
+                            text = { Text("Hapus akun", color = MaterialTheme.colorScheme.error) },
+                            onClick = { expanded = false; onDelete() }
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun RoleDialog(user: UserProfile, onDismiss: () -> Unit, onConfirm: (UserRole) -> Unit) {
+    var role by remember(user.id) { mutableStateOf(user.role) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ubah peran ${user.displayName}") },
+        text = {
+            Column {
+                listOf(UserRole.ADMIN, UserRole.KASIR).forEach { option ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = role == option, onClick = { role = option })
+                        Text(option.label)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(role) }, enabled = role != user.role) { Text("Simpan") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
+    )
 }
 
 @Composable
@@ -234,13 +316,15 @@ private fun ApproveDialog(
 @Composable
 private fun AddStaffDialog(
     stores: List<Store>,
+    allowAdminRole: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String, String?) -> Unit
+    onConfirm: (String, String, String, String?, UserRole) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var storeId by remember { mutableStateOf<String?>(null) }
+    var role by remember { mutableStateOf(UserRole.KASIR) }
     val needStore = stores.isNotEmpty()
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -255,6 +339,14 @@ private fun AddStaffDialog(
                 OutlinedTextField(password, { password = it }, label = { Text("Password (min. 6 karakter)") },
                     singleLine = true, visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth())
+                if (allowAdminRole) {
+                    Text("Peran", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(UserRole.ADMIN, UserRole.KASIR).forEach {
+                            FilterChip(selected = role == it, onClick = { role = it }, label = { Text(it.label) })
+                        }
+                    }
+                }
                 if (needStore) StorePicker(stores, storeId) { storeId = it }
                 Text("Pegawai langsung bisa login dengan email & password ini.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -262,7 +354,7 @@ private fun AddStaffDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name, email, password, storeId) },
+                onClick = { onConfirm(name, email, password, storeId, role) },
                 enabled = name.isNotBlank() && email.contains("@") && password.length >= 6 && (!needStore || storeId != null)
             ) { Text("Simpan") }
         },

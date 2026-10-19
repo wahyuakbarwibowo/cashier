@@ -9,10 +9,12 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.functions.functions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.buildJsonObject
 
 /** Kelola akun pegawai & persetujuan akun. Hak akses dijaga RLS + trigger di Supabase. */
 object AccountManager {
@@ -46,11 +48,21 @@ object AccountManager {
         profiles.update({ set("is_active", active) }) { filter { eq("id", userId) } }
     }
 
+    suspend fun setRole(userId: String, role: UserRole) {
+        profiles.update({ set("role", role) }) { filter { eq("id", userId) } }
+    }
+
+    suspend fun deleteUser(userId: String) {
+        SupabaseProvider.client.functions.invoke("delete-user", buildJsonObject {
+            put("user_id", userId)
+        })
+    }
+
     /**
      * Buat akun kasir untuk toko [storeId] lalu langsung setujui.
      * Pakai klien sementara tanpa penyimpanan sesi supaya sesi admin tidak tertimpa.
      */
-    suspend fun createStaff(fullName: String, email: String, password: String, storeId: String) {
+    suspend fun createStaff(fullName: String, email: String, password: String, storeId: String, role: UserRole) {
         val temp = createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_ANON_KEY) {
             install(Auth) {
                 autoLoadFromStorage = false
@@ -68,7 +80,7 @@ object AccountManager {
                 }
             } ?: temp.auth.currentUserOrNull()
             val userId = user?.id ?: error("Akun gagal dibuat")
-            approve(userId, storeId, UserRole.KASIR)
+            approve(userId, storeId, role)
         } finally {
             runCatching { temp.auth.signOut() }
             temp.close()

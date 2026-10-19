@@ -6,13 +6,13 @@
 
 **Aminmart Cashier** adalah aplikasi Point of Sales (POS) berbasis **Kotlin** & **Jetpack Compose** yang intuitif, cepat, dan modern. Dirancang khusus untuk memenuhi kebutuhan toko retail, minimarket, serta agen pulsa & PPOB dalam satu platform yang terintegrasi.
 
-Sejak v3.0.0 aplikasi berjalan sebagai **SaaS multi-tenant**: pengguna login via **Supabase Auth**, data tersimpan lokal (Room) untuk kecepatan & ketahanan offline, dan manajemen pengguna/toko dilakukan lewat **Web Admin** (SvelteKit) yang dapat di-deploy ke Vercel.
+Sejak v3.0.0 aplikasi berjalan sebagai **SaaS multi-tenant**: kasir dan admin menggunakan satu aplikasi Android, login via **Supabase Auth**, dengan Room untuk penyimpanan lokal dan operasi offline.
 
 ---
 
 ### ✨ Fitur Utama
 *   **🔐 Login & Multi-Role**: Autentikasi email/password via Supabase dengan role `super_admin` (pemilik), `admin` (pemilik toko), dan `kasir`; sesi tetap aktif antar buka aplikasi.
-*   **🌐 Web Admin Dashboard**: Kelola pengguna (buat user, ubah role, nonaktifkan/hapus) dan kelola toko dari browser — siap deploy ke Vercel.
+*   **🛡️ Manajemen Admin di Android**: Kelola toko, akun pegawai, role, persetujuan, status aktif, dan penghapusan akun sesuai hak akses.
 *   **Retail POS**: Manajemen stok barang, barcode scanner (via kamera), transaksi kasir kilat.
 *   **PPOB & Layanan Digital**: Transaksi Pulsa, PLN, E-Wallet, BPJS, Transfer Bank, dan Game.
 *   **📉 Laporan Laba Rugi (Profit & Loss)**: Analisis keuntungan bersih yang sudah terintegrasi dengan omset penjualan, HPP, pengeluaran, serta pantauan saldo **Hutang & Piutang**.
@@ -41,13 +41,12 @@ Sejak v3.0.0 aplikasi berjalan sebagai **SaaS multi-tenant**: pengguna login via
 *   **Language**: Kotlin 2.3.10
 *   **UI Toolkit**: Jetpack Compose (Compose BOM 2025.01.00), Material3 1.3.1
 *   **Database**: Room 2.8.4 (SQLite) + Supabase Postgres (auth & profil)
-*   **Auth/Backend**: supabase-kt 3.7.0 (`auth-kt`, `postgrest-kt`) + Ktor Client
+*   **Auth/Backend**: supabase-kt 3.7.0 (`auth-kt`, `postgrest-kt`, `functions-kt`) + Supabase Edge Functions
 *   **Architecture**: MVVM
 *   **Async**: Kotlin Coroutines 1.10.1
 *   **Navigation**: Navigation Compose 2.8.5
 *   **Printing**: Android Bluetooth API (58mm Thermal Printer)
 *   **Annotation Processing**: KSP 2.3.5
-*   **Web Admin**: SvelteKit (Svelte 5) + Tailwind CSS v4 + @supabase/supabase-js, deploy via @sveltejs/adapter-vercel
 
 ---
 
@@ -79,7 +78,7 @@ Aplikasi meminta login saat pertama dibuka, jadi backend Supabase perlu disiapka
    cp supabase.properties.example supabase.properties
    ```
 3. Panduan lengkap (termasuk menjadikan akun Anda super admin dan deploy
-   web admin ke Vercel): lihat [`docs/setup-supabase.md`](docs/setup-supabase.md)
+   Edge Function): lihat [`docs/setup-supabase.md`](docs/setup-supabase.md)
 
 > File `supabase.properties` tidak ikut di-commit (gitignored).
 
@@ -270,17 +269,12 @@ Sistem digital menggunakan tabel dinamis:
 
 ---
 
-## ☁️ Supabase & Web Admin
+## ☁️ Supabase & Admin
 Sejak v3.0.0 fondasi SaaS sudah aktif:
 *   **Auth**: login aplikasi via Supabase Auth dengan role `super_admin` / `admin` / `kasir`.
-*   **Web Admin** (`admin-web/`): dashboard SvelteKit untuk kelola user & toko,
-    deploy ke Vercel. Menjalankan lokal:
-    ```bash
-    cd admin-web
-    cp .env.example .env.local   # isi nilai asli dari Supabase
-    bun install && bun run dev
-    ```
-*   **Setup lengkap**: [`docs/setup-supabase.md`](docs/setup-supabase.md)
+*   **Admin di Android**: kelola tenant dan pegawai tersedia di menu aplikasi sesuai role.
+*   **Aksi sensitif**: penghapusan akun memakai Edge Function agar service-role key tidak disimpan di aplikasi.
+*   **Setup Supabase**: [`docs/setup-supabase.md`](docs/setup-supabase.md)
 *   **Roadmap berikutnya**: sinkronisasi data transaksi/produk Room ↔ Supabase
     (rencana awal di [`docs/SUPABASE_MIGRATION.md`](docs/SUPABASE_MIGRATION.md)).
 
@@ -300,8 +294,7 @@ app-cashier/
 │   │       │   └── MainActivity.kt
 │   │       └── res/             # Resources (strings, themes, etc.)
 │   └── build.gradle
-├── admin-web/                   # Dashboard web admin (SvelteKit, deploy Vercel)
-├── supabase/                    # Migrasi SQL & skrip setup Supabase
+├── supabase/                    # Migrasi SQL, Edge Functions & skrip setup
 ├── docs/                        # Dokumentasi (setup Supabase, dsb.)
 ├── build.gradle
 ├── settings.gradle

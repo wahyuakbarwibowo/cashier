@@ -1,98 +1,51 @@
-# Setup Supabase + Web Admin (v2 SaaS)
+# Setup Supabase untuk Aplikasi AminMart
 
-Panduan menghubungkan aplikasi kasir Android dan web admin ke Supabase,
-lalu men-deploy web admin ke Vercel.
-
-## Arsitektur
-
-```
-+--------------------+        +---------------------------+
-| Aplikasi Kasir     |  auth  |                           |
-| (Android, offline- +------->+      Supabase             |
-| first, Room lokal) |  sync  |  - Auth (email/password)  |
-+--------------------+        |  - Postgres + RLS         |
-                              +------------+--------------+
-+--------------------+                     |
-| Web Admin          |        auth+db       |
-| (SvelteKit di      +<--------------------+
-|  Vercel)           |
-+--------------------+
-```
-
-- **Role**: `super_admin` (pemilik SaaS), `admin` (pemilik toko), `kasir`.
-- **Multi-tenant**: setiap toko = 1 baris di `stores`; semua user & data
-  nantinya terikat `store_id`, dipisahkan oleh Row Level Security (RLS).
+Panduan menyiapkan autentikasi, manajemen admin Android, backup cloud, dan
+Edge Function penghapusan akun.
 
 ## 1. Buat project Supabase
 
-1. Daftar/masuk di [supabase.com](https://supabase.com) lalu **New project**.
-2. Simpan database password (untuk keperluan lain, tidak dipakai app langsung).
-3. Buka **Project Settings > API**, catat:
-   - `Project URL`
-   - `anon public` key
-   - `service_role` key (**RAHASIA**)
+1. Buat project di [supabase.com](https://supabase.com).
+2. Buka **Project Settings > API** dan catat Project URL serta anon key.
+3. Di **SQL Editor**, jalankan file migration sesuai urutan:
+   `0001_init.sql`, `0002_account_approval.sql`, lalu `0003_store_backups.sql`.
+4. Salin konfigurasi aplikasi dan isi URL serta anon key:
 
-## 2. Jalankan skema SQL
+   ```bash
+   cp supabase.properties.example supabase.properties
+   ```
 
-1. Buka **SQL Editor** di dashboard Supabase.
-2. Jalankan file di `supabase/migrations/` berurutan berdasarkan nomor.
-3. Migrasi membuat tabel akun/toko, kebijakan RLS, dan penyimpanan cadangan
-   data kasir per toko.
+   `supabase.properties` tidak boleh dimasukkan ke Git.
 
-## 3. Jadikan diri Anda super admin
+## 2. Buat akun super admin
 
-1. Buka halaman login web admin (langkah 5) dan daftar/login dengan email
-   Anda. Trigger otomatis membuat profil dengan role `kasir`.
-2. Di SQL Editor jalankan `supabase/promote_super_admin.sql`
-   (ganti email dulu). Selesai - akun Anda kini `super_admin`.
+Daftar melalui aplikasi Android. Setelah profil dibuat, jalankan
+`supabase/promote_super_admin.sql` di SQL Editor setelah mengganti alamat email
+contoh dengan email akun Anda.
 
-## 4. Konfigurasi aplikasi Android
+## 3. Deploy Edge Function
 
-Secrets TIDAK boleh masuk git. Aplikasi membaca dari `supabase.properties`
-di root repo (sudah di-gitignore):
+Fungsi `delete-user` memakai service-role key di sisi Supabase untuk menghapus
+akun Auth. Key tersebut tidak disimpan dalam APK.
 
 ```bash
-cp supabase.properties.example supabase.properties
-# lalu isi SUPABASE_URL dan SUPABASE_ANON_KEY dari Project Settings > API
+supabase login
+supabase link --project-ref PROJECT_REF
+supabase functions deploy delete-user
 ```
 
-Build ulang (`make debug`) -> aplikasi akan meminta login.
+Supabase menyediakan `SUPABASE_SERVICE_ROLE_KEY` untuk Edge Function. Jangan
+menambahkan key itu ke `supabase.properties` atau source Android.
 
-## 5. Menjalankan web admin secara lokal
+## 4. Build aplikasi
+
+Setelah URL dan anon key terisi, build dan pasang aplikasi:
 
 ```bash
-cd admin-web
-cp .env.example .env.local   # isi nilai asli dari Supabase
-bun install
-bun run dev                  # http://localhost:5173
+make build
+make debug
 ```
 
-## 6. Deploy web admin ke Vercel
-
-1. Push repo ini ke GitHub.
-2. Di [vercel.com](https://vercel.com): **Add New > Project > Import**
-   repo ini, set **Root Directory** = `admin-web`.
-3. Framework Preset terdeteksi otomatis (SvelteKit / adapter-vercel).
-4. Tambahkan Environment Variables (Production + Preview):
-   - `PUBLIC_SUPABASE_URL`
-   - `PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` (rahasia; hanya server)
-5. Deploy. Vercel juga bisa menambahkan domain gratis (`*.vercel.app`).
-
-> Catatan keamanan: `SUPABASE_SERVICE_ROLE_KEY` hanya pernah dipakai di
-> server route `/api/users` (membuat/menghapus user auth). Nilainya tidak
-> pernah dikirim ke browser karena tidak berprefix `PUBLIC_`.
-
-## 7. Alur kerja harian
-
-| Aktor | Dari mana | Bisa apa |
-|---|---|---|
-| Super Admin (Anda) | Web admin | Kelola semua toko & semua user (buat admin/kasir, ubah role, nonaktifkan/hapus) |
-| Admin toko | Web admin | Kelola kasir di tokonya sendiri |
-| Kasir/Admin | App Android | Login, transaksi kasir (data lokal Room; sinkronisasi cloud menyusul) |
-
-## Langkah lanjutan (fase berikutnya)
-
-- Sinkronisasi data transaksi/produk Room <-> Supabase (offline-first).
-- Reset password via Supabase Auth email.
-- Audit log aktivitas user.
+Kelola toko hanya tersedia untuk `super_admin`; kelola pegawai tersedia untuk
+`admin` dan `super_admin`. Database kasir tetap lokal, sementara backup cloud
+tersedia dari menu **Backup & Restore**.

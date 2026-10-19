@@ -139,6 +139,7 @@ dependencies {
         // Hanya dipakai untuk OAuth/SSO; butuh compileSdk 36. Email/password tidak memerlukannya.
         exclude group: 'androidx.browser', module: 'browser'
     }
+    implementation 'io.github.jan-tennert.supabase:functions-kt'
     implementation 'io.github.jan-tennert.supabase:postgrest-kt'
     implementation 'io.ktor:ktor-client-android:3.2.0'
 
