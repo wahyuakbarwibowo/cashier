@@ -25,7 +25,7 @@ class ProductSyncRepositoryTest {
     fun setup() {
         productDao = org.mockito.kotlin.mock()
         cloud = FakeProductCloudDataSource()
-        syncRepository = ProductSyncRepository(productDao, cloud)
+        syncRepository = ProductSyncRepository(productDao, cloud) { _, _ -> }
     }
 
     @Test

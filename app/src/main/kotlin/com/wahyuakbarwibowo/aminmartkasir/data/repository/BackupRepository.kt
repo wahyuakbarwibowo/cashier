@@ -9,6 +9,9 @@ import kotlinx.coroutines.withContext
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 
 import androidx.room.withTransaction
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.FeatureAccess
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.FeatureAccessManager
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.PaidFeature
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.SupabaseProvider
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
@@ -16,7 +19,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
-class BackupRepository(private val database: AppDatabase) {
+class BackupRepository(
+    private val database: AppDatabase,
+    private val featureAccess: FeatureAccess = FeatureAccessManager
+) {
     private val gson = Gson()
 
     @Serializable
@@ -26,6 +32,7 @@ class BackupRepository(private val database: AppDatabase) {
     )
 
     suspend fun saveCloudBackup(storeId: String) = withContext(Dispatchers.IO) {
+        featureAccess.requireFeature(storeId, PaidFeature.CLOUD_BACKUP)
         val backup = CloudBackup(storeId, Json.parseToJsonElement(exportData()))
         SupabaseProvider.client.postgrest.from("store_backups").upsert(backup) {
             onConflict = "store_id"
@@ -33,6 +40,7 @@ class BackupRepository(private val database: AppDatabase) {
     }
 
     suspend fun restoreCloudBackup(storeId: String) = withContext(Dispatchers.IO) {
+        featureAccess.requireFeature(storeId, PaidFeature.CLOUD_BACKUP)
         val backup = SupabaseProvider.client.postgrest.from("store_backups")
             .select { filter { eq("store_id", storeId) } }
             .decodeList<CloudBackup>()

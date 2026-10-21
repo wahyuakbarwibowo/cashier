@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.SupabaseProvider
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.Store
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.StoreFeatureFlag
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +14,8 @@ import kotlinx.coroutines.launch
 
 data class TenantUiState(
     val stores: List<Store> = emptyList(),
+    val featureStoreId: String? = null,
+    val featureFlags: List<StoreFeatureFlag>? = null,
     val isLoading: Boolean = true,
     val message: String? = null
 )
@@ -55,6 +58,23 @@ class TenantViewModel : ViewModel() {
         table.delete { filter { eq("id", store.id!!) } }
         reload()
     }
+
+    fun loadFeatures(storeId: String) {
+        _uiState.update { it.copy(featureStoreId = storeId, featureFlags = null) }
+        run("Gagal memuat paket Pro") {
+            val flags = SupabaseProvider.client.postgrest.from("store_feature_flags")
+                .select { filter { eq("store_id", storeId) } }
+                .decodeList<StoreFeatureFlag>()
+            _uiState.update { if (it.featureStoreId == storeId) it.copy(featureFlags = flags) else it }
+        }
+    }
+
+    fun saveFeatures(flags: List<StoreFeatureFlag>, onSaved: () -> Unit) =
+        run("Gagal menyimpan paket Pro", "Paket Pro disimpan") {
+            SupabaseProvider.client.postgrest.from("store_feature_flags")
+                .upsert(flags) { onConflict = "store_id,feature_key" }
+            onSaved()
+        }
 
     fun clearMessage() = _uiState.update { it.copy(message = null) }
 

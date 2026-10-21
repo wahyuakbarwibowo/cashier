@@ -18,7 +18,7 @@ jadi `supabase init` tidak perlu dijalankan lagi.
    ```
 
 4. Untuk database project baru yang masih kosong, periksa lalu terapkan semua
-   migrasi (`0001` sampai `0004`):
+   migrasi (`0001` sampai `0005`):
 
    ```bash
    supabase db push --dry-run
@@ -29,7 +29,7 @@ jadi `supabase init` tidak perlu dijalankan lagi.
    `0001`–`0003` sebelumnya sudah ditempel lewat SQL Editor sesuai panduan lama,
    jangan push tanpa memeriksa riwayat migrasi dan kondisi schema. Untuk
    mengaktifkan sync produk saja, jalankan `supabase/migrations/0004_products.sql`
-   di SQL Editor. Perubahan remote melalui SQL Editor tidak otomatis tercatat
+   dan `0005_store_feature_flags.sql` di SQL Editor. Perubahan remote melalui SQL Editor tidak otomatis tercatat
    oleh CLI; selaraskan migration history sebelum memakai `db push` berikutnya.
 
 5. Buka **Connect** atau **Project Settings > API Keys**, lalu salin Project URL
@@ -61,7 +61,19 @@ Room tetap menjadi penyimpanan lokal, sehingga transaksi dapat berjalan saat
 offline. Sync produk dipicu manual dan berjalan asynchronous. Sinkronisasi
 transaksi, pelanggan, dan entitas selain produk belum tersedia.
 
-## 4. Deploy Edge Function
+## 4. Aktifkan entitlement Pro
+
+`cloud_product_sync` dan `cloud_backup` adalah flag berbayar per toko. Flag baru
+nonaktif secara default. Setelah migrasi `0005_store_feature_flags.sql` diterapkan,
+login sebagai `super_admin`, buka **Kelola Tenant**, lalu tekan ikon bintang pada
+toko. Aktifkan fitur yang dibeli dan isi tanggal akhir dalam format `YYYY-MM-DD`
+(WIB). Kosongkan tanggal jika akses tidak dibatasi waktu; matikan switch untuk
+mencabut akses. Admin toko tidak dapat mengubah flag paketnya sendiri.
+
+Supabase RLS memeriksa flag dan masa berlaku pada setiap akses cloud. Editor ini
+adalah aktivasi manual oleh super admin; payment gateway belum terhubung.
+
+## 5. Deploy Edge Function
 
 Fungsi `delete-user` memakai service-role key di sisi Supabase untuk menghapus
 akun Auth. Key tersebut tidak disimpan dalam APK.
@@ -79,7 +91,7 @@ supabase functions deploy delete-user
 Supabase menyediakan `SUPABASE_SERVICE_ROLE_KEY` untuk Edge Function. Jangan
 menambahkan key itu ke `supabase.properties` atau source Android.
 
-## 5. Build aplikasi
+## 6. Build aplikasi
 
 Setelah URL dan anon key terisi, build dan pasang aplikasi:
 

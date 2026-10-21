@@ -17,6 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.Store
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.StoreFeatureFlag
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.expiryDate
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.expiryFromDate
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.PaidFeature
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.TenantViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,6 +33,7 @@ fun TenantScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<Store?>(null) }
+    var editingFeatures by remember { mutableStateOf<Store?>(null) }
     var deleting by remember { mutableStateOf<Store?>(null) }
 
     LaunchedEffect(uiState.message) {
@@ -99,6 +104,10 @@ fun TenantScreen(
                             TenantCard(
                                 store = store,
                                 onEdit = { editing = store },
+                                onFeatures = {
+                                    editingFeatures = store
+                                    viewModel.loadFeatures(store.id!!)
+                                },
                                 onToggle = { viewModel.toggleActive(store) },
                                 onDelete = { deleting = store }
                             )
@@ -117,6 +126,17 @@ fun TenantScreen(
                 viewModel.save(it)
                 editing = null
             }
+        )
+    }
+
+    editingFeatures?.let { store ->
+        FeatureFlagsDialog(
+            store = store,
+            flags = uiState.featureFlags.takeIf { uiState.featureStoreId == store.id },
+            isLoading = uiState.isLoading,
+            onRetry = { viewModel.loadFeatures(store.id!!) },
+            onDismiss = { editingFeatures = null },
+            onSave = { flags -> viewModel.saveFeatures(flags) { editingFeatures = null } }
         )
     }
 
@@ -141,7 +161,7 @@ fun TenantScreen(
 }
 
 @Composable
-private fun TenantCard(store: Store, onEdit: () -> Unit, onToggle: () -> Unit, onDelete: () -> Unit) {
+private fun TenantCard(store: Store, onEdit: () -> Unit, onFeatures: () -> Unit, onToggle: () -> Unit, onDelete: () -> Unit) {
     Card(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -155,12 +175,93 @@ private fun TenantCard(store: Store, onEdit: () -> Unit, onToggle: () -> Unit, o
                     color = if (store.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
             }
+            IconButton(onClick = onFeatures) {
+                Icon(Icons.Default.Star, contentDescription = "Atur paket Pro ${store.name}")
+            }
             Switch(checked = store.isActive, onCheckedChange = { onToggle() })
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
             }
         }
     }
+}
+
+@Composable
+private fun FeatureFlagsDialog(
+    store: Store,
+    flags: List<StoreFeatureFlag>?,
+    isLoading: Boolean,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit,
+    onSave: (List<StoreFeatureFlag>) -> Unit
+) {
+    val current = remember(flags) { flags.orEmpty().associateBy { it.featureKey } }
+    val enabled = remember(flags) {
+        mutableStateMapOf<PaidFeature, Boolean>().apply {
+            PaidFeature.entries.forEach { feature -> put(feature, current[feature.key]?.enabled == true) }
+        }
+    }
+    val dates = remember(flags) {
+        mutableStateMapOf<PaidFeature, String>().apply {
+            PaidFeature.entries.forEach { feature -> put(feature, expiryDate(current[feature.key]?.expiresAt)) }
+        }
+    }
+    val valid = flags != null && PaidFeature.entries.all { feature ->
+        enabled[feature] != true || runCatching {
+            expiryFromDate(dates[feature].orEmpty(), current[feature.key]?.expiresAt)
+        }.isSuccess
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Paket Pro · ${store.name}") },
+        text = {
+            if (flags == null) {
+                if (isLoading) CircularProgressIndicator() else TextButton(onClick = onRetry) { Text("Coba muat lagi") }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PaidFeature.entries.forEach { feature ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(feature.label, modifier = Modifier.weight(1f))
+                            Switch(
+                                checked = enabled[feature] == true,
+                                onCheckedChange = { enabled[feature] = it }
+                            )
+                        }
+                        OutlinedTextField(
+                            value = dates[feature].orEmpty(),
+                            onValueChange = { dates[feature] = it },
+                            label = { Text("Berlaku sampai (YYYY-MM-DD)") },
+                            supportingText = { Text("Kosong = tanpa batas; tanggal mengikuti WIB") },
+                            isError = enabled[feature] == true && runCatching {
+                                expiryFromDate(dates[feature].orEmpty(), current[feature.key]?.expiresAt)
+                            }.isFailure,
+                            enabled = enabled[feature] == true,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(PaidFeature.entries.map { feature ->
+                        val active = enabled[feature] == true
+                        StoreFeatureFlag(
+                            storeId = store.id!!,
+                            featureKey = feature.key,
+                            enabled = active,
+                            expiresAt = if (active) expiryFromDate(dates[feature].orEmpty(), current[feature.key]?.expiresAt) else null
+                        )
+                    })
+                },
+                enabled = valid && !isLoading
+            ) { Text("Simpan") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
+    )
 }
 
 @Composable

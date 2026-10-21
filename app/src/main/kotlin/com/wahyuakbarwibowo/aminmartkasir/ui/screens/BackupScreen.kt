@@ -126,9 +126,9 @@ fun BackupScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Cadangan Cloud", style = MaterialTheme.typography.titleMedium)
+                    Text("Cadangan Cloud · Pro", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Cadangan disimpan untuk toko pada akun yang sedang login. Pemulihan mengganti seluruh data lokal.",
+                        "Fitur Pro. Cadangan disimpan untuk toko pada akun yang sedang login. Pemulihan mengganti seluruh data lokal.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

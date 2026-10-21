@@ -1,6 +1,7 @@
 package com.wahyuakbarwibowo.aminmartkasir
 
 import android.app.Application
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.FeatureAccessManager
 
 class MainApplication : Application() {
 
@@ -8,5 +9,6 @@ class MainApplication : Application() {
         super.onCreate()
 
         // Initialize other application-level components here
+        FeatureAccessManager.init(applicationContext)
     }
 }

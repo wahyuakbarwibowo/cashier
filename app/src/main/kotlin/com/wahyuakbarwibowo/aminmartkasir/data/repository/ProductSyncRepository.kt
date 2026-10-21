@@ -2,6 +2,9 @@ package com.wahyuakbarwibowo.aminmartkasir.data.repository
 
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.ProductDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.FeatureAccessManager
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.FeatureAccess
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.PaidFeature
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.SupabaseProvider
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.CloudProduct
 import io.github.jan.supabase.postgrest.postgrest
@@ -36,9 +39,11 @@ class SupabaseProductCloudDataSource : ProductCloudDataSource {
 
 class ProductSyncRepository(
     private val productDao: ProductDao,
-    private val cloud: ProductCloudDataSource = SupabaseProductCloudDataSource()
+    private val cloud: ProductCloudDataSource = SupabaseProductCloudDataSource(),
+    private val featureAccess: FeatureAccess = FeatureAccessManager
 ) {
     suspend fun sync(storeId: String): Int {
+        featureAccess.requireFeature(storeId, PaidFeature.PRODUCT_SYNC)
         var pushed = 0
         for (local in productDao.getPendingSync()) {
             val product = local.copy(remoteId = local.remoteId ?: UUID.randomUUID().toString())

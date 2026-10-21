@@ -1,10 +1,15 @@
 # Migrasi dan Sinkronisasi Supabase
 
-Status: **pilot produk aktif di kode**. Sinkronisasi manual dua arah untuk produk
+Status: **pilot produk dan feature entitlement aktif di kode**. Sinkronisasi manual dua arah untuk produk
 tersedia dari layar Produk, dan backup seluruh data tetap tersedia per toko.
-Sebelum digunakan, jalankan migrasi `supabase/migrations/0004_products.sql` di
-project Supabase. Entitas lain belum disinkronkan per baris. Room tetap dipakai
+Jalankan migrasi `0004_products.sql` dan `0005_store_feature_flags.sql` sebelum
+memakai fitur cloud. Entitas lain belum disinkronkan per baris. Room tetap dipakai
 untuk transaksi offline.
+
+Flag `cloud_product_sync` dan `cloud_backup` harus aktif di
+`store_feature_flags` agar cloud endpoint menerima akses. Flag baru default
+nonaktif; aktifkan melalui editor super admin sesuai langkah di
+[`setup-supabase.md`](setup-supabase.md). Aktivasi pembayaran belum terhubung.
 
 Pilot memakai UUID per produk, tombstone untuk penghapusan, dan waktu perubahan
 epoch milidetik. Jika cloud memiliki versi lebih baru, versi cloud menang; jika
@@ -165,3 +170,5 @@ produksi / butuh always-on.
   untuk kasus POS kecil, upgrade kalau ternyata sering bentrok.
 - Background sync worker (WorkManager) — sync manual/on-open dulu, tambah
   kalau user komplain lupa sync.
+- Payment gateway dan penagihan otomatis — flag Pro sementara dikelola manual
+  per toko sampai penyedia pembayaran dipilih.

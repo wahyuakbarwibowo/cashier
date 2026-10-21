@@ -40,7 +40,7 @@ Sejak v3.0.0 aplikasi berjalan sebagai **SaaS multi-tenant**: kasir dan admin me
 ## 🛠️ Tech Stack
 *   **Language**: Kotlin 2.3.10
 *   **UI Toolkit**: Jetpack Compose (Compose BOM 2025.01.00), Material3 1.3.1
-*   **Database**: Room 2.8.4 (SQLite, sumber data offline) + Supabase Postgres (auth, profil, backup, dan sinkronisasi produk)
+*   **Database**: Room 2.8.4 (SQLite, sumber data offline) + Supabase Postgres (auth, profil, entitlement fitur Pro, backup, dan sinkronisasi produk)
 *   **Auth/Backend**: supabase-kt 3.7.0 (`auth-kt`, `postgrest-kt`, `functions-kt`) + Supabase Edge Functions
 *   **Architecture**: MVVM
 *   **Async**: Kotlin Coroutines 1.10.1
@@ -275,7 +275,8 @@ Sejak v3.0.0 fondasi SaaS sudah aktif:
 *   **Admin di Android**: kelola tenant dan pegawai tersedia di menu aplikasi sesuai role.
 *   **Aksi sensitif**: penghapusan akun memakai Edge Function agar service-role key tidak disimpan di aplikasi.
 *   **Setup Supabase**: [`docs/setup-supabase.md`](docs/setup-supabase.md)
-*   **Sinkronisasi produk**: tekan ikon cloud di layar produk untuk push/pull produk toko. Proses berjalan asynchronous; transaksi dan perubahan lokal tetap bisa digunakan saat sync berjalan atau gagal. Jalankan migrasi `0004_products.sql` terlebih dahulu; detail status dan batas pilot ada di [`docs/SUPABASE_MIGRATION.md`](docs/SUPABASE_MIGRATION.md).
+*   **Sinkronisasi produk**: tekan ikon cloud di layar produk untuk push/pull produk toko. Proses berjalan asynchronous; transaksi dan perubahan lokal tetap bisa digunakan saat sync berjalan atau gagal. Jalankan migrasi `0004_products.sql` dan `0005_store_feature_flags.sql` terlebih dahulu; detail aktivasi ada di [`docs/setup-supabase.md`](docs/setup-supabase.md).
+*   **Paket Pro**: sinkronisasi produk dan backup cloud dilindungi feature flag per toko; database menolak akses cloud jika entitlement mati atau kedaluwarsa. `super_admin` mengatur flag dan tanggal berlaku dari **Kelola Tenant** di Android; payment gateway belum terhubung.
 *   **Data lain**: transaksi, pelanggan, pembelian, dan entitas selain produk belum disinkronkan per baris; backup cloud seluruh database tetap tersedia melalui layar Backup.
 
 ---

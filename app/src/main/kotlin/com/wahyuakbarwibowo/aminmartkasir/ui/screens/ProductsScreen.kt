@@ -107,7 +107,7 @@ fun ProductsScreen(
                         if (uiState.isSyncing) {
                             CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.CloudSync, contentDescription = "Sinkronkan produk")
+                            Icon(Icons.Default.CloudSync, contentDescription = "Sinkronkan produk Pro")
                         }
                     }
                 },
