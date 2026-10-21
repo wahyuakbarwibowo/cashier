@@ -9,6 +9,9 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE isDeleted = 0 ORDER BY id DESC")
     fun getAllProducts(): Flow<List<ProductEntity>>
 
+    @Query("SELECT * FROM products ORDER BY id DESC")
+    fun getAllProductsForBackup(): Flow<List<ProductEntity>>
+
     @Query("SELECT * FROM products WHERE isDeleted = 0 ORDER BY id DESC LIMIT :limit OFFSET :offset")
     suspend fun getProducts(limit: Int, offset: Int): List<ProductEntity>
 

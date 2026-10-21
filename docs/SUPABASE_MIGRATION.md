@@ -139,13 +139,14 @@ menyentuh entity di atas).
 - Buka cabang baru tinggal login, tidak perlu backup-restore manual.
 
 **Rugi / risiko:**
-- Sinkronisasi butuh koneksi internet dan dipicu manual. Data lokal tetap bisa
-  dipakai offline, tetapi antarperangkat belum sama sampai tombol sync ditekan.
+- Sinkronisasi produk menunggu koneksi internet dan berjalan otomatis setelah
+  perubahan stok, termasuk checkout dan pembelian. Data lokal tetap bisa dipakai
+  offline; perangkat lain baru melihat perubahan setelah sync berhasil.
 - Nambah kompleksitas: auth, RLS policy, migration Room, error handling saat
   sync gagal (retry, partial failure).
-- Last-write-wins bisa "menimpa" perubahan device lain kalau 2 kasir edit data
-  yang sama offline lalu sync bersamaan (jarang terjadi di POS kecil per-toko,
-  tapi mungkin terjadi kalau 1 toko punya >1 device aktif).
+- Stok produk masih memakai last-write-wins. Jika dua kasir menjual produk yang
+  sama saat offline, salah satu perubahan stok dapat tertimpa saat sync.
+  Rekonsiliasi stok lintas perangkat membutuhkan sync transaksi/pergerakan stok.
 - Owner jadi bergantung ke pihak ketiga (Supabase) — kalau mereka down atau
   ubah harga, fitur sync ikut kena.
 - Data toko (harga jual, omzet) kini ada di server pihak ketiga, bukan cuma di

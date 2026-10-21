@@ -14,18 +14,19 @@ class ViewModelFactory(
     private val storeId: String
 ) : ViewModelProvider.Factory {
 
-    private val productRepository = ProductRepository(database.productDao()) { ProductSyncScheduler.enqueue(context, storeId) }
+    private val scheduleProductSync = { ProductSyncScheduler.enqueue(context, storeId) }
+    private val productRepository = ProductRepository(database.productDao(), scheduleProductSync)
     private val productSyncRepository = ProductSyncRepository(database.productDao())
     private val productVariantRepository = ProductVariantRepository(database.productVariantDao())
     private val customerRepository = CustomerRepository(database.customerDao())
     private val paymentMethodRepository = PaymentMethodRepository(database.paymentMethodDao())
-    private val saleRepository = SaleRepository(database)
+    private val saleRepository = SaleRepository(database, scheduleProductSync)
     private val stockHistoryRepository = StockHistoryRepository(database.stockHistoryDao())
     private val customerPointsHistoryRepository = CustomerPointsHistoryRepository(database.customerPointsHistoryDao())
     private val receivableRepository = ReceivableRepository(database.receivableDao())
     private val payableRepository = PayableRepository(database.payableDao())
     private val supplierRepository = SupplierRepository(database.supplierDao(), database.purchaseDao(), database.purchaseItemDao())
-    private val purchaseRepository = PurchaseRepository(database)
+    private val purchaseRepository = PurchaseRepository(database, scheduleProductSync)
     private val expenseRepository = ExpenseRepository(database.expenseDao())
     private val digitalProductRepository = DigitalProductRepository(database.digitalProductDao())
     private val digitalCategoryRepository = DigitalCategoryRepository(database.digitalCategoryDao())

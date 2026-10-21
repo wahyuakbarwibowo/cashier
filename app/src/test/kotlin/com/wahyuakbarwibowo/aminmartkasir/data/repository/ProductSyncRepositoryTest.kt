@@ -87,6 +87,31 @@ class ProductSyncRepositoryTest {
     }
 
     @Test
+    fun `two devices exchange product changes through cloud`() = runTest {
+        val firstDevice = MemoryProductDao()
+        val secondDevice = MemoryProductDao()
+        firstDevice.rows += product(id = 1, remoteId = "shared-product", syncUpdatedAt = 100)
+        val firstSync = ProductSyncRepository(firstDevice, cloud) { _, _ -> }
+        val secondSync = ProductSyncRepository(secondDevice, cloud) { _, _ -> }
+
+        firstSync.sync("store-1")
+        secondSync.sync("store-1")
+        assertEquals("Local name", secondDevice.rows.single().name)
+        assertTrue(secondDevice.rows.single().isSynced)
+
+        secondDevice.rows[0] = secondDevice.rows.single().copy(
+            name = "Updated on second device", stock = 7,
+            syncUpdatedAt = 200, isSynced = false
+        )
+        secondSync.sync("store-1")
+        firstSync.sync("store-1")
+
+        assertEquals("Updated on second device", firstDevice.rows.single().name)
+        assertEquals(7, firstDevice.rows.single().stock)
+        assertTrue(firstDevice.rows.single().isSynced)
+    }
+
+    @Test
     fun `cloud timestamp tie leaves local version unchanged`() = runTest {
         val local = product(id = 4, remoteId = "product-3", syncUpdatedAt = 400, isSynced = true)
         whenever(productDao.getPendingSync()).thenReturn(emptyList())
@@ -137,6 +162,53 @@ class ProductSyncRepositoryTest {
             sellingPrice = 12.0, packagePrice = 0.0, packageQty = 0, discount = 0.0,
             stock = 8, lowStockThreshold = 5, syncUpdatedAt = syncUpdatedAt, isDeleted = false
         )
+
+    private class MemoryProductDao : ProductDao by org.mockito.kotlin.mock() {
+        val rows = mutableListOf<ProductEntity>()
+
+        override suspend fun getPendingSync() = rows.filter { !it.isSynced }
+
+        override suspend fun getByRemoteId(remoteId: String) = rows.firstOrNull { it.remoteId == remoteId }
+
+        override suspend fun insertIfAbsent(product: ProductEntity): Long {
+            if (rows.any { it.remoteId == product.remoteId }) return -1
+            val id = (rows.maxOfOrNull { it.id } ?: 0) + 1
+            rows += product.copy(id = id)
+            return id
+        }
+
+        override suspend fun update(product: ProductEntity) {
+            rows[rows.indexOfFirst { it.id == product.id }] = product
+        }
+
+        override suspend fun markSynced(id: Long, syncUpdatedAt: Long) {
+            val index = rows.indexOfFirst { it.id == id && it.syncUpdatedAt == syncUpdatedAt }
+            if (index >= 0) rows[index] = rows[index].copy(isSynced = true)
+        }
+
+        override suspend fun applyRemoteIfUnchanged(
+            id: Long, code: String?, name: String, purchasePrice: Double,
+            purchasePackagePrice: Double, purchasePackageQty: Int, sellingPrice: Double,
+            packagePrice: Double, packageQty: Int, discount: Double, stock: Int,
+            lowStockThreshold: Int, createdAt: String?, updatedAt: String?, remoteId: String,
+            syncUpdatedAt: Long, isDeleted: Boolean, expectedSyncUpdatedAt: Long,
+            expectedIsSynced: Boolean
+        ): Int {
+            val index = rows.indexOfFirst {
+                it.id == id && it.syncUpdatedAt == expectedSyncUpdatedAt && it.isSynced == expectedIsSynced
+            }
+            if (index < 0) return 0
+            rows[index] = ProductEntity(
+                id = id, code = code, name = name, purchasePrice = purchasePrice,
+                purchasePackagePrice = purchasePackagePrice, purchasePackageQty = purchasePackageQty,
+                sellingPrice = sellingPrice, packagePrice = packagePrice, packageQty = packageQty,
+                discount = discount, stock = stock, lowStockThreshold = lowStockThreshold,
+                createdAt = createdAt, updatedAt = updatedAt, remoteId = remoteId,
+                syncUpdatedAt = syncUpdatedAt, isSynced = true, isDeleted = isDeleted
+            )
+            return 1
+        }
+    }
 
     private class FakeProductCloudDataSource : ProductCloudDataSource {
         val products = mutableListOf<CloudProduct>()

@@ -171,7 +171,9 @@ fun SettingsScreen(
                     method = method,
                     onDelete = { viewModel.deletePaymentMethod(method) },
                     onMoveUp = { if (index > 0) viewModel.movePaymentMethod(index, index - 1) },
-                    onMoveDown = { if (index < uiState.paymentMethods.size - 1) viewModel.movePaymentMethod(index, index + 1) }
+                    onMoveDown = { if (index < uiState.paymentMethods.size - 1) viewModel.movePaymentMethod(index, index + 1) },
+                    canMoveUp = index > 0,
+                    canMoveDown = index < uiState.paymentMethods.size - 1
                 )
             }
         }
@@ -193,7 +195,9 @@ fun PaymentMethodItem(
     method: PaymentMethodEntity,
     onDelete: () -> Unit,
     onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    onMoveDown: () -> Unit,
+    canMoveUp: Boolean = true,
+    canMoveDown: Boolean = true
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -206,15 +210,15 @@ fun PaymentMethodItem(
             }
             
             // Reordering controls
-            IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.KeyboardArrowUp, null)
+            IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Naikkan ${method.name}")
             }
-            IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.KeyboardArrowDown, null)
+            IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Turunkan ${method.name}")
             }
             
-            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+            IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Default.Delete, contentDescription = "Hapus ${method.name}", tint = MaterialTheme.colorScheme.error)
             }
         }
     }

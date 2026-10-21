@@ -31,7 +31,7 @@ Sejak v3.0.0 aplikasi berjalan sebagai **SaaS multi-tenant**: kasir dan admin me
 *   **🔄 Reload & Refresh**: Tombol penyegaran data instan di layar transaksi untuk memastikan data stok dan riwayat selalu aktual tanpa harus keluar layar.
 *   **⌨️ Enhanced UX (Keyboard Avoidance)**: Optimasi seluruh layar input agar bidang isian tidak tertutup oleh keyboard virtual, memastikan pengalaman mengetik yang nyaman.
 *   **📅 Filter Rentang Tanggal**: Filter laporan dan riwayat berdasarkan periode waktu tertentu (Hari, Minggu, Bulan, Tahun).
-*   **💾 Backup & Restore**: Amankan data lokal Anda dengan fitur ekspor/impor database.
+*   **💾 Backup & Restore**: Ekspor/impor JSON atau Excel untuk 19 kelompok data lokal toko, unduh template Excel, dan ekspor PDF baca saja. [Panduan Excel/PDF](docs/EXCEL_PDF_DATA.md).
 *   **🕐 Manajemen Shift Kasir**: Buka/tutup shift dengan pencatatan kas awal, kas terhitung, kas seharusnya, dan selisih untuk rekonsiliasi laci kas.
 *   **🔍 Pencarian Global**: Pencarian lintas data (produk, transaksi, pelanggan, dll) langsung dari database dalam satu layar.
 

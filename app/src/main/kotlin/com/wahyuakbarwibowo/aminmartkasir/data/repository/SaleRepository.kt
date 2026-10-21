@@ -10,7 +10,8 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import kotlinx.coroutines.flow.Flow
 
 class SaleRepository(
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val onStockChanged: () -> Unit = {}
 ) {
     private val saleDao = database.saleDao()
     private val saleItemDao = database.saleItemDao()
@@ -139,7 +140,7 @@ class SaleRepository(
         }
 
         saleId
-    }
+    }.also { runCatching(onStockChanged) }
 
     /**
      * Memperbarui transaksi penjualan secara atomik di dalam sebuah Room Database Transaction.
@@ -313,5 +314,5 @@ class SaleRepository(
         } else if (existingReceivable != null) {
             database.receivableDao().delete(existingReceivable)
         }
-    }
+    }.also { runCatching(onStockChanged) }
 }

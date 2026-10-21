@@ -18,6 +18,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import java.io.InputStream
+import java.io.OutputStream
 
 class BackupRepository(
     private val database: AppDatabase,
@@ -50,7 +52,7 @@ class BackupRepository(
 
     suspend fun exportData(): String = withContext(Dispatchers.IO) {
         val backupData = BackupData(
-            products = database.productDao().getAllProducts().first(),
+            products = database.productDao().getAllProductsForBackup().first(),
             productVariants = database.productVariantDao().getAllVariantsForBackup().first(),
             customers = database.customerDao().getAllCustomers().first(),
             paymentMethods = database.paymentMethodDao().getAllPaymentMethods().first(),
@@ -71,6 +73,19 @@ class BackupRepository(
             shifts = database.shiftDao().getAllShifts().first()
         )
         gson.toJson(backupData)
+    }
+
+    suspend fun exportExcel(output: OutputStream, template: Boolean = false) = withContext(Dispatchers.IO) {
+        output.use { ExcelBackupCodec.write(it, if (template) null else exportData()) }
+    }
+
+    suspend fun importExcel(input: InputStream) = withContext(Dispatchers.IO) {
+        val json = input.use { ExcelBackupCodec.read(it) }
+        importData(json)
+    }
+
+    suspend fun exportPdf(output: OutputStream) = withContext(Dispatchers.IO) {
+        output.use { PdfBackupExporter.write(it, exportData()) }
     }
 
     @Suppress("SENSELESS_COMPARISON", "USELESS_ELVIS")

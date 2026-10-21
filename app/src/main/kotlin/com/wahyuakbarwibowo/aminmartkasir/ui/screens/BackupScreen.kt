@@ -4,10 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +29,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.BackupViewModel
-import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.BufferedReader
 
@@ -47,6 +43,23 @@ fun BackupScreen(
     var jsonToSave by remember { mutableStateOf<String?>(null) }
     var confirmCloudSave by remember { mutableStateOf(false) }
     var confirmCloudRestore by remember { mutableStateOf(false) }
+    var excelToImport by remember { mutableStateOf<Uri?>(null) }
+
+    val createExcelLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    ) { uri -> uri?.let { viewModel.exportExcel({ context.contentResolver.openOutputStream(it) }) } }
+
+    val createTemplateLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    ) { uri -> uri?.let { viewModel.exportExcel({ context.contentResolver.openOutputStream(it) }, template = true) } }
+
+    val createPdfLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri -> uri?.let { viewModel.exportPdf { context.contentResolver.openOutputStream(it) } } }
+
+    val openExcelLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> excelToImport = uri }
 
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -115,7 +128,7 @@ fun BackupScreen(
             )
 
             Text(
-                "Ekspor data Anda ke file JSON untuk cadangan, atau impor kembali data dari file cadangan sebelumnya. Perhatian: Proses impor akan menghapus semua data saat ini dan menggantinya dengan data dari file cadangan.",
+                "Simpan seluruh data toko sebagai JSON atau Excel. PDF untuk dibaca dan dibagikan. Impor JSON atau Excel mengganti seluruh data lokal toko ini.",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -150,6 +163,35 @@ fun BackupScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Pulihkan dari Cloud")
                     }
+                }
+            }
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Excel dan PDF", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Excel berisi 19 sheet data toko. Template kosong memiliki kolom yang sama. PDF hanya untuk dibaca; tidak dapat diimpor.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Button(
+                        onClick = { createExcelLauncher.launch("aminmart_data_${System.currentTimeMillis()}.xlsx") },
+                        modifier = Modifier.fillMaxWidth(), enabled = !uiState.isLoading
+                    ) { Text("Unduh Semua Data Excel") }
+                    OutlinedButton(
+                        onClick = { createTemplateLauncher.launch("aminmart_template.xlsx") },
+                        modifier = Modifier.fillMaxWidth(), enabled = !uiState.isLoading
+                    ) { Text("Unduh Template Excel") }
+                    OutlinedButton(
+                        onClick = { openExcelLauncher.launch(arrayOf("*/*")) },
+                        modifier = Modifier.fillMaxWidth(), enabled = !uiState.isLoading
+                    ) { Text("Impor Excel") }
+                    OutlinedButton(
+                        onClick = { createPdfLauncher.launch("aminmart_data_${System.currentTimeMillis()}.pdf") },
+                        modifier = Modifier.fillMaxWidth(), enabled = !uiState.isLoading
+                    ) { Text("Unduh Semua Data PDF") }
                 }
             }
 
@@ -231,6 +273,23 @@ fun BackupScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmCloudRestore = false }) { Text("Batal") }
+            }
+        )
+    }
+
+    excelToImport?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { excelToImport = null },
+            title = { Text("Impor Excel dan ganti data?") },
+            text = { Text("Seluruh data lokal toko ini akan diganti. Pastikan file Excel berisi 19 sheet dari aplikasi dan simpan cadangan terlebih dahulu.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    excelToImport = null
+                    viewModel.importExcel { context.contentResolver.openInputStream(uri) }
+                }) { Text("Impor dan Ganti") }
+            },
+            dismissButton = {
+                TextButton(onClick = { excelToImport = null }) { Text("Batal") }
             }
         )
     }

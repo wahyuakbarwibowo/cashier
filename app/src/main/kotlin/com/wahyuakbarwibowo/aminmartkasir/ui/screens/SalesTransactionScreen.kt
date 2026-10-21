@@ -29,11 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import kotlin.math.ceil
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -260,7 +258,7 @@ fun SalesTransactionScreen(
                     LazyColumn(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         state = cartListState,
-                        contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 120.dp), // Extra bottom padding for dock
+                        contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 192.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(uiState.cartItems, key = { "${it.product.id}-${it.variant?.id ?: 0L}" }) { item ->
@@ -308,52 +306,30 @@ fun SalesTransactionScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Summary Row (Simplified for Dock)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Column {
-                                Text(
-                                    "Total Bayar", 
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = formatCurrency(uiState.total),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            
+                        Text(
+                            "Total Bayar",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = formatCurrency(uiState.total),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { showProductSelector = true },
+                                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) { Text("Tambah Produk") }
                             Button(
                                 onClick = { showPaymentMethodSelector = true },
-                                modifier = Modifier.height(56.dp).widthIn(min = 140.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                contentPadding = PaddingValues(horizontal = 24.dp)
-                            ) {
-                                Text("BAYAR", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                                Icon(Icons.Default.ChevronRight, null)
-                            }
+                                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) { Text("Bayar", fontWeight = FontWeight.Bold) }
                         }
                     }
-                }
-            }
-
-            // Quick Add Floating Button when cart is not empty
-            if (uiState.cartItems.isNotEmpty()) {
-                SmallFloatingActionButton(
-                    onClick = { showProductSelector = true },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = 100.dp, end = 24.dp),
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Tambah")
                 }
             }
         }
@@ -725,90 +701,78 @@ fun CartItemCard(
                             modifier = Modifier.weight(1f, fill = false)
                         )
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = formatCurrency(item.price),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        if (item.variant != null) {
-                            Text(
-                                text = "• ${item.variant.name}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Text(
-                            text = "• Stok: ${item.product.stock}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (item.product.stock <= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = formatCurrency(item.price),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val stock = item.variant?.stock ?: item.product.stock
+                    Text(
+                        text = (item.variant?.let { "${it.name} · " } ?: "") + "Stok: $stock",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (stock <= 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Hapus",
+                        contentDescription = "Hapus ${item.product.name} dari keranjang",
                         tint = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Large tactile qty controls
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     IconButton(
                         onClick = onDecreaseQty,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.Remove, null, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Remove, "Kurangi jumlah ${item.product.name}")
                     }
-                    
-                    Text(
-                        text = item.qty.toString(),
+
+                    Box(
                         modifier = Modifier
-                            .widthIn(min = 32.dp)
+                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { showQtyDialog = true }
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                    
+                            .clickable(onClickLabel = "Ubah jumlah ${item.product.name}") { showQtyDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = item.qty.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
                     IconButton(
                         onClick = onIncreaseQty,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Add, "Tambah jumlah ${item.product.name}", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
-                
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = formatCurrency(item.subtotal),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+
+                Text(
+                    text = formatCurrency(item.subtotal),
+                    modifier = Modifier.align(Alignment.End),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
@@ -948,15 +912,16 @@ fun ProductSelectorDialog(
                                         ) {
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    product.name, 
+                                                    product.name,
+                                                    style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.Bold, 
-                                                    maxLines = 1, 
+                                                    maxLines = 2,
                                                     overflow = TextOverflow.Ellipsis,
                                                     color = if (isOutOfStock) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Text(
                                                     if (isOutOfStock) "Stok Habis" else "Stok: ${product.stock}", 
-                                                    style = MaterialTheme.typography.labelSmall,
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                     color = when {
                                                         isOutOfStock -> MaterialTheme.colorScheme.error
                                                         product.stock <= 5 -> MaterialTheme.colorScheme.error

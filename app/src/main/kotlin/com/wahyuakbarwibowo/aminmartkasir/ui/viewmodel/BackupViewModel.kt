@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import java.io.InputStream
+import java.io.OutputStream
 
 data class BackupUiState(
     val isLoading: Boolean = false,
@@ -44,6 +47,39 @@ class BackupViewModel(
                 _uiState.update { it.copy(isLoading = false, message = "Impor berhasil! Data telah diperbarui.", isSuccess = true) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, message = "Gagal impor: ${e.message}", isSuccess = false) }
+            }
+        }
+    }
+
+    fun exportExcel(openOutput: () -> OutputStream?, template: Boolean = false) = runFileAction(
+        if (template) "Menyiapkan template Excel..." else "Mengekspor data Excel...",
+        if (template) "Template Excel berhasil disimpan." else "Data Excel berhasil disimpan."
+    ) {
+        backupRepository.exportExcel(requireNotNull(openOutput()) { "File tujuan tidak dapat dibuka." }, template)
+    }
+
+    fun importExcel(openInput: () -> InputStream?) = runFileAction(
+        "Mengimpor data Excel...", "Data Excel berhasil diimpor."
+    ) {
+        backupRepository.importExcel(requireNotNull(openInput()) { "File sumber tidak dapat dibuka." })
+    }
+
+    fun exportPdf(openOutput: () -> OutputStream?) = runFileAction(
+        "Membuat PDF...", "PDF berhasil disimpan."
+    ) {
+        backupRepository.exportPdf(requireNotNull(openOutput()) { "File tujuan tidak dapat dibuka." })
+    }
+
+    private fun runFileAction(loading: String, success: String, action: suspend () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isLoading = true, message = loading) }
+            try {
+                action()
+                _uiState.update { it.copy(isLoading = false, message = success, isSuccess = true) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, message = "Gagal: ${e.message}", isSuccess = false) }
             }
         }
     }

@@ -46,7 +46,8 @@ class SupplierRepository(
 }
 
 class PurchaseRepository(
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val onStockChanged: () -> Unit = {}
 ) {
     private val purchaseDao = database.purchaseDao()
     private val purchaseItemDao = database.purchaseItemDao()
@@ -105,5 +106,5 @@ class PurchaseRepository(
         database.expenseDao().insert(expense)
         
         purchaseId
-    }
+    }.also { runCatching(onStockChanged) }
 }
