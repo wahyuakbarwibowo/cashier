@@ -18,6 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.AccountManager
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.UserRole
+import com.wahyuakbarwibowo.aminmartkasir.data.sync.ProductSyncScheduler
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.MoreMenuSheet
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.primaryMenuItems
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.secondaryMenuItems
@@ -41,6 +42,12 @@ fun MainAppContainer(
     val pendingApprovalCount by AccountManager.pendingCount.collectAsStateWithLifecycle()
     val authState by AuthManager.state.collectAsStateWithLifecycle()
     val role = (authState as? AuthManager.UiState.Authenticated)?.profile?.role
+    val authenticated = authState as? AuthManager.UiState.Authenticated
+    LaunchedEffect(authenticated?.profile?.storeId, authenticated?.isOffline) {
+        if (authenticated != null && !authenticated.isOffline) {
+            authenticated.profile.storeId?.let { ProductSyncScheduler.enqueue(navController.context, it) }
+        }
+    }
     // Cek pendaftar baru saat app dibuka & tiap kali menu Lainnya dibuka
     LaunchedEffect(role, showMoreMenu) {
         if (role == UserRole.SUPER_ADMIN || role == UserRole.ADMIN) AccountManager.refreshPendingCount()

@@ -1,16 +1,20 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.wahyuakbarwibowo.aminmartkasir.data.local.AppDatabase
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
+import com.wahyuakbarwibowo.aminmartkasir.data.sync.ProductSyncScheduler
 
 class ViewModelFactory(
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val context: Context,
+    private val storeId: String
 ) : ViewModelProvider.Factory {
 
-    private val productRepository = ProductRepository(database.productDao())
+    private val productRepository = ProductRepository(database.productDao()) { ProductSyncScheduler.enqueue(context, storeId) }
     private val productSyncRepository = ProductSyncRepository(database.productDao())
     private val productVariantRepository = ProductVariantRepository(database.productVariantDao())
     private val customerRepository = CustomerRepository(database.customerDao())
@@ -45,7 +49,8 @@ class ViewModelFactory(
                     productRepository = productRepository,
                     productVariantRepository = productVariantRepository,
                     stockHistoryRepository = stockHistoryRepository,
-                    productSyncRepository = productSyncRepository
+                    productSyncRepository = productSyncRepository,
+                    onManualSyncSucceeded = { ProductSyncScheduler.markSynced(context, it) }
                 ) as T
             }
             modelClass.isAssignableFrom(SalesViewModel::class.java) -> {

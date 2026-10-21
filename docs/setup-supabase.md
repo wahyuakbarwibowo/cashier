@@ -43,6 +43,13 @@ jadi `supabase init` tidak perlu dijalankan lagi.
    kedua tetap `SUPABASE_ANON_KEY`; publishable key dapat ditempatkan di sana.
    File ini diabaikan Git. Jangan gunakan secret/service-role key di aplikasi.
 
+Data kasir lokal disimpan dalam file Room terpisah berdasarkan `store_id` akun.
+Saat pertama kali membuka versi baru jika ada database lama, aplikasi meminta
+Anda memilih: salin data lama ke toko yang sedang login, atau mulai toko ini
+dengan data kosong. File lama tetap disimpan; pilih toko pemilik data dengan
+benar sebelum menyalinnya. Pilihan kosong untuk satu toko tidak menghapus data
+lama dan toko lain masih dapat mengklaimnya.
+
 ## 2. Siapkan akun dan toko
 
 Build dan buka aplikasi, lalu daftarkan akun. Setelah profil dibuat, jalankan
@@ -55,10 +62,12 @@ Sinkronisasi produk memerlukan akun yang memiliki `store_id`.
 1. Tambahkan atau edit produk di layar Produk.
 2. Tekan ikon cloud untuk mengirim perubahan lokal dan mengambil perubahan cloud.
 3. Login pada perangkat kedua ke toko yang sama dan tekan ikon cloud di sana.
-4. Coba juga ubah produk offline, sambungkan kembali internet, lalu tekan sync.
+4. Setelah login, coba ubah produk offline lalu sambungkan
+   kembali internet. WorkManager akan mengirimnya otomatis; lihat waktu sync
+   terakhir di layar Produk. Ikon cloud tetap dapat dipakai untuk sync manual.
 
 Room tetap menjadi penyimpanan lokal, sehingga transaksi dapat berjalan saat
-offline. Sync produk dipicu manual dan berjalan asynchronous. Sinkronisasi
+offline. Sync produk berjalan asynchronous setelah login. Sinkronisasi
 transaksi, pelanggan, dan entitas selain produk belum tersedia.
 
 ## 4. Aktifkan entitlement Pro

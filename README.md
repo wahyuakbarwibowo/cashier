@@ -275,7 +275,7 @@ Sejak v3.0.0 fondasi SaaS sudah aktif:
 *   **Admin di Android**: kelola tenant dan pegawai tersedia di menu aplikasi sesuai role.
 *   **Aksi sensitif**: penghapusan akun memakai Edge Function agar service-role key tidak disimpan di aplikasi.
 *   **Setup Supabase**: [`docs/setup-supabase.md`](docs/setup-supabase.md)
-*   **Sinkronisasi produk**: tekan ikon cloud di layar produk untuk push/pull produk toko. Proses berjalan asynchronous; transaksi dan perubahan lokal tetap bisa digunakan saat sync berjalan atau gagal. Jalankan migrasi `0004_products.sql` dan `0005_store_feature_flags.sql` terlebih dahulu; detail aktivasi ada di [`docs/setup-supabase.md`](docs/setup-supabase.md).
+*   **Sinkronisasi produk**: perubahan produk dijadwalkan otomatis saat koneksi tersedia; ikon cloud tetap tersedia untuk sync manual. Data Room tiap toko dipisahkan memakai `store_id` akun, dan tetap bisa dipakai saat offline. Jalankan migrasi `0004_products.sql` dan `0005_store_feature_flags.sql` terlebih dahulu; detail aktivasi ada di [`docs/setup-supabase.md`](docs/setup-supabase.md).
 *   **Paket Pro**: sinkronisasi produk dan backup cloud dilindungi feature flag per toko; database menolak akses cloud jika entitlement mati atau kedaluwarsa. `super_admin` mengatur flag dan tanggal berlaku dari **Kelola Tenant** di Android; payment gateway belum terhubung.
 *   **Data lain**: transaksi, pelanggan, pembelian, dan entitas selain produk belum disinkronkan per baris; backup cloud seluruh database tetap tersedia melalui layar Backup.
 

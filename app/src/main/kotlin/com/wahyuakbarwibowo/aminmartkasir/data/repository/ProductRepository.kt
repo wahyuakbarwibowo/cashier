@@ -4,7 +4,12 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.ProductDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import kotlinx.coroutines.flow.Flow
 
-class ProductRepository(private val productDao: ProductDao) {
+class ProductRepository(
+    private val productDao: ProductDao,
+    private val onChanged: () -> Unit = {}
+) {
+    private fun scheduleSync() { runCatching(onChanged) }
+
     enum class ProductSort {
         NEWEST,
         NAME_ASC,
@@ -47,7 +52,9 @@ class ProductRepository(private val productDao: ProductDao) {
     }
 
     suspend fun insert(product: ProductEntity): Long {
-        return productDao.insert(product.copy(isSynced = false, isDeleted = false, syncUpdatedAt = System.currentTimeMillis()))
+        val id = productDao.insert(product.copy(isSynced = false, isDeleted = false, syncUpdatedAt = System.currentTimeMillis()))
+        scheduleSync()
+        return id
     }
 
     suspend fun update(product: ProductEntity) {
@@ -59,21 +66,26 @@ class ProductRepository(private val productDao: ProductDao) {
             isSynced = false,
             syncUpdatedAt = System.currentTimeMillis()
         ))
+        scheduleSync()
     }
 
     suspend fun delete(product: ProductEntity) {
         productDao.delete(product.id)
+        scheduleSync()
     }
 
     suspend fun deleteById(id: Long) {
         productDao.deleteById(id)
+        scheduleSync()
     }
 
     suspend fun decreaseStock(productId: Long, qty: Int) {
         productDao.decreaseStock(productId, qty)
+        scheduleSync()
     }
 
     suspend fun increaseStock(productId: Long, qty: Int) {
         productDao.increaseStock(productId, qty)
+        scheduleSync()
     }
 }

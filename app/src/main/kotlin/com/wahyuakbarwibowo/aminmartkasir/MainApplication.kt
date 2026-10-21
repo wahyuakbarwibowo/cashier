@@ -2,13 +2,16 @@ package com.wahyuakbarwibowo.aminmartkasir
 
 import android.app.Application
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.FeatureAccessManager
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
+import com.wahyuakbarwibowo.aminmartkasir.data.sync.ProductSyncScheduler
 
 class MainApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
 
-        // Initialize other application-level components here
         FeatureAccessManager.init(applicationContext)
+        ProductSyncScheduler.init(applicationContext)
+        AuthManager.init(applicationContext)
     }
 }

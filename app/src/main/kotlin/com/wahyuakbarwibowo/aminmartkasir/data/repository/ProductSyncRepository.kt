@@ -9,6 +9,8 @@ import com.wahyuakbarwibowo.aminmartkasir.data.remote.SupabaseProvider
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.CloudProduct
 import io.github.jan.supabase.postgrest.postgrest
 import java.util.UUID
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 interface ProductCloudDataSource {
     suspend fun findProduct(storeId: String, remoteId: String): CloudProduct?
@@ -42,7 +44,11 @@ class ProductSyncRepository(
     private val cloud: ProductCloudDataSource = SupabaseProductCloudDataSource(),
     private val featureAccess: FeatureAccess = FeatureAccessManager
 ) {
-    suspend fun sync(storeId: String): Int {
+    companion object {
+        private val syncMutex = Mutex()
+    }
+
+    suspend fun sync(storeId: String): Int = syncMutex.withLock {
         featureAccess.requireFeature(storeId, PaidFeature.PRODUCT_SYNC)
         var pushed = 0
         for (local in productDao.getPendingSync()) {
@@ -67,7 +73,7 @@ class ProductSyncRepository(
                 applyRemote(remoteProduct.toLocal(local.id), local.syncUpdatedAt, true)
             }
         }
-        return pushed
+        pushed
     }
 
     private fun ProductEntity.toCloud(storeId: String) = CloudProduct(

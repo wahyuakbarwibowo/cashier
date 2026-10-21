@@ -44,7 +44,8 @@ class ProductViewModel(
     private val productRepository: ProductRepository,
     private val productVariantRepository: ProductVariantRepository,
     private val stockHistoryRepository: StockHistoryRepository,
-    private val productSyncRepository: ProductSyncRepository
+    private val productSyncRepository: ProductSyncRepository,
+    private val onManualSyncSucceeded: (String) -> Unit = {}
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProductUiState())
@@ -185,6 +186,7 @@ class ProductViewModel(
             _uiState.update { it.copy(isSyncing = true, error = null) }
             try {
                 val count = productSyncRepository.sync(storeId)
+                onManualSyncSucceeded(storeId)
                 _uiState.update { it.copy(isSyncing = false, successMessage = "Sinkronisasi selesai ($count produk dikirim)") }
                 loadInitialProducts()
             } catch (e: Exception) {

@@ -1,6 +1,6 @@
 # Migrasi dan Sinkronisasi Supabase
 
-Status: **pilot produk dan feature entitlement aktif di kode**. Sinkronisasi manual dua arah untuk produk
+Status: **pilot produk dan feature entitlement aktif di kode**. Sinkronisasi dua arah untuk produk
 tersedia dari layar Produk, dan backup seluruh data tetap tersedia per toko.
 Jalankan migrasi `0004_products.sql` dan `0005_store_feature_flags.sql` sebelum
 memakai fitur cloud. Entitas lain belum disinkronkan per baris. Room tetap dipakai
@@ -11,16 +11,25 @@ Flag `cloud_product_sync` dan `cloud_backup` harus aktif di
 nonaktif; aktifkan melalui editor super admin sesuai langkah di
 [`setup-supabase.md`](setup-supabase.md). Aktivasi pembayaran belum terhubung.
 
+Sync otomatis dijadwalkan lewat WorkManager setelah login ke toko tersebut.
+Perubahan lokal tetap di Room; pekerjaan
+menunggu jaringan, retry saat gagal sementara, dan layar Produk menampilkan
+waktu sync terakhir. Room memakai file terpisah berdasarkan `store_id` akun
+untuk seluruh data kasir, sehingga akun toko lain tidak membaca data lokal
+toko sebelumnya. Tombol sync manual tetap tersedia.
+
 Pilot memakai UUID per produk, tombstone untuk penghapusan, dan waktu perubahan
 epoch milidetik. Jika cloud memiliki versi lebih baru, versi cloud menang; jika
-waktunya sama, perubahan lokal menang. Sync manual berjalan asynchronous pada
+waktunya sama, perubahan lokal menang. Sync berjalan asynchronous pada
 IO dispatcher, jadi UI dan transaksi lokal tetap bisa dipakai. Produk lokal yang
 belum pernah sync akan masuk ke toko dari akun yang sedang login.
 
 Setelah login berhasil sekali, profil tersimpan untuk membuka app offline dan
 layar menampilkan status offline. Login pertama tetap membutuhkan internet.
-Ketika jaringan pulih, tekan ikon cloud di layar Produk untuk mengirim perubahan
-tertunda dan mengambil produk terbaru.
+Setelah login, perubahan produk dijadwalkan otomatis ketika jaringan tersedia.
+Ikon cloud dapat dipakai untuk memicu sync manual kapan saja. Saat pembaruan
+pertama menemukan database lokal versi lama, pilih toko pemiliknya di dialog;
+aplikasi menyimpan file lama dan menyalinnya ke ruang data toko yang dipilih.
 
 ## Kenapa Supabase
 
@@ -168,7 +177,5 @@ produksi / butuh always-on.
   upgrade ke Supabase Realtime kalau owner butuh update instan.
 - Conflict resolution canggih (merge field-level) — last-write-wins cukup
   untuk kasus POS kecil, upgrade kalau ternyata sering bentrok.
-- Background sync worker (WorkManager) — sync manual/on-open dulu, tambah
-  kalau user komplain lupa sync.
 - Payment gateway dan penagihan otomatis — flag Pro sementara dikelola manual
   per toko sampai penyedia pembayaran dipilih.

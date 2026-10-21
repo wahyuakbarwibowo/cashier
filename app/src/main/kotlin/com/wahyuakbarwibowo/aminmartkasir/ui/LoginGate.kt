@@ -16,10 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.UserProfile
 import com.wahyuakbarwibowo.aminmartkasir.ui.screens.LoginScreen
 
 @Composable
-fun LoginGate(onSignedIn: @Composable () -> Unit) {
+fun LoginGate(onSignedIn: @Composable (UserProfile) -> Unit) {
     val authState by AuthManager.state.collectAsStateWithLifecycle()
 
     when (val state = authState) {
@@ -45,7 +46,7 @@ fun LoginGate(onSignedIn: @Composable () -> Unit) {
                     )
                 }
             }
-            Box(modifier = Modifier.weight(1f)) { onSignedIn() }
+            Box(modifier = Modifier.weight(1f)) { onSignedIn(state.profile) }
         }
     }
 }

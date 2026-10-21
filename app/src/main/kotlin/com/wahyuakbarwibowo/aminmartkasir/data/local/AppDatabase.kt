@@ -61,8 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun shiftDao(): ShiftDao
 
     companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
+        private val instances = mutableMapOf<String, AppDatabase>()
 
         // Add new migrations here when bumping version. Never remove old ones.
         val MIGRATION_9_10 = object : Migration(9, 10) {
@@ -104,27 +103,31 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+        fun getDatabase(context: Context, storeId: String): AppDatabase {
+            val name = TenantDatabaseFiles.name(storeId)
+            return synchronized(this) {
+                instances.getOrPut(name) {
+                    check(!TenantDatabaseFiles.needsChoice(context, storeId)) {
+                        "Pilih toko untuk data lokal lama sebelum membuka kasir."
+                    }
+                    Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "kasir_database"
-                )
+                    name
+                    )
                     .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     // Versi 1-8 mendahului histori Migration object (dulu pakai fallbackToDestructiveMigration
                     // tanpa batas); tidak ada schema snapshot untuk menulis migrasi asli, jadi scope destructive
                     // fallback hanya untuk versi lama ini. Versi 9+ tetap wajib Migration object di atas.
                     .fallbackToDestructiveMigrationFrom(dropAllTables = true, 1, 2, 3, 4, 5, 6, 7, 8)
                     .build()
-                INSTANCE = instance
-                instance
+                }
             }
         }
 
-        fun getViewModelFactory(context: Context): ViewModelProvider.Factory {
-            val database = getDatabase(context)
-            return ViewModelFactory(database)
+        fun getViewModelFactory(context: Context, storeId: String): ViewModelProvider.Factory {
+            val database = getDatabase(context, storeId)
+            return ViewModelFactory(database, context.applicationContext, storeId)
         }
     }
 }

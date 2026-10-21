@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
@@ -30,6 +31,32 @@ class ProductRepositoryTest {
     fun setup() {
         MockitoAnnotations.openMocks(this)
         productRepository = ProductRepository(productDao)
+    }
+
+    @Test
+    fun `successful local changes schedule sync but failed insert does not`() = runTest {
+        var scheduled = 0
+        val repository = ProductRepository(productDao) { scheduled++ }
+        val product = ProductEntity(name = "Test")
+        whenever(productDao.insert(any())).thenReturn(1L)
+
+        repository.insert(product)
+        repository.increaseStock(1L, 2)
+        repository.deleteById(1L)
+        assertEquals(3, scheduled)
+
+        whenever(productDao.insert(any())).thenThrow(IllegalStateException("disk full"))
+        val result = runCatching { repository.insert(product) }
+        assertTrue(result.isFailure)
+        assertEquals(3, scheduled)
+    }
+
+    @Test
+    fun `scheduling failure does not fail saved product`() = runTest {
+        val repository = ProductRepository(productDao) { error("scheduler unavailable") }
+        whenever(productDao.insert(any())).thenReturn(7L)
+
+        assertEquals(7L, repository.insert(ProductEntity(name = "Saved locally")))
     }
 
     @Test

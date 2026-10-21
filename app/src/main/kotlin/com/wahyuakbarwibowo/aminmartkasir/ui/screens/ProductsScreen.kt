@@ -29,9 +29,13 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.google.zxing.client.android.Intents
 import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
+import com.wahyuakbarwibowo.aminmartkasir.data.sync.ProductSyncScheduler
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProductSortOption
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ProductViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
+import java.text.DateFormat
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +49,9 @@ fun ProductsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val context = LocalContext.current
+    val authState by AuthManager.state.collectAsStateWithLifecycle()
+    val lastSyncedAt by ProductSyncScheduler.lastSyncedAt.collectAsStateWithLifecycle()
+    val storeId = (authState as? AuthManager.UiState.Authenticated)?.profile?.storeId
 
     val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         val scannedCode = result.contents
@@ -96,7 +103,18 @@ fun ProductsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Daftar Produk") },
+                title = {
+                    Column {
+                        Text("Daftar Produk")
+                        if (storeId != null) {
+                            Text(
+                                lastSyncedAt[storeId]?.let { "Sync terakhir: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it))}" }
+                                    ?: "Menunggu sync otomatis",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
                         Icon(Icons.Default.Menu, contentDescription = "Lainnya")

@@ -3,6 +3,11 @@ package com.wahyuakbarwibowo.aminmartkasir.data.repository
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.ProductDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.CloudProduct
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -15,6 +20,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.mockito.Mockito.times
 
 class ProductSyncRepositoryTest {
     private lateinit var productDao: ProductDao
@@ -93,6 +99,26 @@ class ProductSyncRepositoryTest {
             .applyRemoteIfUnchanged(any(), anyOrNull(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), anyOrNull(), anyOrNull(), any(), any(), any(), any(), any())
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `manual and background sync serialize access to pending products`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        cloud.uploadGate = gate
+        whenever(productDao.getPendingSync()).thenReturn(listOf(product(id = 4, syncUpdatedAt = 100)), emptyList())
+        val secondRepository = ProductSyncRepository(productDao, cloud) { _, _ -> }
+
+        val first = launch { syncRepository.sync("store-1") }
+        runCurrent()
+        val second = launch { secondRepository.sync("store-1") }
+        runCurrent()
+        verify(productDao, times(1)).getPendingSync()
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        verify(productDao, times(2)).getPendingSync()
+        assertTrue(first.isCompleted && second.isCompleted)
+    }
+
     private fun product(
         id: Long,
         remoteId: String? = null,
@@ -115,11 +141,13 @@ class ProductSyncRepositoryTest {
     private class FakeProductCloudDataSource : ProductCloudDataSource {
         val products = mutableListOf<CloudProduct>()
         val uploads = mutableListOf<CloudProduct>()
+        var uploadGate: CompletableDeferred<Unit>? = null
 
         override suspend fun findProduct(storeId: String, remoteId: String) =
             products.firstOrNull { it.storeId == storeId && it.remoteId == remoteId }
 
         override suspend fun upsertProduct(product: CloudProduct) {
+            uploadGate?.await()
             uploads += product
             products.removeAll { it.remoteId == product.remoteId }
             products += product
