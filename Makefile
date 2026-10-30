@@ -49,6 +49,7 @@ PACKAGE = com.wahyuakbarwibowo.aminmartkasir
 APK_DEBUG = app/build/outputs/apk/debug/app-debug.apk
 APK_RELEASE_UNSIGNED = app/build/outputs/apk/release/app-release-unsigned.apk
 APK_RELEASE_SIGNED = app/build/outputs/apk/release/app-release.apk
+APK_WEB = web/apk/cashier/app-release.apk
 AAB_RELEASE = app/build/outputs/bundle/release/app-release.aab
 
 # Sync Gradle
@@ -85,8 +86,10 @@ release-signed:
 		exit 1; \
 	fi
 	$(GRADLE) assembleRelease
+	cp $(APK_RELEASE_SIGNED) $(APK_WEB)
 	@echo ""
 	@echo "✓ Signed release APK ready: $(APK_RELEASE_SIGNED)"
+	@echo "✓ Disalin ke $(APK_WEB) (tombol download web) — commit & push untuk publish"
 
 # Build Android App Bundle (unsigned)
 bundle:
