@@ -37,8 +37,8 @@ android {
         applicationId = "com.wahyuakbarwibowo.aminmartkasir"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "3.2.0"
+        versionCode = 11
+        versionName = "3.3.0"
 
         // Kredensial Supabase di-inject dari supabase.properties (gitignored).
         buildConfigField "String", "SUPABASE_URL", "\"${supabaseProps.getProperty('SUPABASE_URL', '')}\""
