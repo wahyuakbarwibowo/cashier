@@ -137,87 +137,164 @@
             background: rgba(0, 0, 0, 0.7);
             border: 1px solid rgba(244, 63, 94, 0.2);
         }
+
+        .blob { position: absolute; border-radius: 9999px; filter: blur(60px); pointer-events: none; }
+        .feature { padding: 2rem; border-radius: 1.5rem; border: 1px solid #ffe4e6; background: #fff; transition: transform .2s, box-shadow .2s; }
+        .feature:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -20px rgba(225, 29, 72, .35); }
+        .dark .feature { background: rgba(15, 23, 42, .6); border-color: rgba(136, 19, 55, .5); }
+        .feature .icon { width: 3rem; height: 3rem; display: grid; place-items: center; font-size: 1.5rem; border-radius: 1rem; background: #ffe4e6; margin-bottom: 1rem; }
+        .dark .feature .icon { background: rgba(225, 29, 72, .15); }
+        .feature h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: .5rem; }
+        .feature p { color: #64748b; }
+        .dark .feature p { color: #94a3b8; }
+        .step { width: 3.5rem; height: 3.5rem; margin: 0 auto 1rem; display: grid; place-items: center; border-radius: 9999px; font-weight: 800; font-size: 1.25rem; color: #fff; background: linear-gradient(135deg, #e11d48, #f472b6); box-shadow: 0 10px 25px -10px rgba(225, 29, 72, .6); }
+        .faq { padding: 1.25rem 1.5rem; border-radius: 1rem; border: 1px solid #ffe4e6; background: #fff1f2; }
+        .dark .faq { background: rgba(15, 23, 42, .6); border-color: rgba(136, 19, 55, .5); }
+        .faq summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; }
+        .faq summary::after { content: '+'; color: #e11d48; font-size: 1.25rem; line-height: 1; }
+        .faq[open] summary::after { content: '\2212'; }
+        .faq p { margin-top: .75rem; color: #64748b; }
+        .dark .faq p { color: #94a3b8; }
+        .float-chip { animation: float 4s ease-in-out infinite; }
+        .float-chip.delay { animation-delay: 2s; }
+        @keyframes float { 50% { transform: translateY(-10px); } }
+        .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+        .reveal.show { opacity: 1; transform: none; }
+        @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } .float-chip { animation: none; } }
     </style>
 </head>
 
-<body class="bg-brand-50 text-slate-900 dark:bg-black dark:text-slate-100 transition-colors duration-300">
+<body class="bg-brand-50 text-slate-900 dark:bg-black dark:text-slate-100 transition-colors duration-300 overflow-x-hidden">
 
     <!-- Navbar (loaded from config.js) -->
     <div id="navbar-container"></div>
 
-    <header class="pt-32 pb-16 px-4">
-        <div class="max-w-7xl mx-auto text-center">
-            <h1 class="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
-                Kelola Bisnis <span
-                    class="bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-pink-400">Lebih Mudah &
-                    Canggih</span>
-            </h1>
-            <p class="text-lg text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto">
-                Aplikasi kasir serbaguna untuk pencatatan transaksi toko retail dan manajemen penjualan produk digital
-                secara mandiri.
-            </p>
-
-            <!-- Download Section -->
-            <div class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-3xl p-8 mb-10 border border-brand-100 dark:border-brand-900 max-w-3xl mx-auto">
-                <h2 class="text-2xl font-bold mb-6">Download Aplikasi</h2>
-
-                <!-- Download Button -->
-                <div class="flex justify-center">
+    <!-- Hero -->
+    <header class="relative pt-28 md:pt-36 pb-20 px-4">
+        <div class="blob w-72 h-72 bg-brand-500/30 -top-10 -left-20"></div>
+        <div class="blob w-96 h-96 bg-pink-400/20 top-40 -right-32"></div>
+        <div class="relative max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+            <div class="text-center md:text-left reveal">
+                <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-slate-900/80 border border-brand-100 dark:border-brand-900 text-sm font-semibold text-brand-600 mb-6">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Gratis &bull; Jalan tanpa internet
+                </span>
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight">
+                    Kasir toko & PPOB<br>
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-pink-400">dalam satu HP.</span>
+                </h1>
+                <p class="text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-xl mx-auto md:mx-0">
+                    Catat penjualan, stok, hutang pelanggan, sampai pulsa & token listrik. Cetak struk lewat printer Bluetooth. Cocok untuk warung, toko kelontong, dan konter.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                     <a href="apk/cashier/app-release.apk" download
-                        class="bg-brand-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-brand-500 transition shadow-lg flex items-center gap-2">
-                        <span>✨</span> Download Aminmart Cashier
+                        class="bg-brand-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-brand-500 transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 hover:-translate-y-0.5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+                        Download APK
+                    </a>
+                    <a href="install.html"
+                        class="bg-white text-brand-600 dark:bg-slate-900 dark:text-brand-400 px-8 py-4 rounded-2xl font-bold border border-brand-100 dark:border-brand-900 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition text-center">
+                        Panduan Instalasi
                     </a>
                 </div>
-
-                <div class="mt-6 text-center">
-                    <a href="install.html" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline">
-                        Lihat panduan instalasi lengkap →
-                    </a>
-                </div>
+                <p class="mt-4 text-sm text-slate-500">Android 8.0 ke atas &bull; Tanpa langganan wajib</p>
             </div>
-            
-            <div class="flex flex-wrap justify-center gap-4">
-                <a href="contact.html"
-                    class="bg-white text-brand-600 dark:bg-slate-900 dark:text-brand-400 px-8 py-4 rounded-2xl font-bold border border-brand-100 dark:border-brand-900 hover:bg-brand-50 dark:hover:bg-brand-900/50 transition shadow-sm">Hubungi
-                    Admin</a>
+
+            <!-- Phone mockup -->
+            <div class="flex justify-center reveal">
+                <div class="phone relative w-64 sm:w-72 rounded-[2.5rem] bg-slate-900 p-3 shadow-2xl shadow-brand-600/20">
+                    <div class="rounded-[2rem] bg-white dark:bg-slate-950 overflow-hidden">
+                        <div class="bg-gradient-to-r from-brand-600 to-pink-500 text-white px-5 pt-6 pb-5">
+                            <p class="text-xs opacity-80">Penjualan hari ini</p>
+                            <p class="text-2xl font-extrabold">Rp 1.284.500</p>
+                            <p class="text-xs mt-1 opacity-90">▲ 12% dari kemarin &bull; 47 transaksi</p>
+                        </div>
+                        <div class="p-4 space-y-3 text-sm">
+                            <div class="flex justify-between items-center p-3 rounded-xl bg-brand-50 dark:bg-slate-900">
+                                <span>🧴 Sabun Cair 450ml <span class="text-slate-400">x2</span></span><span class="font-bold">24.000</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 rounded-xl bg-brand-50 dark:bg-slate-900">
+                                <span>⚡ Token PLN 50rb</span><span class="font-bold">52.000</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 rounded-xl bg-brand-50 dark:bg-slate-900">
+                                <span>🍚 Beras 5kg</span><span class="font-bold">72.000</span>
+                            </div>
+                            <div class="flex justify-between pt-2 border-t border-dashed border-slate-300 dark:border-slate-700 font-extrabold">
+                                <span>Total</span><span class="text-brand-600">Rp 148.000</span>
+                            </div>
+                            <div class="w-full text-center py-3 rounded-xl bg-brand-600 text-white font-bold">Bayar &amp; Cetak Struk</div>
+                        </div>
+                    </div>
+                    <div class="float-chip absolute -left-10 top-24 bg-white dark:bg-slate-900 rounded-2xl shadow-xl px-4 py-3 text-xs font-bold border border-brand-100 dark:border-brand-900">🖨️ Struk tercetak</div>
+                    <div class="float-chip delay absolute -right-8 bottom-24 bg-white dark:bg-slate-900 rounded-2xl shadow-xl px-4 py-3 text-xs font-bold border border-brand-100 dark:border-brand-900">📦 Stok aman</div>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Features Grid -->
-    <section class="py-20 bg-white dark:bg-slate-900/50">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl font-bold mb-4">Fitur Unggulan</h2>
-                <p class="text-slate-500 dark:text-slate-400">Didesain untuk meningkatkan efisiensi operasional toko
-                    Anda.</p>
+    <!-- Highlights -->
+    <section class="px-4 pb-16">
+        <div class="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-center reveal">
+            <div class="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-brand-100 dark:border-brand-900"><p class="text-2xl font-extrabold text-brand-600">100%</p><p class="text-sm text-slate-500">Offline</p></div>
+            <div class="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-brand-100 dark:border-brand-900"><p class="text-2xl font-extrabold text-brand-600">Rp 0</p><p class="text-sm text-slate-500">Biaya mulai</p></div>
+            <div class="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-brand-100 dark:border-brand-900"><p class="text-2xl font-extrabold text-brand-600">58mm</p><p class="text-sm text-slate-500">Printer thermal</p></div>
+            <div class="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-brand-100 dark:border-brand-900"><p class="text-2xl font-extrabold text-brand-600">Excel</p><p class="text-sm text-slate-500">Export laporan</p></div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="fitur" class="py-20 bg-white dark:bg-slate-900/50 px-4">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-14 reveal">
+                <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Semua yang toko Anda butuhkan</h2>
+                <p class="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Tidak perlu buku catatan, kalkulator, dan aplikasi terpisah lagi.</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Card 1 -->
-                <div class="p-8 rounded-3xl bg-blue-50 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800">
-                    <div class="text-4xl mb-4">✨</div>
-                    <h3 class="text-xl font-bold mb-2 text-blue-900 dark:text-blue-300">Manajemen Produk Digital</h3>
-                    <p class="text-blue-700 dark:text-blue-400 opacity-80">Catat penjualan Pulsa, PLN, dan E-Wallet
-                        secara manual dengan kategori yang bisa Anda kustomisasi sesuai keinginan.</p>
-                </div>
-                <!-- Card 2 -->
-                <div
-                    class="p-8 rounded-3xl bg-indigo-50 border border-indigo-100 dark:bg-indigo-900/20 dark:border-indigo-800">
-                    <div class="text-4xl mb-4">📊</div>
-                    <h3 class="text-xl font-bold mb-2 text-indigo-900 dark:text-indigo-300">Laporan Akurat</h3>
-                    <p class="text-indigo-700 dark:text-indigo-400 opacity-80">Pantau laba/rugi harian hingga tahunan
-                        dengan filter rentang
-                        tanggal yang fleksibel.</p>
-                </div>
-                <!-- Card 3 -->
-                <div
-                    class="p-8 rounded-3xl bg-slate-50 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
-                    <div class="text-4xl mb-4">🖨️</div>
-                    <h3 class="text-xl font-bold mb-2 text-slate-900 dark:text-slate-200">Cetak Struk</h3>
-                    <p class="text-slate-700 dark:text-slate-400 opacity-80">Mendukung printer thermal Bluetooth untuk
-                        mencetak struk
-                        transaksi retail maupun digital secara instan.</p>
-                </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="feature reveal"><div class="icon">🛒</div><h3>Kasir Cepat</h3><p>Scan barcode pakai kamera, harga satuan & grosir/pak, dan stok otomatis berkurang saat transaksi.</p></div>
+                <div class="feature reveal"><div class="icon">📱</div><h3>Pulsa, PLN & E-Wallet</h3><p>Catat penjualan produk digital dengan kategori yang bisa Anda atur sendiri, lengkap dengan riwayat nomor pelanggan.</p></div>
+                <div class="feature reveal"><div class="icon">📒</div><h3>Hutang & Piutang</h3><p>Pelanggan bayar kurang? Piutang tercatat otomatis. Hutang ke supplier juga terpantau.</p></div>
+                <div class="feature reveal"><div class="icon">📦</div><h3>Stok & Pembelian</h3><p>Riwayat keluar-masuk stok, varian produk, dan pencatatan belanja dari supplier.</p></div>
+                <div class="feature reveal"><div class="icon">📊</div><h3>Laporan Laba Rugi</h3><p>Grafik penjualan, pengeluaran, dan laba harian sampai tahunan. Export ke Excel.</p></div>
+                <div class="feature reveal"><div class="icon">💵</div><h3>Shift Kasir</h3><p>Buka & tutup laci kas, hitung selisih uang fisik dengan sistem di akhir shift.</p></div>
+                <div class="feature reveal"><div class="icon">🖨️</div><h3>Cetak Struk Bluetooth</h3><p>Langsung cetak ke printer thermal 58mm, untuk transaksi toko maupun digital.</p></div>
+                <div class="feature reveal"><div class="icon">⭐</div><h3>Poin Pelanggan</h3><p>Beri poin ke pelanggan setia supaya mereka balik lagi ke toko Anda.</p></div>
+                <div class="feature reveal"><div class="icon">💾</div><h3>Backup & Restore</h3><p>Data aman di HP Anda sendiri. Backup kapan saja dan pindahkan ke HP baru dengan mudah.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Steps -->
+    <section class="py-20 px-4">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-center mb-14 reveal">Mulai dalam 3 langkah</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center reveal"><div class="step">1</div><h3 class="font-bold text-lg mb-2">Download APK</h3><p class="text-slate-500 dark:text-slate-400">Unduh dan pasang di HP Android Anda.</p></div>
+                <div class="text-center reveal"><div class="step">2</div><h3 class="font-bold text-lg mb-2">Input produk</h3><p class="text-slate-500 dark:text-slate-400">Tambah produk satu per satu atau scan barcode.</p></div>
+                <div class="text-center reveal"><div class="step">3</div><h3 class="font-bold text-lg mb-2">Mulai jualan</h3><p class="text-slate-500 dark:text-slate-400">Transaksi, cetak struk, dan pantau laporannya.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="py-20 bg-white dark:bg-slate-900/50 px-4">
+        <div class="max-w-3xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-center mb-12 reveal">Pertanyaan umum</h2>
+            <div class="space-y-4">
+                <details class="faq reveal"><summary>Apakah harus selalu online?</summary><p>Tidak. Semua fitur kasir jalan tanpa internet, dan data tersimpan di HP Anda.</p></details>
+                <details class="faq reveal"><summary>Apakah aplikasinya gratis?</summary><p>Ya, fitur kasir utama gratis. Beberapa fitur tambahan seperti sinkronisasi cloud tersedia di paket Pro.</p></details>
+                <details class="faq reveal"><summary>Printer apa yang didukung?</summary><p>Printer thermal Bluetooth ukuran kertas 58mm yang umum dijual di pasaran.</p></details>
+                <details class="faq reveal"><summary>Kenapa muncul peringatan saat install?</summary><p>Karena APK diunduh dari luar Play Store. Ikuti <a href="install.html" class="text-brand-600 font-semibold hover:underline">panduan instalasi</a> untuk mengizinkannya.</p></details>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-20 px-4">
+        <div class="max-w-5xl mx-auto rounded-[2rem] bg-gradient-to-br from-brand-600 to-pink-500 text-white p-10 md:p-16 text-center shadow-2xl shadow-brand-600/30 reveal">
+            <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Siap rapikan pembukuan toko?</h2>
+            <p class="opacity-90 mb-8 max-w-xl mx-auto">Gratis, ringan, dan langsung bisa dipakai hari ini.</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="apk/cashier/app-release.apk" download class="bg-white text-brand-600 px-8 py-4 rounded-2xl font-bold hover:-translate-y-0.5 transition shadow-lg">Download Sekarang</a>
+                <a href="contact.html" class="border-2 border-white/70 px-8 py-4 rounded-2xl font-bold hover:bg-white/10 transition">Hubungi Admin</a>
             </div>
         </div>
     </section>
@@ -253,7 +330,11 @@
     </footer>
 
     <script>
-        // Theme toggle and mobile menu now handled by config.js
+        // Animasi muncul saat discroll
+        const io = new IntersectionObserver(entries => entries.forEach(e => {
+            if (e.isIntersecting) { e.target.classList.add('show'); io.unobserve(e.target); }
+        }), { threshold: 0.15 });
+        document.querySelectorAll('.reveal').forEach(el => io.observe(el));
     </script>
 </body>
 
