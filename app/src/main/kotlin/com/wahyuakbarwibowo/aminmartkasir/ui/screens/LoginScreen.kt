@@ -1,5 +1,6 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,10 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -25,9 +28,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wahyuakbarwibowo.aminmartkasir.R
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.SupabaseProvider
 import kotlinx.coroutines.launch
@@ -36,6 +42,7 @@ import kotlinx.coroutines.launch
 fun LoginScreen(modifier: Modifier = Modifier) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var isRegister by remember { mutableStateOf(false) }
@@ -55,13 +62,12 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Storefront,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(56.dp)
+                Image(
+                    painter = painterResource(R.drawable.aminmart_logo),
+                    contentDescription = "Logo Aminmart",
+                    modifier = Modifier.size(120.dp)
                 )
-                Text("AminMart Kasir", style = MaterialTheme.typography.headlineSmall)
+                Text("Aminmart Kasir", style = MaterialTheme.typography.headlineSmall)
                 Text(
                     if (isRegister) "Daftar akun baru" else "Masuk untuk melanjutkan",
                     style = MaterialTheme.typography.bodyMedium,
@@ -99,7 +105,15 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                     onValueChange = { password = it },
                     label = { Text(if (isRegister) "Password (min. 6 karakter)" else "Password") },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (passwordVisible) "Sembunyikan password" else "Tampilkan password"
+                            )
+                        }
+                    },
                     enabled = !isLoading && SupabaseProvider.isConfigured,
                     modifier = Modifier.fillMaxWidth()
                 )
