@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Dikonfirmasi - Aminmart Cashier</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/png" href="cashier-icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'media',
+            theme: { extend: { colors: { brand: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48' } } } }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-brand-50 text-slate-900 dark:bg-black dark:text-slate-100 min-h-screen flex items-center justify-center px-4">
+    <main class="bg-white/80 dark:bg-slate-900/80 rounded-3xl p-8 max-w-md w-full text-center border border-brand-100 dark:border-brand-900 shadow-lg">
+        <img src="cashier-icon.png" alt="Logo Aminmart" class="w-20 h-20 mx-auto mb-4 rounded-2xl">
+
+        <div id="success">
+            <h1 class="text-2xl font-extrabold mb-3">Email berhasil dikonfirmasi ✓</h1>
+            <p class="text-slate-600 dark:text-slate-400 mb-6">
+                Akun kamu sedang menunggu persetujuan admin toko. Setelah disetujui, silakan login di aplikasi
+                Aminmart Kasir.
+            </p>
+        </div>
+
+        <div id="failed" class="hidden">
+            <h1 class="text-2xl font-extrabold mb-3">Link konfirmasi tidak valid</h1>
+            <p class="text-slate-600 dark:text-slate-400 mb-6">
+                <span id="failed-reason">Link mungkin sudah kedaluwarsa atau pernah dipakai.</span>
+                Silakan daftar ulang dari aplikasi untuk mendapatkan email baru.
+            </p>
+        </div>
+
+        <a href="apk/cashier/app-release.apk" download
+            class="inline-block bg-brand-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-500 transition">
+            Download Aplikasi
+        </a>
+        <p class="mt-4 text-sm"><a href="./" class="text-brand-600 hover:underline">Ke halaman utama</a></p>
+    </main>
+
+    <script>
+        // Supabase mengirim hasil verifikasi lewat hash; buang token dari URL.
+        const params = new URLSearchParams(location.hash.slice(1));
+        if (params.has('error')) {
+            document.getElementById('success').classList.add('hidden');
+            document.getElementById('failed').classList.remove('hidden');
+            const desc = params.get('error_description');
+            if (desc) document.getElementById('failed-reason').textContent = desc + '.';
+        }
+        if (location.hash) history.replaceState(null, '', location.pathname);
+    </script>
+</body>
+
+</html>
