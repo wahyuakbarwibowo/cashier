@@ -235,6 +235,33 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                 }
             }
 
+            if (!isRegister) {
+                TextButton(
+                    onClick = {
+                        errorMessage = null
+                        infoMessage = null
+                        if (email.isBlank() || !emailValid) {
+                            errorMessage = "Isi email Anda dulu di kolom Email, lalu tekan Lupa Password lagi."
+                            return@TextButton
+                        }
+                        isLoading = true
+                        scope.launch {
+                            val result = AuthManager.resetPassword(email)
+                            if (result.isSuccess) {
+                                infoMessage = "Link untuk membuat password baru sudah dikirim ke $email. Cek kotak masuk atau folder spam."
+                            } else {
+                                errorMessage = result.exceptionOrNull()?.message ?: "Gagal mengirim email. Coba lagi."
+                            }
+                            isLoading = false
+                        }
+                    },
+                    enabled = fieldsEnabled,
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Text("Lupa Password?", style = MaterialTheme.typography.titleSmall)
+                }
+            }
+
             TextButton(
                 onClick = {
                     isRegister = !isRegister

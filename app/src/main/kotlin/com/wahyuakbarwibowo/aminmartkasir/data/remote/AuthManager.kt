@@ -31,6 +31,7 @@ object AuthManager {
     private const val PREFS_NAME = "auth_session"
     private const val KEY_REFRESH_TOKEN = "refresh_token"
     private const val KEY_CACHED_PROFILE = "cached_profile"
+    private const val RESET_PASSWORD_URL = "https://wahyuakbarwibowo.github.io/cashier/reset-password.html"
     const val PENDING_MESSAGE = "Akun menunggu persetujuan admin."
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -159,6 +160,19 @@ object AuthManager {
         error.contains("invalid", true) && error.contains("email", true) -> "Format email tidak valid."
         error.contains("password", true) -> "Password terlalu lemah. Gunakan minimal 6 karakter."
         else -> "Pendaftaran gagal. Coba lagi."
+    }
+
+    suspend fun resetPassword(email: String): Result<Unit> {
+        return try {
+            SupabaseProvider.client.auth.resetPasswordForEmail(email.trim(), redirectUrl = RESET_PASSWORD_URL)
+            Result.success(Unit)
+        } catch (e: RestException) {
+            Result.failure(Exception(signUpErrorMessage(e.error)))
+        } catch (e: IOException) {
+            Result.failure(Exception("Tidak ada koneksi internet."))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun signOut() {
