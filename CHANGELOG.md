@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-10-31
+
+### Added
+- Konfirmasi sebelum menghapus kategori/produk digital, metode pembayaran, dan pesanan tertahan.
+
+### Fixed
+- Tombol hapus kategori digital dan menu transaksi digital terlalu kecil untuk diketuk.
+
 ## [3.5.0] - 2026-10-31
 
 ### Changed
