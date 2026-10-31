@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-10-31
+
+### Added
+- Kolom "Ulangi Password" dan validasi format email di form daftar.
+
+### Changed
+- Form login/daftar lebih ramah pengguna lanjut usia: teks dan tombol lebih besar, bisa di-scroll saat keyboard muncul, keyboard email/password sesuai, tombol Enter langsung masuk.
+- Pesan error pendaftaran dalam Bahasa Indonesia.
+
 ## [3.3.0] - 2026-10-30
 
 ### Added
