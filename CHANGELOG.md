@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-31
+
+### Changed
+- Ukuran teks di seluruh aplikasi diperbesar 15% agar mudah dibaca pengguna lanjut usia.
+
 ## [3.4.0] - 2026-10-31
 
 ### Added
