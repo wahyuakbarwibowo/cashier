@@ -1,5 +1,6 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
+import com.wahyuakbarwibowo.aminmartkasir.ui.components.ConfirmDeleteDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -76,6 +77,16 @@ fun SalesTransactionScreen(
     var showEditProductDialog by remember { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<CartItem?>(null) }
     var showHeldOrdersDialog by remember { mutableStateOf(false) }
+    var heldOrderToDelete by remember { mutableStateOf<Long?>(null) }
+
+    heldOrderToDelete?.let { target ->
+        ConfirmDeleteDialog(
+            title = "Hapus Pesanan Tersimpan",
+            message = "Pesanan yang ditahan akan dihapus dan tidak bisa dikembalikan. Lanjutkan?",
+            onConfirm = { viewModel.deleteHeldOrder(target) },
+            onDismiss = { heldOrderToDelete = null }
+        )
+    }
     var successTransactionData by remember { mutableStateOf<LastTransactionData?>(null) }
     val cartListState = rememberLazyListState()
     val context = LocalContext.current
@@ -546,7 +557,7 @@ fun SalesTransactionScreen(
                     showMessage("Kosongkan keranjang dulu sebelum lanjut pesanan")
                 }
             },
-            onDelete = { id -> viewModel.deleteHeldOrder(id) },
+            onDelete = { id -> heldOrderToDelete = id },
             onDismiss = { showHeldOrdersDialog = false }
         )
     }

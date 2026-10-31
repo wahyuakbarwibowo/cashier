@@ -1,5 +1,6 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
+import com.wahyuakbarwibowo.aminmartkasir.ui.components.ConfirmDeleteDialog
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,6 +47,8 @@ fun DigitalManagementScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var categoryToDelete by remember { mutableStateOf<com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalCategoryEntity?>(null) }
+    var productToDelete by remember { mutableStateOf<com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalProductEntity?>(null) }
     var showAddProductDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -90,8 +93,17 @@ fun DigitalManagementScreen(
                 CategoryList(
                     categories = uiState.categories,
                     onMove = { from, to -> viewModel.moveCategory(from, to) },
-                    onDelete = { viewModel.deleteCategory(it) }
+                    onDelete = { categoryToDelete = it }
                 )
+
+                categoryToDelete?.let { target ->
+                    ConfirmDeleteDialog(
+                        title = "Hapus Kategori",
+                        message = "Yakin ingin menghapus kategori ini?",
+                        onConfirm = { viewModel.deleteCategory(target) },
+                        onDismiss = { categoryToDelete = null }
+                    )
+                }
                 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 
@@ -170,8 +182,17 @@ fun DigitalManagementScreen(
                         modifier = Modifier.weight(1f),
                         products = filteredProducts,
                         onMove = { from, to -> viewModel.moveProduct(from, to) },
-                        onDelete = { viewModel.deleteProduct(it) }
+                        onDelete = { productToDelete = it }
                     )
+
+                productToDelete?.let { target ->
+                    ConfirmDeleteDialog(
+                        title = "Hapus Produk",
+                        message = "Yakin ingin menghapus produk digital ini?",
+                        onConfirm = { viewModel.deleteProduct(target) },
+                        onDismiss = { productToDelete = null }
+                    )
+                }
                 }
             }
         }

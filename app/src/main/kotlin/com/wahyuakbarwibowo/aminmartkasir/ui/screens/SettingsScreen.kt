@@ -1,5 +1,6 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
+import com.wahyuakbarwibowo.aminmartkasir.ui.components.ConfirmDeleteDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,6 +33,16 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var methodToDelete by remember { mutableStateOf<com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PaymentMethodEntity?>(null) }
+
+    methodToDelete?.let { target ->
+        ConfirmDeleteDialog(
+            title = "Hapus Metode Pembayaran",
+            message = "Yakin ingin menghapus metode pembayaran ini?",
+            onConfirm = { viewModel.deletePaymentMethod(target) },
+            onDismiss = { methodToDelete = null }
+        )
+    }
     
     var shopName by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
@@ -169,7 +180,7 @@ fun SettingsScreen(
             uiState.paymentMethods.forEachIndexed { index, method ->
                 PaymentMethodItem(
                     method = method,
-                    onDelete = { viewModel.deletePaymentMethod(method) },
+                    onDelete = { methodToDelete = method },
                     onMoveUp = { if (index > 0) viewModel.movePaymentMethod(index, index - 1) },
                     onMoveDown = { if (index < uiState.paymentMethods.size - 1) viewModel.movePaymentMethod(index, index + 1) },
                     canMoveUp = index > 0,
