@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.7.0] - 2026-10-31
+
+### Added
+- Tombol "Lupa Password?" di halaman login; link di email membuka halaman web untuk membuat password baru.
+
 ## [3.6.0] - 2026-10-31
 
 ### Added
