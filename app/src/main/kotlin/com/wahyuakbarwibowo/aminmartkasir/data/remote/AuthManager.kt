@@ -144,12 +144,21 @@ object AuthManager {
             clearLocalSession()
             Result.success(Unit)
         } catch (e: RestException) {
-            Result.failure(Exception(e.error.ifBlank { "Pendaftaran gagal." }))
+            Result.failure(Exception(signUpErrorMessage(e.error)))
         } catch (e: IOException) {
             Result.failure(Exception("Tidak ada koneksi internet."))
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    // Pesan Supabase berbahasa Inggris; terjemahkan yang umum agar mudah dipahami
+    private fun signUpErrorMessage(error: String): String = when {
+        error.contains("already registered", true) -> "Email sudah terdaftar. Silakan masuk."
+        error.contains("rate limit", true) -> "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
+        error.contains("invalid", true) && error.contains("email", true) -> "Format email tidak valid."
+        error.contains("password", true) -> "Password terlalu lemah. Gunakan minimal 6 karakter."
+        else -> "Pendaftaran gagal. Coba lagi."
     }
 
     suspend fun signOut() {
