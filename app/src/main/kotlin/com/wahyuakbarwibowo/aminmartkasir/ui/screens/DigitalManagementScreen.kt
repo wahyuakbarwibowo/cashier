@@ -282,8 +282,8 @@ fun CategoryItem(
         ) {
             Icon(Icons.Default.DragIndicator, contentDescription = null, modifier = Modifier.size(16.dp))
             Text(category.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-            IconButton(onClick = onDelete, modifier = Modifier.size(20.dp)) {
-                Icon(Icons.Default.Close, contentDescription = "Hapus", modifier = Modifier.size(14.dp))
+            IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.Close, contentDescription = "Hapus", modifier = Modifier.size(20.dp))
             }
         }
     }

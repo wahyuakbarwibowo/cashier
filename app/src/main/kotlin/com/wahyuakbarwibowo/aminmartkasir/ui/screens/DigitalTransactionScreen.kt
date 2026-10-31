@@ -468,8 +468,8 @@ fun ProductCard(
                     
                     var expanded by remember { mutableStateOf(false) }
                     Box {
-                        IconButton(onClick = { expanded = true }, modifier = Modifier.size(18.dp)) {
-                            Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.outline)
+                        IconButton(onClick = { expanded = true }) {
+                            Icon(Icons.Default.MoreVert, "Menu transaksi", tint = MaterialTheme.colorScheme.outline)
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             DropdownMenuItem(text = { Text("Edit") }, onClick = { onEdit(); expanded = false })
