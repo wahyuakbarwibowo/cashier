@@ -16,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class ProductSortOption(val label: String, val repositorySort: ProductRepository.ProductSort) {
     NEWEST("Terbaru", ProductRepository.ProductSort.NEWEST),
@@ -59,6 +60,20 @@ class ProductViewModel(
     init {
         loadInitialProducts()
         loadLowStockProducts()
+        reloadOnProductChanges()
+    }
+
+    /**
+     * Form produk memakai instance ViewModel sendiri, jadi daftar di layar Produk perlu
+     * tahu saat tabel berubah. Room memancarkan ulang kueri ini di setiap perubahan tabel.
+     */
+    private fun reloadOnProductChanges() {
+        viewModelScope.launch(Dispatchers.IO) {
+            productRepository.productCount.drop(1).collect {
+                val query = _uiState.value.searchQuery
+                if (query.isBlank()) loadInitialProducts() else searchProducts(query)
+            }
+        }
     }
 
     private fun loadLowStockProducts() {
@@ -207,59 +222,27 @@ class ProductViewModel(
         }
     }
 
-    fun addProduct(product: ProductEntity) {
+    /**
+     * Simpan produk dari form, lalu panggil [onSaved] di Main. Layar baru boleh ditutup
+     * setelah ini: VM terikat ke back stack form, jadi menutup layar lebih dulu bisa
+     * membatalkan penyimpanan di tengah jalan. [variants] null = varian tidak diubah.
+     */
+    fun saveProduct(product: ProductEntity, variants: List<ProductVariantEntity>?, onSaved: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val id = productRepository.insert(product)
-                
-                // Record stock history
-                if (product.stock != 0) {
-                    stockHistoryRepository.insert(
-                        StockHistoryEntity(
-                            productId = id,
-                            productName = product.name,
-                            changeQty = product.stock,
-                            stockBefore = 0,
-                            stockAfter = product.stock,
-                            reason = "Stok awal produk baru",
-                            createdAt = DateUtils.nowDateTime()
-                        )
-                    )
+                if (product.id == 0L) {
+                    productRepository.insert(product)
+                    _uiState.update { it.copy(successMessage = "Produk berhasil ditambahkan") }
+                } else {
+                    val loadedStock = _uiState.value.editingProduct?.takeIf { it.id == product.id }?.stock ?: product.stock
+                    productRepository.update(product, stockDelta = product.stock - loadedStock)
+                    variants?.let { productVariantRepository.syncForProduct(product.id, it) }
+                    _uiState.update { it.copy(successMessage = "Produk berhasil diperbarui") }
                 }
-                
-                _uiState.update { it.copy(successMessage = "Produk berhasil ditambahkan") }
-                loadInitialProducts()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
-            }
-        }
-    }
-
-    fun updateProduct(product: ProductEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val oldProduct = productRepository.getProductById(product.id)
-                productRepository.update(product)
-                
-                // Record stock history if stock changed manually
-                if (oldProduct != null && oldProduct.stock != product.stock) {
-                    stockHistoryRepository.insert(
-                        StockHistoryEntity(
-                            productId = product.id,
-                            productName = product.name,
-                            changeQty = product.stock - oldProduct.stock,
-                            stockBefore = oldProduct.stock,
-                            stockAfter = product.stock,
-                            reason = "Update stok manual",
-                            createdAt = DateUtils.nowDateTime()
-                        )
-                    )
-                }
-                
-                _uiState.update { it.copy(successMessage = "Produk berhasil diperbarui") }
-                loadInitialProducts()
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+            } finally {
+                withContext(Dispatchers.Main) { onSaved() }
             }
         }
     }
@@ -283,31 +266,10 @@ class ProductViewModel(
     fun adjustStock(productId: Long, changeQty: Int, reason: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val product = productRepository.getProductById(productId)
-                if (product == null) {
+                if (!productRepository.adjustStock(productId, changeQty, reason)) {
                     _uiState.update { it.copy(error = "Produk tidak ditemukan") }
                     return@launch
                 }
-
-                val newStock = product.stock + changeQty
-                
-                if (changeQty > 0) {
-                    productRepository.increaseStock(productId, changeQty)
-                } else {
-                    productRepository.decreaseStock(productId, -changeQty)
-                }
-
-                stockHistoryRepository.insert(
-                    StockHistoryEntity(
-                        productId = productId,
-                        productName = product.name,
-                        changeQty = changeQty,
-                        stockBefore = product.stock,
-                        stockAfter = newStock,
-                        reason = reason,
-                        createdAt = DateUtils.nowDateTime()
-                    )
-                )
 
                 _uiState.update { it.copy(successMessage = "Stok berhasil disesuaikan") }
                 if (_uiState.value.searchQuery.isBlank()) {
@@ -327,12 +289,5 @@ class ProductViewModel(
 
     suspend fun getVariantsByProductId(productId: Long): List<ProductVariantEntity> {
         return productVariantRepository.getByProductIdOnce(productId)
-    }
-
-    suspend fun replaceVariants(productId: Long, variants: List<ProductVariantEntity>) {
-        productVariantRepository.deleteByProductId(productId)
-        variants.forEach { variant ->
-            productVariantRepository.insert(variant.copy(id = 0, productId = productId))
-        }
     }
 }

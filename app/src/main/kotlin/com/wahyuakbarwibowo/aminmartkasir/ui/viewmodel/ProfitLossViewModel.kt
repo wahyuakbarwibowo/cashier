@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.CategoryExpenseDto
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.STOCK_PURCHASE_CATEGORY
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ExpenseRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.PhoneHistoryRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SaleRepository
@@ -127,7 +128,10 @@ class ProfitLossViewModel(
                 }
 
                 val cashFlow = cashierRev + digRev - expTot
-                val netProfit = cashierProf + digProf - expTot
+                // Pembelian stok dicatat juga sebagai pengeluaran (untuk arus kas), padahal
+                // profit kasir sudah dikurangi harga modal barang yang terjual. Jangan potong dua kali.
+                val stockPurchases = expCat.filter { it.category == STOCK_PURCHASE_CATEGORY }.sumOf { it.totalAmount }
+                val netProfit = cashierProf + digProf - (expTot - stockPurchases)
 
                 _uiState.update {
                     it.copy(

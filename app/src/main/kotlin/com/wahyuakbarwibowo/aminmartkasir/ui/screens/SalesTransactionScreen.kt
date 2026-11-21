@@ -37,12 +37,7 @@ import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
-import com.google.zxing.client.android.Intents
-import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
+import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.rememberBarcodeScanner
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.*
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
@@ -111,42 +106,24 @@ fun SalesTransactionScreen(
     }
 
     // Scan barcode langsung dari layar kasir -> auto tambah ke keranjang
-    val quickScanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        val scannedCode = result.contents
-        if (!scannedCode.isNullOrBlank()) {
-            viewModel.addToCartByBarcode(scannedCode) { res ->
-                when (res) {
-                    is BarcodeAddResult.Added -> {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showMessage("${res.productName} ditambah")
-                    }
-                    is BarcodeAddResult.OutOfStock -> {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        showMessage("Stok ${res.productName} habis/tidak mencukupi")
-                    }
-                    is BarcodeAddResult.NotFound -> {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        showMessage("Produk barcode \"$scannedCode\" tidak ditemukan")
-                    }
+    val quickScan = rememberBarcodeScanner(
+        onPermissionDenied = { showMessage("Izin kamera diperlukan untuk scan barcode") }
+    ) { scannedCode ->
+        viewModel.addToCartByBarcode(scannedCode) { res ->
+            when (res) {
+                is BarcodeAddResult.Added -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    showMessage("${res.productName} ditambah")
+                }
+                is BarcodeAddResult.OutOfStock -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    showMessage("Stok ${res.productName} habis/tidak mencukupi")
+                }
+                is BarcodeAddResult.NotFound -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    showMessage("Produk barcode \"$scannedCode\" tidak ditemukan")
                 }
             }
-        }
-    }
-    val quickScanPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            val options = ScanOptions().apply {
-                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
-                setPrompt("Scan barcode produk")
-                setBeepEnabled(true)
-                setOrientationLocked(true)
-                setCaptureActivity(BarcodeCaptureActivity::class.java)
-                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
-            }
-            quickScanLauncher.launch(options)
-        } else {
-            showMessage("Izin kamera diperlukan untuk scan barcode")
         }
     }
 
@@ -154,10 +131,6 @@ fun SalesTransactionScreen(
         if (editingSaleId != null) {
             viewModel.loadSaleIntoCart(editingSaleId)
         }
-    }
-
-    LaunchedEffect(uiState.cartItems) {
-        viewModel.calculatePoints()
     }
 
     Scaffold(
@@ -183,7 +156,7 @@ fun SalesTransactionScreen(
                 },
                 windowInsets = WindowInsets.statusBars,
                 actions = {
-                    IconButton(onClick = { quickScanPermissionLauncher.launch(android.Manifest.permission.CAMERA) }) {
+                    IconButton(onClick = { quickScan() }) {
                         Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                     if (uiState.heldOrders.isNotEmpty()) {
@@ -405,9 +378,12 @@ fun SalesTransactionScreen(
             selectedCustomer = uiState.selectedCustomer,
             customers = uiState.customers,
             pointsRedeemed = uiState.pointsRedeemed,
+            discount = uiState.discount,
             onSelectCustomer = { viewModel.setSelectedCustomer(it) },
             onPointsRedeemedChange = { viewModel.setPointsRedeemed(it) },
             onDiscountChange = { viewModel.setDiscount(it) },
+            isProcessing = uiState.isProcessing,
+            errorMessage = uiState.error,
             onDismiss = { showPaymentMethodSelector = false },
             onProcess = { paid, method ->
                 viewModel.setPaid(paid)
@@ -446,6 +422,15 @@ fun SalesTransactionScreen(
                 }
             }
         )
+    }
+
+    // Error saat dialog bayar terbuka tampil di dialog; selain itu lewat snackbar.
+    LaunchedEffect(uiState.error, showPaymentMethodSelector) {
+        val error = uiState.error
+        if (error != null && !showPaymentMethodSelector) {
+            showMessage(error)
+            viewModel.clearError()
+        }
     }
 
     LaunchedEffect(showSuccessDialog) {
@@ -585,7 +570,7 @@ fun HeldOrdersDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Pesanan Ditahan", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Tutup") }
                     }
                     if (!cartIsEmpty) {
                         Spacer(Modifier.height(8.dp))
@@ -821,30 +806,7 @@ fun ProductSelectorDialog(
         }
     }
     
-    val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        val scannedCode = result.contents
-        if (!scannedCode.isNullOrBlank()) {
-            onSearchQueryChange(scannedCode)
-        }
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            val options = ScanOptions().apply {
-                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
-                setPrompt("Scan barcode produk")
-                setBeepEnabled(true)
-                setOrientationLocked(true)
-                setCaptureActivity(BarcodeCaptureActivity::class.java)
-                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
-            }
-            barcodeLauncher.launch(options)
-        } else {
-            android.widget.Toast.makeText(context, "Izin kamera diperlukan untuk scan barcode", android.widget.Toast.LENGTH_SHORT).show()
-        }
-    }
+val scanBarcode = rememberBarcodeScanner { onSearchQueryChange(it) }
     
     BasicAlertDialog(
         onDismissRequest = onDismiss,
@@ -863,7 +825,7 @@ fun ProductSelectorDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Pilih Produk", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Tutup") }
                     }
                     
                     Spacer(Modifier.height(16.dp))
@@ -874,8 +836,8 @@ fun ProductSelectorDialog(
                         placeholder = { Text("Cari nama atau barcode...") },
                         leadingIcon = { Icon(Icons.Default.Search, null) },
                         trailingIcon = {
-                            IconButton(onClick = { cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA) }) {
-                                Icon(Icons.Default.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary)
+                            IconButton(onClick = { scanBarcode() }) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode", tint = MaterialTheme.colorScheme.primary)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -986,16 +948,21 @@ fun PaymentMethodSelectorDialog(
     selectedCustomer: CustomerEntity?,
     customers: List<CustomerEntity>,
     pointsRedeemed: Int,
+    discount: Double = 0.0,
     onSelectCustomer: (CustomerEntity?) -> Unit,
     onPointsRedeemedChange: (Int) -> Unit,
     onDiscountChange: (Double) -> Unit,
+    isProcessing: Boolean = false,
+    errorMessage: String? = null,
     onDismiss: () -> Unit,
     onProcess: (Double, PaymentMethodEntity) -> Unit
 ) {
     var paidText by remember { mutableStateOf(BigDecimal.valueOf(total).stripTrailingZeros().toPlainString()) }
-    var discountInput by remember { mutableStateOf("0") }
+    // Mulai dari diskon yang sudah ada di VM; kalau tidak, dialog yang dibuka ulang
+    // tampil 0 padahal total masih terdiskon, dan % dihitung dari basis yang salah.
+    var discountInput by remember { mutableStateOf(discount.toLong().toString()) }
     var discountIsPercent by remember { mutableStateOf(false) }
-    var appliedDiscountRp by remember { mutableStateOf(0.0) }
+    var appliedDiscountRp by remember { mutableStateOf(discount) }
     var selectedMethod by remember { mutableStateOf<PaymentMethodEntity?>(paymentMethods.firstOrNull()) }
     var customerExpanded by remember { mutableStateOf(false) }
 
@@ -1005,6 +972,13 @@ fun PaymentMethodSelectorDialog(
     val subtotalValue = total + appliedDiscountRp + (pointsRedeemed * 100.0)
     val paidValue = paidText.toDoubleOrNull() ?: 0.0
     val changeValue = paidValue - currentTotal
+
+    // Ikuti total baru (diskon/poin berubah) selama kasir belum mengetik nominal sendiri.
+    var lastTotal by remember { mutableStateOf(currentTotal) }
+    LaunchedEffect(currentTotal) {
+        if (paidText.toDoubleOrNull() == lastTotal) paidText = currentTotal.toLong().toString()
+        lastTotal = currentTotal
+    }
 
     // Terapkan diskon (Rp atau %) ke VM. % dihitung dari subtotal yang stabil.
     fun applyDiscount(rawInput: String, isPercent: Boolean) {
@@ -1075,6 +1049,32 @@ fun PaymentMethodSelectorDialog(
                                 }
                             }
                         }
+                    }
+
+                    if (selectedCustomer != null && (selectedCustomer.points > 0 || pointsRedeemed > 0)) {
+                        var pointsText by remember(selectedCustomer.id) {
+                            mutableStateOf(if (pointsRedeemed > 0) pointsRedeemed.toString() else "")
+                        }
+                        OutlinedTextField(
+                            value = pointsText,
+                            onValueChange = {
+                                if (it.length <= 7 && it.all { ch -> ch.isDigit() }) {
+                                    pointsText = it
+                                    onPointsRedeemedChange(it.toIntOrNull() ?: 0)
+                                }
+                            },
+                            label = { Text("Tukar Poin") },
+                            supportingText = {
+                                Text(
+                                    "Saldo ${selectedCustomer.points} poin · 1 poin = Rp100" +
+                                        if (pointsRedeemed > 0) " · dipakai $pointsRedeemed (−${formatCurrency(pointsRedeemed * 100.0)})" else ""
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
                     }
 
                     // Diskon: toggle Rp / %
@@ -1220,13 +1220,25 @@ fun PaymentMethodSelectorDialog(
                     val isCustomerSelected = selectedCustomer != null
                     val isPaidValid = if (isDebt) true else paidValue >= currentTotal
 
+                    if (errorMessage != null) {
+                        Text(
+                            errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
                     Button(
                         onClick = { if (selectedMethod != null) onProcess(paidValue, selectedMethod!!) },
-                        enabled = selectedMethod != null && (!isDebt || isCustomerSelected) && isPaidValid,
+                        enabled = !isProcessing && selectedMethod != null && (!isDebt || isCustomerSelected) && isPaidValid,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("KONFIRMASI PEMBAYARAN", fontWeight = FontWeight.Bold)
+                        if (isProcessing) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("KONFIRMASI PEMBAYARAN", fontWeight = FontWeight.Bold)
+                        }
                     }
                     
                     TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {

@@ -41,7 +41,7 @@ class DashboardViewModel(
                 productRepository.productCount,
                 customerRepository.customerCount,
                 saleRepository.saleCount,
-                productRepository.getLowStockProducts().map { it.size }
+                productRepository.lowStockCount
             ) { products, customers, sales, lowStock ->
                 _uiState.update { 
                     it.copy(
@@ -116,15 +116,5 @@ class DashboardViewModel(
 
     fun refresh() {
         loadDashboardData()
-    }
-}
-
-private fun <T> MutableStateFlow<T>.update(function: (T) -> T) {
-    while (true) {
-        val prevValue = value
-        val nextValue = function(prevValue)
-        if (compareAndSet(prevValue, nextValue)) {
-            return
-        }
     }
 }

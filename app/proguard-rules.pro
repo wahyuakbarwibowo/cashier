@@ -7,10 +7,6 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# react-native-reanimated
--keep class com.swmansion.reanimated.** { *; }
--keep class com.facebook.react.turbomodule.** { *; }
-
 # Add any project specific keep options here:
 
 # Room - Keep entity classes and DAOs
@@ -32,29 +28,3 @@
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -dontwarn kotlinx.coroutines.**
-
-# Kotlin - Metadata compatibility with R8
--dontwarn kotlin.Metadata
--dontwarn kotlin.**
--keep class kotlin.** { *; }
--keep class kotlin.Metadata { *; }
--dontwarn kotlin.Unit
--keepclassmembers class **$WhenMappings {
-    <fields>;
-}
--keepclassmembers class kotlin.Metadata {
-    public <methods>;
-}
-
-# Kotlinx Metadata (for R8 compatibility with newer Kotlin versions)
--keep class kotlin.Metadata { *; }
--keep class kotlin.jvm.internal.** { *; }
--keep class kotlin.reflect.** { *; }
--dontwarn kotlin.reflect.**
-
-# Keep generic signature of Call, Response (R8 full mode strips signatures from non-kept items)
--keep,allowobfuscation,allowshrinking interface retrofit2.Call
--keep,allowobfuscation,allowshrinking class retrofit2.Response
-
-# With R8 full mode, it is no longer possible to keep the line numbers
--dontoptimize

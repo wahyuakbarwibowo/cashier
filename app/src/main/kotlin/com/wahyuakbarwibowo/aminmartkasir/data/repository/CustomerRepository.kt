@@ -29,11 +29,9 @@ class CustomerRepository(private val customerDao: CustomerDao) {
     }
 
     suspend fun delete(customer: CustomerEntity) {
-        customerDao.delete(customer)
-    }
-
-    suspend fun deleteById(id: Long) {
-        customerDao.deleteById(id)
+        if (customerDao.deleteIfNoUnpaidReceivable(customer.id) == 0) {
+            throw IllegalStateException("${customer.name} masih punya piutang belum lunas. Lunasi dulu sebelum dihapus.")
+        }
     }
 
     suspend fun addPoints(id: Long, points: Int) {

@@ -54,8 +54,6 @@ Aminmart Cashier is a versatile solution for UMKM and modern retail. This web pr
 ├── delete-account.html  # Account deletion request page
 ├── stats.html           # Statistics page
 ├── stats.json           # Statistics data
-├── update-stats.js      # Client-side stats updater
-├── update-stats.php     # Server-side stats updater
 └── apk/
     ├── cashier/
     │   └── app-arm64-v8a-release.apk  # Aminmart Cashier APK

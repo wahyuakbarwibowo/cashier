@@ -48,7 +48,17 @@ fun CustomersScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(uiState.error, uiState.successMessage) {
+        val message = uiState.error ?: uiState.successMessage
+        if (message != null) {
+            viewModel.clearMessages()
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Manajemen Pelanggan") },

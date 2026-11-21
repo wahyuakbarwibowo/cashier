@@ -32,15 +32,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PurchaseViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
-import android.Manifest
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
-import com.google.zxing.client.android.Intents
-import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
+import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.rememberBarcodeScanner
 import com.wahyuakbarwibowo.aminmartkasir.utils.RupiahVisualTransformation
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -565,30 +558,7 @@ private fun AddPurchaseItemDialog(
     val qty = qtyText.toIntOrNull() ?: 0
     val price = priceText.toDoubleOrNull() ?: 0.0
 
-    val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        val scannedCode = result.contents
-        if (!scannedCode.isNullOrBlank()) {
-            onSearchQueryChange(scannedCode)
-        }
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            val options = ScanOptions().apply {
-                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
-                setPrompt("Scan barcode produk untuk pembelian")
-                setBeepEnabled(true)
-                setOrientationLocked(true)
-                setCaptureActivity(BarcodeCaptureActivity::class.java)
-                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
-            }
-            barcodeLauncher.launch(options)
-        } else {
-            Toast.makeText(context, "Izin kamera diperlukan untuk scan barcode", Toast.LENGTH_SHORT).show()
-        }
-    }
+    val scanBarcode = rememberBarcodeScanner(prompt = "Scan barcode produk untuk pembelian") { onSearchQueryChange(it) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -616,7 +586,7 @@ private fun AddPurchaseItemDialog(
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon = {
                             IconButton(onClick = {
-                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                scanBarcode()
                             }) {
                                 Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
                             }
@@ -634,7 +604,8 @@ private fun AddPurchaseItemDialog(
                                 enabled = false
                             )
                         } else {
-                            products.forEach { product ->
+                            // Dropdown tidak lazy; batasi supaya ribuan produk tidak dirender sekaligus.
+                            products.take(30).forEach { product ->
                                 DropdownMenuItem(
                                     text = {
                                         Column {

@@ -15,12 +15,6 @@ interface SaleDao {
     @Query("SELECT * FROM sales WHERE id = :id")
     suspend fun getSaleById(id: Long): SaleEntity?
 
-    @Query("SELECT * FROM sales ORDER BY id DESC")
-    fun getSalesByDateRange(): Flow<List<SaleEntity>>
-
-    @Query("SELECT * FROM sales ORDER BY id DESC LIMIT :limit OFFSET :offset")
-    suspend fun getSalesByDateRange(limit: Int, offset: Int): List<SaleEntity>
-
     @Query("SELECT SUM(total) FROM sales WHERE createdAt >= :startDate AND createdAt <= :endDate")
     suspend fun getTotalSalesByDateRange(startDate: String, endDate: String): Double?
 
@@ -39,7 +33,7 @@ interface SaleDao {
     @Query("SELECT * FROM sales WHERE createdAt >= :startDate AND createdAt <= :endDate ORDER BY id DESC")
     suspend fun getSalesByDateRange(startDate: String, endDate: String): List<SaleEntity>
 
-    @Query("SELECT * FROM sales WHERE CAST(id AS TEXT) LIKE '%' || :query || '%' OR createdAt LIKE '%' || :query || '%' ORDER BY id DESC LIMIT :limit")
+    @Query("SELECT * FROM sales WHERE instr(CAST(id AS TEXT), :query) > 0 OR instr(LOWER(createdAt), LOWER(:query)) > 0 ORDER BY id DESC LIMIT :limit")
     suspend fun searchSales(query: String, limit: Int = 20): List<SaleEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

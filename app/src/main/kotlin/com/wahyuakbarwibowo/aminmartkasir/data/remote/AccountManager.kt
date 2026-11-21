@@ -9,6 +9,7 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.PostgrestUpdate
 import io.github.jan.supabase.functions.functions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,19 +38,31 @@ object AccountManager {
     }
 
     suspend fun approve(userId: String, storeId: String?, role: UserRole) {
-        profiles.update({
+        updateProfile(userId) {
             set("store_id", storeId)
             set("role", role)
             set("is_approved", true)
-        }) { filter { eq("id", userId) } }
+        }
     }
 
     suspend fun setActive(userId: String, active: Boolean) {
-        profiles.update({ set("is_active", active) }) { filter { eq("id", userId) } }
+        updateProfile(userId) { set("is_active", active) }
     }
 
     suspend fun setRole(userId: String, role: UserRole) {
-        profiles.update({ set("role", role) }) { filter { eq("id", userId) } }
+        updateProfile(userId) { set("role", role) }
+    }
+
+    /**
+     * Baris yang disaring RLS tetap menghasilkan 200 dengan 0 baris, jadi minta baris
+     * hasil update dan anggap kosong sebagai ditolak; kalau tidak, UI melapor berhasil.
+     */
+    private suspend fun updateProfile(userId: String, values: PostgrestUpdate.() -> Unit) {
+        val updated = profiles.update(values) {
+            select()
+            filter { eq("id", userId) }
+        }.decodeList<UserProfile>()
+        check(updated.isNotEmpty()) { "Tidak berhak mengubah akun ini." }
     }
 
     suspend fun deleteUser(userId: String) {

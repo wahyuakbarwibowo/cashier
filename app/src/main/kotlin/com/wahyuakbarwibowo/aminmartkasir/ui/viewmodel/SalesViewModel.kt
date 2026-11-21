@@ -1,5 +1,6 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
@@ -11,6 +12,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 sealed class BarcodeAddResult {
     data class Added(val productName: String) : BarcodeAddResult()
@@ -40,6 +43,7 @@ data class SalesTransactionUiState(
     val canLoadMore: Boolean = true,
     val editingSaleId: Long? = null,
     val heldOrders: List<HeldOrder> = emptyList(),
+    val isProcessing: Boolean = false,
     val error: String? = null
 )
 
@@ -52,6 +56,27 @@ data class HeldOrder(
     val createdAt: String
 )
 
+/** Keranjang ringkas untuk SavedStateHandle; entity diambil ulang dari DB saat dipulihkan. */
+@Serializable
+private data class SavedCart(
+    val lines: List<SavedLine>,
+    val customerId: Long? = null,
+    val discount: Double = 0.0,
+    val pointsRedeemed: Int = 0
+)
+
+@Serializable
+private data class SavedLine(
+    val productId: Long,
+    val variantId: Long? = null,
+    val qty: Int,
+    val price: Double,
+    val costPrice: Double,
+    val subtotal: Double
+)
+
+private const val SAVED_CART_KEY = "cart"
+
 data class CartItem(
     val product: ProductEntity,
     val variant: ProductVariantEntity? = null,
@@ -61,6 +86,21 @@ data class CartItem(
     val subtotal: Double
 )
 
+/**
+ * Subtotal satu baris produk tanpa varian: harga paket untuk tiap kelipatan packageQty
+ * (hanya bila harga paket diisi), sisanya harga satuan, lalu diskon produk (%),
+ * dibulatkan ke rupiah.
+ */
+internal fun productLineSubtotal(product: ProductEntity, qty: Int): Double {
+    val gross = if (product.packageQty > 0 && product.packagePrice > 0) {
+        (qty / product.packageQty) * product.packagePrice + (qty % product.packageQty) * product.sellingPrice
+    } else {
+        qty * product.sellingPrice
+    }
+    val discountPercent = product.discount.coerceIn(0.0, 100.0)
+    return Math.round(gross * (1 - discountPercent / 100)).toDouble()
+}
+
 class SalesViewModel(
     private val productRepository: ProductRepository,
     private val productVariantRepository: ProductVariantRepository,
@@ -69,7 +109,8 @@ class SalesViewModel(
     private val saleRepository: SaleRepository,
     private val stockHistoryRepository: StockHistoryRepository,
     private val customerPointsHistoryRepository: CustomerPointsHistoryRepository,
-    private val receivableRepository: ReceivableRepository
+    private val receivableRepository: ReceivableRepository,
+    private val savedState: SavedStateHandle = SavedStateHandle()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SalesTransactionUiState())
@@ -83,6 +124,54 @@ class SalesViewModel(
 
     init {
         loadInitialData()
+        restoreCart()
+        persistCart()
+    }
+
+    /** Android bisa mematikan proses saat app di latar belakang; jangan sampai keranjang hilang. */
+    private fun restoreCart() {
+        val json = savedState.get<String>(SAVED_CART_KEY) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val saved = runCatching { Json.decodeFromString<SavedCart>(json) }.getOrNull() ?: return@launch
+            val items = saved.lines.mapNotNull { line ->
+                val product = productRepository.getProductById(line.productId) ?: return@mapNotNull null
+                val variant = line.variantId?.let { productVariantRepository.getVariantById(it) ?: return@mapNotNull null }
+                CartItem(product, variant, line.qty, line.price, line.costPrice, line.subtotal)
+            }
+            val customer = saved.customerId?.let { customerRepository.getCustomerById(it) }
+            _uiState.update { state ->
+                if (state.cartItems.isNotEmpty() || state.editingSaleId != null) state
+                else recalculateState(
+                    state.copy(
+                        cartItems = items,
+                        selectedCustomer = customer,
+                        discount = saved.discount,
+                        pointsRedeemed = if (customer != null) saved.pointsRedeemed else 0
+                    )
+                )
+            }
+        }
+    }
+
+    private fun persistCart() {
+        viewModelScope.launch {
+            uiState
+                .map { s ->
+                    // Transaksi yang sedang diedit dimuat ulang dari argumen navigasi.
+                    if (s.editingSaleId != null || s.cartItems.isEmpty()) null
+                    else SavedCart(
+                        lines = s.cartItems.map {
+                            SavedLine(it.product.id, it.variant?.id, it.qty, it.price, it.costPrice, it.subtotal)
+                        },
+                        customerId = s.selectedCustomer?.id,
+                        discount = s.discount,
+                        pointsRedeemed = s.pointsRedeemed
+                    )
+                }
+                .distinctUntilChanged()
+                .drop(1) // emisi awal (keranjang kosong) jangan menimpa yang sedang dipulihkan
+                .collect { savedState[SAVED_CART_KEY] = it?.let { cart -> Json.encodeToString(SavedCart.serializer(), cart) } }
+        }
     }
 
     private fun loadInitialData() {
@@ -179,6 +268,11 @@ class SalesViewModel(
         }
     }
 
+    /** Daftar halaman (non-pencarian) adalah snapshot; muat ulang agar stok di selector tidak basi. */
+    private fun refreshStockAfterSale() {
+        if (_uiState.value.searchQuery.isBlank()) loadInitialProducts()
+    }
+
     fun refreshProducts() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshingProducts = true) }
@@ -188,23 +282,12 @@ class SalesViewModel(
         }
     }
 
-    private fun getPricePerUnit(product: ProductEntity, qty: Int): Double {
-        return if (product.packageQty > 0 && qty >= product.packageQty) {
-            product.packagePrice / product.packageQty
-        } else {
-            product.sellingPrice
-        }
-    }
+    private fun lineSubtotal(product: ProductEntity, variant: ProductVariantEntity?, qty: Int): Double =
+        variant?.let { it.sellingPrice * qty } ?: productLineSubtotal(product, qty)
 
-    private fun calculateSubtotal(product: ProductEntity, qty: Int): Double {
-        val totalDiscount = product.discount * qty
-        return if (product.packageQty > 0 && product.packagePrice > 0) {
-            val packages = qty / product.packageQty
-            val remainder = qty % product.packageQty
-            (packages * product.packagePrice) + (remainder * product.sellingPrice) - totalDiscount
-        } else {
-            (qty * product.sellingPrice) - totalDiscount
-        }
+    private fun pricedItem(item: CartItem, qty: Int): CartItem {
+        val subtotal = lineSubtotal(item.product, item.variant, qty)
+        return item.copy(qty = qty, price = subtotal / qty, subtotal = subtotal)
     }
 
     suspend fun getVariantsByProductId(productId: Long): List<ProductVariantEntity> {
@@ -224,26 +307,19 @@ class SalesViewModel(
         _uiState.update { state ->
             val newCartItems = if (existingItem != null) {
                 state.cartItems.map {
-                    if (it.product.id == product.id && it.variant?.id == variant?.id) {
-                        val newQty = it.qty + 1
-                        val unitPrice = variant?.sellingPrice ?: getPricePerUnit(product, newQty)
-                        it.copy(
-                            qty = newQty, 
-                            price = unitPrice,
-                            subtotal = unitPrice * newQty
-                        )
-                    } else {
-                        it
-                    }
+                    if (it.product.id == product.id && it.variant?.id == variant?.id) pricedItem(it, it.qty + 1) else it
                 }
             } else {
-                state.cartItems + CartItem(
-                    product = product,
-                    variant = variant,
-                    qty = 1,
-                    price = variant?.sellingPrice ?: getPricePerUnit(product, 1),
-                    costPrice = variant?.purchasePrice ?: product.purchasePrice,
-                    subtotal = variant?.sellingPrice ?: getPricePerUnit(product, 1)
+                state.cartItems + pricedItem(
+                    CartItem(
+                        product = product,
+                        variant = variant,
+                        qty = 1,
+                        price = 0.0,
+                        costPrice = variant?.purchasePrice ?: product.purchasePrice,
+                        subtotal = 0.0
+                    ),
+                    1
                 )
             }
             recalculateState(state.copy(cartItems = newCartItems))
@@ -267,16 +343,7 @@ class SalesViewModel(
 
         _uiState.update { state ->
             val newCartItems = state.cartItems.map {
-                if (it.product.id == productId && it.variant?.id == variantId) {
-                    val unitPrice = it.variant?.sellingPrice ?: getPricePerUnit(it.product, qty)
-                    it.copy(
-                        qty = qty, 
-                        price = unitPrice,
-                        subtotal = unitPrice * qty
-                    )
-                } else {
-                    it
-                }
+                if (it.product.id == productId && it.variant?.id == variantId) pricedItem(it, qty) else it
             }
             recalculateState(state.copy(cartItems = newCartItems))
         }
@@ -332,12 +399,15 @@ class SalesViewModel(
     private fun recalculateState(state: SalesTransactionUiState): SalesTransactionUiState {
         val subtotal = state.cartItems.sumOf { it.subtotal }
         val pointsValue = state.pointsRedeemed * 100
-        val total = (subtotal - state.discount - pointsValue).coerceAtLeast(0.0)
+        // Diskon persen bisa menghasilkan pecahan; total harus rupiah utuh agar "Uang Pas"
+        // (paid = total) lolos validasi pembayaran.
+        val total = Math.round(subtotal - state.discount - pointsValue).toDouble().coerceAtLeast(0.0)
         val change = state.paid - total
         return state.copy(
             subtotal = subtotal,
             total = total,
-            change = change
+            change = change,
+            pointsEarned = (total / 10000).toInt() // 1 poin per Rp 10.000, setelah diskon
         )
     }
 
@@ -360,17 +430,36 @@ class SalesViewModel(
     }
 
     fun setSelectedCustomer(customer: CustomerEntity?) {
-        _uiState.update { it.copy(selectedCustomer = customer) }
+        // Poin yang ditukar milik pelanggan sebelumnya; mulai lagi dari nol.
+        _uiState.update { recalculateState(it.copy(selectedCustomer = customer, pointsRedeemed = 0)) }
     }
 
     fun setSelectedPaymentMethod(paymentMethod: PaymentMethodEntity?) {
         _uiState.update { it.copy(selectedPaymentMethod = paymentMethod) }
     }
 
+    /** Dibatasi saldo poin pelanggan dan sisa tagihan setelah diskon (1 poin = Rp100). */
     fun setPointsRedeemed(points: Int) {
         _uiState.update { currentState ->
-            recalculateState(currentState.copy(pointsRedeemed = points))
+            val balance = currentState.selectedCustomer?.points ?: 0
+            val byTotal = ((currentState.subtotal - currentState.discount) / 100).toInt()
+            val max = minOf(balance, byTotal).coerceAtLeast(0)
+            recalculateState(currentState.copy(pointsRedeemed = points.coerceIn(0, max)))
         }
+    }
+
+    /** Set isProcessing secara atomik; false bila transaksi lain masih berjalan (cegah tap ganda). */
+    private fun tryStartProcessing(): Boolean {
+        var started = false
+        _uiState.update {
+            started = !it.isProcessing
+            if (started) it.copy(isProcessing = true, error = null) else it
+        }
+        return started
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 
     /** Simpan payment method "Hutang" virtual (id=-1, dibuat sementara di UI) sebagai row nyata agar bisa di-resolve lagi saat edit transaksi. */
@@ -381,6 +470,7 @@ class SalesViewModel(
     }
 
     fun processTransaction(onComplete: (saleId: Long) -> Unit = {}) {
+        if (!tryStartProcessing()) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
@@ -420,25 +510,6 @@ class SalesViewModel(
                     )
                 }
 
-                val stockUpdates = currentState.cartItems.map { item ->
-                    Triple(item.product.id, item.variant?.id, item.qty)
-                }
-
-                val stockHistories = currentState.cartItems.map { item ->
-                    val before = item.variant?.stock ?: item.product.stock
-                    val after = (before - item.qty).coerceAtLeast(0)
-                    val name = item.variant?.let { "${item.product.name} - ${it.name}" } ?: item.product.name
-                    StockHistoryEntity(
-                        productId = item.product.id,
-                        productName = name,
-                        changeQty = -item.qty,
-                        stockBefore = before,
-                        stockAfter = after,
-                        reason = "", // Akan di-copy di repository dengan saleId yang sesuai
-                        createdAt = DateUtils.nowDateTime()
-                    )
-                }
-
                 val receivable = if (selectedPaymentMethod?.name?.contains("Hutang", ignoreCase = true) == true) {
                     ReceivableEntity(
                         saleId = 0,
@@ -455,8 +526,6 @@ class SalesViewModel(
                 val saleId = saleRepository.checkoutSaleTransaction(
                     sale = sale,
                     items = saleItems,
-                    stockUpdates = stockUpdates,
-                    stockHistories = stockHistories,
                     pointsEarned = currentState.pointsEarned,
                     pointsRedeemed = currentState.pointsRedeemed,
                     customerId = currentState.selectedCustomer?.id,
@@ -465,16 +534,22 @@ class SalesViewModel(
 
                 // Clear cart
                 clearCart()
+                refreshStockAfterSale()
 
                 onComplete(saleId)
                 
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(error = e.message ?: "Transaksi gagal disimpan") }
+            } finally {
+                _uiState.update { it.copy(isProcessing = false) }
             }
         }
     }
 
     fun loadSaleIntoCart(saleId: Long) {
+        // LaunchedEffect jalan lagi setiap layar kembali tampil (mis. dari Produk Baru);
+        // jangan timpa keranjang yang sedang diedit dengan versi DB.
+        if (_uiState.value.editingSaleId == saleId) return
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             try {
@@ -500,7 +575,10 @@ class SalesViewModel(
                     } else null
                 }
 
+                // Poin yang dulu ditukar di transaksi ini dikembalikan saat disimpan ulang,
+                // jadi boleh dipakai lagi saat edit.
                 val customer = sale.customerId?.let { customerRepository.getCustomerById(it) }
+                    ?.let { it.copy(points = it.points + sale.pointsRedeemed) }
                 val paymentMethod = sale.paymentMethodId?.let { paymentMethodRepository.getPaymentMethodById(it) }
 
                 _uiState.update { state ->
@@ -509,7 +587,9 @@ class SalesViewModel(
                             cartItems = cartItems,
                             selectedCustomer = customer,
                             selectedPaymentMethod = paymentMethod,
-                            discount = (cartItems.sumOf { it.subtotal } - sale.total).coerceAtLeast(0.0),
+                            // sale.total sudah dikurangi nilai poin; jangan hitung poin dua kali
+                            discount = (cartItems.sumOf { it.subtotal } - sale.total - sale.pointsRedeemed * 100)
+                                .coerceAtLeast(0.0),
                             pointsRedeemed = sale.pointsRedeemed,
                             editingSaleId = saleId,
                             isLoading = false
@@ -578,16 +658,8 @@ class SalesViewModel(
         _uiState.update { it.copy(heldOrders = it.heldOrders.filterNot { o -> o.id == id }) }
     }
 
-    fun calculatePoints() {
-        val currentState = _uiState.value
-        val pointsEarned = (currentState.total / 10000).toInt() // Asumsi 1 point per Rp 10.000
-
-        _uiState.update {
-            it.copy(pointsEarned = pointsEarned)
-        }
-    }
-
     fun updateTransaction(saleId: Long, onUpdateComplete: () -> Unit) {
+        if (!tryStartProcessing()) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
@@ -625,8 +697,9 @@ class SalesViewModel(
                     change = currentState.change,
                     pointsEarned = currentState.pointsEarned,
                     pointsRedeemed = currentState.pointsRedeemed,
-                    profit = newProfit,
-                    createdAt = DateUtils.nowDateTime()
+                    profit = newProfit
+                    // createdAt sengaja dipertahankan: edit tidak boleh memindahkan transaksi
+                    // ke laporan/shift hari ini.
                 )
 
                 // Siapkan item penjualan baru
@@ -677,10 +750,13 @@ class SalesViewModel(
                 )
 
                 clearCart()
+                refreshStockAfterSale()
                 onUpdateComplete()
 
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(error = e.message ?: "Transaksi gagal disimpan") }
+            } finally {
+                _uiState.update { it.copy(isProcessing = false) }
             }
         }
     }

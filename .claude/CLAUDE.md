@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Aminmart Cashier** — Android POS + PPOB app for small retail businesses. Kotlin + Jetpack Compose + Room (SQLite). Fully offline. UI in Indonesian.
+**Aminmart Cashier** — Android POS + PPOB app for small retail businesses. Kotlin + Jetpack Compose + Room (SQLite). Offline-first: transactions live in a local DB per store; Supabase handles login, staff/tenant management, cloud backup, and product sync. UI in Indonesian.
 
 ## Development Commands
 
@@ -20,6 +20,12 @@ make db-pull        # Pull database file from device
 make db-clear       # Clear all app data on device
 ```
 
+Room migration tests (instrumented, need a device/emulator; schema JSON in `app/schemas/`):
+```bash
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.wahyuakbarwibowo.aminmartkasir.data.local.MigrationTest
+```
+Every new `Migration(n, n+1)` must be added to `MigrationTest`.
+
 Single test class/method (no make target — call gradle directly):
 ```bash
 ./gradlew testDebugUnitTest --tests "com.wahyuakbarwibowo.aminmartkasir.SomeTest"
@@ -33,7 +39,7 @@ make bundle-signed    # Signed AAB
 ```
 
 Package name: `com.wahyuakbarwibowo.aminmartkasir`
-DB name: `kasir_database` (Room, version 11)
+DB name: one file per store via `TenantDatabaseFiles.name(storeId)` (Room, version 16)
 
 ## Architecture
 
@@ -52,17 +58,18 @@ DB name: `kasir_database` (Room, version 11)
 app/src/main/kotlin/.../aminmartkasir/
 ├── data/
 │   ├── local/
-│   │   ├── AppDatabase.kt       # Room DB singleton, version 11, explicit Migration objects
+│   │   ├── AppDatabase.kt       # Room DB per store, version 16, explicit Migration objects
 │   │   ├── dao/                 # 19 DAOs
-│   │   ├── entity/              # Room entities
-│   │   └── converter/           # TypeConverters
-│   └── repository/              # Repository per domain (15 repos)
+│   │   └── entity/              # 20 Room entities
+│   ├── remote/                  # Supabase: AuthManager, AccountManager, FeatureAccessManager
+│   ├── sync/                    # ProductSyncWorker (WorkManager)
+│   └── repository/              # Repository per domain
 ├── ui/
 │   ├── screens/                 # Compose screens
-│   ├── viewmodel/               # ViewModels + ViewModelFactory + UiState
+│   ├── viewmodel/               # ViewModels + ViewModelFactory
 │   ├── components/              # Shared composables
 │   ├── navigation/              # Nav graph
-│   ├── scanner/                 # Barcode camera
+│   ├── scanner/                 # Barcode camera; use rememberBarcodeScanner() for permission + scan
 │   └── theme/
 ├── utils/
 │   ├── BluetoothPrinterHelper.kt
@@ -73,25 +80,33 @@ app/src/main/kotlin/.../aminmartkasir/
 
 ### Database
 
-`AppDatabase` is a singleton (`@Volatile` + `synchronized`). Get instance via `AppDatabase.getDatabase(context)`. Current `version = 11`. **Schema changes use real `Migration` objects** (registered via `.addMigrations(...)` in `getDatabase`) for version 9 and above — adding entities/columns requires bumping `version` AND writing a `Migration(n, n+1)` object with the raw SQL. Do not wipe device data; data must survive upgrades. Versions 1-8 predate this policy and have no schema snapshots, so `.fallbackToDestructiveMigrationFrom(1..8)` is scoped to just those legacy starting versions to unblock devices stuck there — never widen that range going forward.
+`AppDatabase` keeps one instance per store (`synchronized` map). Get it via `AppDatabase.getDatabase(context, storeId)`. Current `version = 16`. **Schema changes use real `Migration` objects** (registered via `.addMigrations(...)` in `getDatabase`) for version 9 and above — adding entities/columns requires bumping `version` AND writing a `Migration(n, n+1)` object with the raw SQL. Do not wipe device data; data must survive upgrades. Versions 1-8 predate this policy and have no schema snapshots, so `.fallbackToDestructiveMigrationFrom(1..8)` is scoped to just those legacy starting versions to unblock devices stuck there — never widen that range going forward.
 
 20 entities (19 DAOs) including: `ProductEntity`, `ProductVariantEntity`, `SaleEntity`, `SaleItemEntity`, `PurchaseEntity`, `ReceivableEntity`, `PayableEntity`, `PhoneHistoryEntity`, `DigitalProductEntity`, `DigitalCategoryEntity`, `ExpenseEntity`, `CustomerPointsHistoryEntity`, `StockHistoryEntity`, `ShiftEntity`.
 
 ### State Management
 
-All screen state lives in ViewModels (no shared state/global store). `ViewModelFactory` manually wires repositories into ViewModels — add new VMs there. `UiState.kt` defines sealed class for loading/success/error.
+All screen state lives in ViewModels (no shared state/global store, except `AuthManager.state` for the signed-in profile). `ViewModelFactory` manually wires repositories into ViewModels — add new VMs there.
 
 ### Key Business Logic
 
-- **Auto-Receivables**: When sale payment < total, `SaleRepository` auto-creates a `ReceivableEntity`. Payment method containing "hutang" allows partial/zero payments.
+- **Auto-Receivables**: When sale payment < total, `SaleRepository` auto-creates a `ReceivableEntity`. Payment method containing "hutang" allows partial/zero payments. Payments use atomic SQL (`paidAmount = paidAmount + :x`).
+- **Stock writes**: Change stock only through DAO `@Transaction` helpers (`insertWithInitialStock`, `updateWithStockDelta`, `adjustStockWithHistory`, checkout in `SaleRepository`) so every change is a relative delta with a `StockHistoryEntity` row. Never write an absolute stock value read earlier.
 - **Product Variants**: `ProductVariantEntity` links to `ProductEntity`. Dual pricing: unit vs package (`package_price` / `package_qty`).
-- **Stock Validation**: `SalesViewModel` blocks checkout when stock insufficient.
+- **Stock Validation**: `SaleRepository` re-checks stock inside the checkout transaction and throws when insufficient; line totals come from `productLineSubtotal()`.
 - **Backdate**: Sales and digital transactions accept custom dates.
 - **Thermal Printing**: `BluetoothPrinterHelper.kt` handles 58mm receipt layout via Android Bluetooth API.
 - **Digital Categories**: Dynamic CRUD in `DigitalCategoryDao` — categories (PULSA, PLN, PDAM, etc.) are user-managed, not hardcoded.
 - **Backup/Restore**: `BackupRepository` exports/imports full DB as JSON.
-- **Shift Management**: `ShiftEntity` tracks cash drawer sessions (opening/counted cash, expected vs difference, open/closed status).
+- **Shift Management**: `ShiftEntity` tracks cash drawer sessions (opening/counted cash, expected vs difference, open/closed status). Expected cash counts only payment methods with `PaymentMethodEntity.isCash`.
 - **Global Search**: `GlobalSearchViewModel` runs DB-backed cross-entity search (products, sales, customers, etc.) from `GlobalSearchScreen`.
+
+### Supabase (server)
+
+- Schema lives in `supabase/migrations/` (numbered SQL, applied manually by the operator) and edge functions in `supabase/functions/`. Add a new numbered file; never edit an applied migration.
+- Access control is enforced by RLS + triggers on the server; UI role checks (`AppMenus.kt`) are convenience only.
+- Roles: `super_admin`, `admin`, `kasir`. `AuthManager` keeps a cached profile so the POS works offline; only a 400/401 on refresh ends the session.
+- Product sync: metadata is last-write-wins on `sync_updated_at` (server clamps future timestamps). Stock is synced as deltas: `ProductEntity.syncedStock` is the last stock agreed with the cloud, `stock - syncedStock` is pushed via RPC `add_product_stock`, and pulls keep unpushed local deltas. Upserts never send `stock`.
 
 ### Navigation
 

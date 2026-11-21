@@ -25,9 +25,13 @@ Deno.serve(async (request) => {
   const { data: { user }, error: authError } = await callerClient.auth.getUser(token);
   if (authError || !user) return json({ error: "Tidak terautentikasi" }, 401);
   const { data: caller } = await service.from("profiles")
-    .select("id, role, store_id, is_active").eq("id", user.id).maybeSingle();
+    .select("id, role, store_id, is_active, is_approved").eq("id", user.id).maybeSingle();
   if (!caller?.is_active) return json({ error: "Akun nonaktif" }, 403);
-  if (!["admin", "super_admin"].includes(caller.role)) return json({ error: "Akses ditolak" }, 403);
+  const isSuperAdmin = caller.role === "super_admin";
+  // Admin wajib sudah disetujui dan terikat ke toko; tanpa ini admin tanpa toko
+  // lolos cek store_id (null === null) dan bisa menghapus semua user tanpa toko.
+  const isStoreAdmin = caller.role === "admin" && caller.is_approved && caller.store_id != null;
+  if (!isSuperAdmin && !isStoreAdmin) return json({ error: "Akses ditolak" }, 403);
 
   let userId: string;
   try {
@@ -41,7 +45,7 @@ Deno.serve(async (request) => {
   const { data: target } = await service.from("profiles")
     .select("id, role, store_id").eq("id", userId).maybeSingle();
   if (!target) return json({ error: "User tidak ditemukan" }, 404);
-  if (caller.role === "admin" &&
+  if (!isSuperAdmin &&
       (target.store_id !== caller.store_id || !["admin", "kasir"].includes(target.role))) {
     return json({ error: "Akses ditolak untuk user ini" }, 403);
   }

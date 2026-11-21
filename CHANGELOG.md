@@ -16,6 +16,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-21
+
+### Added
+- Tukar poin pelanggan langsung di dialog pembayaran (1 poin = Rp100), dibatasi saldo poin dan sisa tagihan.
+- Tandai metode pembayaran sebagai tunai/non-tunai di Pengaturan; kas shift hanya menghitung metode tunai.
+
+### Changed
+- Stok produk disinkronkan sebagai selisih (delta), sehingga penjualan offline di beberapa perangkat sama-sama mengurangi stok cloud. Semua perangkat toko perlu diperbarui ke versi ini.
+- Password baru minimal 8 karakter dan berisi huruf serta angka.
+- Link reset password memakai token yang baru diverifikasi saat tombol Simpan ditekan.
+- APK rilis lebih kecil (12 MB → 4 MB) karena optimasi R8 diaktifkan.
+
+### Fixed
+- Histori piutang/hutang yang sudah lunas tidak lagi ikut terhapus saat pelanggan/supplier dihapus.
+- Keranjang kasir tidak hilang saat Android menutup aplikasi di latar belakang.
+- Pencarian dengan karakter % atau _ tidak lagi dianggap wildcard.
+- Daftar produk langsung menampilkan produk yang baru ditambah atau diubah.
+- Restore backup tidak mengirim ulang selisih stok yang sudah tersinkron.
+
+## [3.7.1] - 2026-11-21
+
+### Security
+- Hanya admin/super admin yang bisa melihat dan menimpa backup cloud; menu Backup & Restore disembunyikan dari kasir.
+- Role, status aktif, toko, dan email di profil hanya bisa diubah oleh admin toko yang sama atau super admin.
+- Anggota toko yang dinonaktifkan kehilangan akses data tokonya.
+- Token sesi dan pengaturan tidak lagi ikut backup Android; lalu lintas HTTP tanpa enkripsi dimatikan.
+- Logout saat offline benar-benar menghapus sesi Supabase.
+- Ekspor CSV aman dari formula injection; permission yang tidak dipakai dihapus.
+
+### Fixed
+- Stok dicek ulang di dalam transaksi checkout; simpan produk tidak lagi menimpa stok yang berubah di tempat lain.
+- Harga paket dan diskon produk dihitung benar; total dibulatkan ke rupiah dan poin dihitung setelah diskon.
+- Checkout dan simpan pembelian tidak bisa terkirim dua kali; error transaksi ditampilkan.
+- Edit transaksi tidak lagi mengubah tanggal, mengurangi poin dua kali, atau menghapus cicilan piutang.
+- Pembayaran piutang dan transaksi digital beserta piutangnya disimpan secara atomik.
+- Pelanggan/supplier yang masih berhutang tidak bisa dihapus; poin pelanggan tidak bisa minus.
+- Laba bersih tidak lagi memotong harga modal dua kali; kas shift dihitung dari uang tunai yang diterima.
+- Cetak ulang struk memakai tanggal transaksi; gagal cetak dilaporkan.
+- Stok menipis memakai ambang per produk; nama produk terlaris konsisten.
+- Sync produk ditarik per halaman dan jam perangkat yang maju tidak lagi selalu menang konflik.
+- Restore ditolak bila ada ID ganda; sel Excel kosong tidak lagi gagal di-restore.
+- Keranjang tidak hilang saat ukuran font atau bahasa diubah; pencarian riwayat digital mencakup seluruh data.
+- Aplikasi tidak logout saat server Supabase bermasalah; pesan error login lebih jelas.
+
+### Changed
+- Index tanggal di pengeluaran dan pembelian (migrasi DB 12 → 13) untuk mempercepat laporan.
+
 ## [3.7.0] - 2026-10-31
 
 ### Added

@@ -38,4 +38,10 @@ interface ReceivableDao {
 
     @Query("UPDATE receivables SET status = :status WHERE id = :id")
     suspend fun updateStatus(id: Long, status: String)
+
+    /** Tambah pembayaran relatif ke nilai di DB (bukan salinan di UI) agar tap ganda/list basi tidak menimpa. */
+    @Query("""UPDATE receivables SET paidAmount = paidAmount + :amount,
+        status = CASE WHEN paidAmount + :amount >= amount THEN 'paid' ELSE 'pending' END
+        WHERE id = :id""")
+    suspend fun addPayment(id: Long, amount: Double)
 }

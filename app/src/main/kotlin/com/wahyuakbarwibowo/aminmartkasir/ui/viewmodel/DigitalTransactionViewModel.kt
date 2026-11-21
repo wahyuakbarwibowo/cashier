@@ -17,6 +17,8 @@ data class DigitalTransactionUiState(
     val allProducts: List<DigitalProductEntity> = emptyList(),
     val managementProviders: List<String> = emptyList(),
     val phoneHistory: List<PhoneHistoryEntity> = emptyList(),
+    /** Hasil cari riwayat dari DB (semua halaman); null = tidak sedang mencari. */
+    val historySearchResults: List<PhoneHistoryEntity>? = null,
     val paymentMethods: List<PaymentMethodEntity> = emptyList(),
     val customers: List<CustomerEntity> = emptyList(),
     val selectedCategory: String? = null,
@@ -106,28 +108,38 @@ class DigitalTransactionViewModel(
             }
             currentHistoryPage = 1
 
+            // Flow ini emit lagi setiap produk/kategori berubah. Riwayat halaman 1 dan
+            // muat-ulang produk hanya untuk emisi pertama / saat kategori berganti,
+            // supaya halaman riwayat yang sudah dimuat dan pencarian aktif tidak ter-reset.
+            var isFirst = true
+            var loadedCategory: String? = null
             combine(
                 digitalCategoryRepository.allDigitalCategories,
                 digitalProductRepository.allDigitalProducts
             ) { cats, allProds ->
                 cats to allProds
             }.collect { (cats, allProds) ->
+                val first = isFirst
+                isFirst = false
                 _uiState.update { state ->
                     state.copy(
                         categories = cats,
-                        phoneHistory = initialHistory,
+                        phoneHistory = if (first) initialHistory else state.phoneHistory,
                         allProducts = allProds,
                         isLoading = false,
                         isRefreshing = false,
-                        canLoadMore = !isLastHistoryPage,
+                        canLoadMore = if (first) !isLastHistoryPage else state.canLoadMore,
                         selectedCategory = when {
                             state.selectedCategory != null && cats.any { it.name == state.selectedCategory } -> state.selectedCategory
                             else -> cats.firstOrNull()?.name
                         }
                     )
                 }
-                // Refresh products for initial category
-                _uiState.value.selectedCategory?.let { loadProductsByCategory(it) }
+                val category = _uiState.value.selectedCategory
+                if (category != null && category != loadedCategory) {
+                    loadedCategory = category
+                    loadProductsByCategory(category)
+                }
             }
         }
     }
@@ -289,23 +301,21 @@ class DigitalTransactionViewModel(
                     createdAt = DateUtils.nowDateTime()
                 )
                 
-                val id = phoneHistoryRepository.insert(phoneHistory)
-                val insertedTransaction = phoneHistory.copy(id = id)
-                
                 // If payment method is debt, record to receivables
-                if (method?.name?.contains("Hutang", ignoreCase = true) == true) {
-                    receivableRepository.insert(
-                        ReceivableEntity(
-                            saleId = null, // digital doesn't use retail saleId
-                            customerId = customer?.id,
-                            amount = product.sellingPrice,
-                            paidAmount = paid,
-                            status = if (paid >= product.sellingPrice) "paid" else "pending",
-                            createdAt = DateUtils.nowDateTime(),
-                            notes = "Hutang dari Transaksi Digital ${product.name} ke $phoneNumber"
-                        )
+                val receivable = if (method?.name?.contains("Hutang", ignoreCase = true) == true) {
+                    ReceivableEntity(
+                        saleId = null, // digital doesn't use retail saleId
+                        customerId = customer?.id,
+                        amount = product.sellingPrice,
+                        paidAmount = paid,
+                        status = if (paid >= product.sellingPrice) "paid" else "pending",
+                        createdAt = DateUtils.nowDateTime(),
+                        notes = "Hutang dari Transaksi Digital ${product.name} ke $phoneNumber"
                     )
-                }
+                } else null
+
+                val id = phoneHistoryRepository.insertWithReceivable(phoneHistory, receivable)
+                val insertedTransaction = phoneHistory.copy(id = id)
                 
                 _uiState.update { 
                     it.copy(
@@ -391,9 +401,12 @@ class DigitalTransactionViewModel(
         }
     }
 
-    fun moveProduct(fromIndex: Int, toIndex: Int) {
+    /** Pindahkan produk [fromId] ke posisi produk [toId] di daftar lengkap (bukan daftar terfilter). */
+    fun moveProduct(fromId: Long, toId: Long) {
         val products = _uiState.value.allProducts
-        if (fromIndex !in products.indices || toIndex !in products.indices || fromIndex == toIndex) return
+        val fromIndex = products.indexOfFirst { it.id == fromId }
+        val toIndex = products.indexOfFirst { it.id == toId }
+        if (fromIndex < 0 || toIndex < 0 || fromIndex == toIndex) return
 
         val mutable = products.toMutableList()
         val moved = mutable.removeAt(fromIndex)
@@ -421,6 +434,23 @@ class DigitalTransactionViewModel(
                     digitalProductRepository.update(product.copy(sortOrder = index))
                 }
             }
+        }
+    }
+
+    private var historySearchJob: Job? = null
+
+    /** Cari di seluruh riwayat (DB), bukan hanya halaman yang sudah dimuat. */
+    fun searchHistory(query: String) {
+        historySearchJob?.cancel()
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) {
+            _uiState.update { it.copy(historySearchResults = null) }
+            return
+        }
+        historySearchJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(300) // debounce ketikan
+            val results = phoneHistoryRepository.searchPhoneHistory(trimmed)
+            _uiState.update { it.copy(historySearchResults = results) }
         }
     }
 }

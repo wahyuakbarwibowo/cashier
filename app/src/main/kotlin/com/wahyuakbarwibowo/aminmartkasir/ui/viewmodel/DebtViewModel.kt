@@ -142,14 +142,7 @@ class DebtViewModel(
     fun recordPayment(receivable: ReceivableEntity, amount: Double) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val newPaidAmount = receivable.paidAmount + amount
-                val newStatus = if (newPaidAmount >= receivable.amount) "paid" else "pending"
-                
-                val updated = receivable.copy(
-                    paidAmount = newPaidAmount,
-                    status = newStatus
-                )
-                receivableRepository.update(updated)
+                receivableRepository.addPayment(receivable.id, amount)
                 
                 _uiState.update { it.copy(successMessage = "Pembayaran berhasil dicatat") }
                 loadReceivables()

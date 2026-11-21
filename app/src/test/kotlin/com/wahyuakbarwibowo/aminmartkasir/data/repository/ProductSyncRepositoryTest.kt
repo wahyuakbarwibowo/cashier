@@ -44,9 +44,7 @@ class ProductSyncRepositoryTest {
         assertEquals(1, pushed)
         assertEquals("store-1", cloud.uploads.single().storeId)
         assertNotNull(cloud.uploads.single().remoteId)
-        val persisted = argumentCaptor<ProductEntity>()
-        verify(productDao).update(persisted.capture())
-        assertEquals(cloud.uploads.single().remoteId, persisted.firstValue.remoteId)
+        verify(productDao).assignRemoteId(4, cloud.uploads.single().remoteId)
         verify(productDao).markSynced(4, 100)
     }
 
@@ -64,7 +62,7 @@ class ProductSyncRepositoryTest {
         assertTrue(cloud.uploads.isEmpty())
         verify(productDao).applyRemoteIfUnchanged(
             eq(4), eq("A1"), eq("Cloud name"), eq(10.0), eq(0.0), eq(0),
-            eq(12.0), eq(0.0), eq(0), eq(0.0), eq(8), eq(5), eq(null), eq(null),
+            eq(12.0), eq(0.0), eq(0), eq(0.0), eq(5), eq(null), eq(null),
             eq("product-1"), eq(200L), eq(false), eq(100L), eq(false)
         )
     }
@@ -103,12 +101,47 @@ class ProductSyncRepositoryTest {
             name = "Updated on second device", stock = 7,
             syncUpdatedAt = 200, isSynced = false
         )
+        assertEquals(8, secondDevice.rows.single().syncedStock)
         secondSync.sync("store-1")
         firstSync.sync("store-1")
 
         assertEquals("Updated on second device", firstDevice.rows.single().name)
         assertEquals(7, firstDevice.rows.single().stock)
         assertTrue(firstDevice.rows.single().isSynced)
+    }
+
+    @Test
+    fun `offline sales on two devices are both subtracted from cloud stock`() = runTest {
+        val firstDevice = MemoryProductDao()
+        val secondDevice = MemoryProductDao()
+        firstDevice.rows += product(id = 1, syncUpdatedAt = 100).copy(stock = 10)
+        val firstSync = ProductSyncRepository(firstDevice, cloud) { _, _ -> }
+        val secondSync = ProductSyncRepository(secondDevice, cloud) { _, _ -> }
+        firstSync.sync("store-1")
+        secondSync.sync("store-1")
+        assertEquals(10, cloud.products.single().stock)
+
+        firstDevice.sell(qty = 2, now = 200)
+        secondDevice.sell(qty = 3, now = 300)
+        firstSync.sync("store-1")
+        secondSync.sync("store-1")
+        firstSync.sync("store-1")
+
+        assertEquals(5, cloud.products.single().stock)
+        assertEquals(5, firstDevice.rows.single().stock)
+        assertEquals(5, secondDevice.rows.single().stock)
+    }
+
+    @Test
+    fun `legacy product without stock basis overwrites cloud stock once`() = runTest {
+        val device = MemoryProductDao()
+        device.rows += product(id = 1, remoteId = "legacy", syncUpdatedAt = 500).copy(stock = 4, syncedStock = null)
+        cloud.products += cloudProduct(remoteId = "legacy", syncUpdatedAt = 100).copy(stock = 9)
+
+        ProductSyncRepository(device, cloud) { _, _ -> }.sync("store-1")
+
+        assertEquals(4, cloud.products.single().stock)
+        assertEquals(4, device.rows.single().syncedStock)
     }
 
     @Test
@@ -121,7 +154,7 @@ class ProductSyncRepositoryTest {
         syncRepository.sync("store-1")
 
         org.mockito.kotlin.verify(productDao, org.mockito.Mockito.never())
-            .applyRemoteIfUnchanged(any(), anyOrNull(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), anyOrNull(), anyOrNull(), any(), any(), any(), any(), any())
+            .applyRemoteIfUnchanged(any(), anyOrNull(), any(), any(), any(), any(), any(), any(), any(), any(), any(), anyOrNull(), anyOrNull(), any(), any(), any(), any(), any())
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -166,7 +199,26 @@ class ProductSyncRepositoryTest {
     private class MemoryProductDao : ProductDao by org.mockito.kotlin.mock() {
         val rows = mutableListOf<ProductEntity>()
 
-        override suspend fun getPendingSync() = rows.filter { !it.isSynced }
+        override suspend fun getPendingSync() = rows.filter { !it.isSynced || it.stock != it.syncedStock }
+
+        fun sell(qty: Int, now: Long) {
+            rows[0] = rows[0].copy(stock = rows[0].stock - qty, syncUpdatedAt = now, isSynced = false)
+        }
+
+        override suspend fun reconcileStock(id: Long, remoteStock: Int) {
+            val index = rows.indexOfFirst { it.id == id && (it.syncedStock != null || it.isSynced) }
+            if (index < 0) return
+            val row = rows[index]
+            rows[index] = row.copy(
+                stock = remoteStock + (row.syncedStock?.let { row.stock - it } ?: 0),
+                syncedStock = remoteStock
+            )
+        }
+
+        override suspend fun markStockPushed(id: Long, pushedStock: Int, serverStock: Int) {
+            val index = rows.indexOfFirst { it.id == id }
+            rows[index] = rows[index].copy(stock = rows[index].stock + serverStock - pushedStock, syncedStock = serverStock)
+        }
 
         override suspend fun getByRemoteId(remoteId: String) = rows.firstOrNull { it.remoteId == remoteId }
 
@@ -181,6 +233,11 @@ class ProductSyncRepositoryTest {
             rows[rows.indexOfFirst { it.id == product.id }] = product
         }
 
+        override suspend fun assignRemoteId(id: Long, remoteId: String) {
+            val index = rows.indexOfFirst { it.id == id && it.remoteId == null }
+            if (index >= 0) rows[index] = rows[index].copy(remoteId = remoteId)
+        }
+
         override suspend fun markSynced(id: Long, syncUpdatedAt: Long) {
             val index = rows.indexOfFirst { it.id == id && it.syncUpdatedAt == syncUpdatedAt }
             if (index >= 0) rows[index] = rows[index].copy(isSynced = true)
@@ -189,7 +246,7 @@ class ProductSyncRepositoryTest {
         override suspend fun applyRemoteIfUnchanged(
             id: Long, code: String?, name: String, purchasePrice: Double,
             purchasePackagePrice: Double, purchasePackageQty: Int, sellingPrice: Double,
-            packagePrice: Double, packageQty: Int, discount: Double, stock: Int,
+            packagePrice: Double, packageQty: Int, discount: Double,
             lowStockThreshold: Int, createdAt: String?, updatedAt: String?, remoteId: String,
             syncUpdatedAt: Long, isDeleted: Boolean, expectedSyncUpdatedAt: Long,
             expectedIsSynced: Boolean
@@ -198,11 +255,11 @@ class ProductSyncRepositoryTest {
                 it.id == id && it.syncUpdatedAt == expectedSyncUpdatedAt && it.isSynced == expectedIsSynced
             }
             if (index < 0) return 0
-            rows[index] = ProductEntity(
-                id = id, code = code, name = name, purchasePrice = purchasePrice,
+            rows[index] = rows[index].copy(
+                code = code, name = name, purchasePrice = purchasePrice,
                 purchasePackagePrice = purchasePackagePrice, purchasePackageQty = purchasePackageQty,
                 sellingPrice = sellingPrice, packagePrice = packagePrice, packageQty = packageQty,
-                discount = discount, stock = stock, lowStockThreshold = lowStockThreshold,
+                discount = discount, lowStockThreshold = lowStockThreshold,
                 createdAt = createdAt, updatedAt = updatedAt, remoteId = remoteId,
                 syncUpdatedAt = syncUpdatedAt, isSynced = true, isDeleted = isDeleted
             )
@@ -221,8 +278,16 @@ class ProductSyncRepositoryTest {
         override suspend fun upsertProduct(product: CloudProduct) {
             uploadGate?.await()
             uploads += product
+            val stock = products.firstOrNull { it.remoteId == product.remoteId }?.stock ?: 0
             products.removeAll { it.remoteId == product.remoteId }
-            products += product
+            products += product.copy(stock = stock)
+        }
+
+        override suspend fun addStock(remoteId: String, delta: Int): Int? {
+            val index = products.indexOfFirst { it.remoteId == remoteId }
+            if (index < 0) return null
+            products[index] = products[index].copy(stock = products[index].stock + delta)
+            return products[index].stock
         }
 
         override suspend fun getProducts(storeId: String) = products.filter { it.storeId == storeId }

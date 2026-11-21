@@ -9,5 +9,7 @@ data class LastTransactionData(
     val discount: Double,
     val total: Double,
     val paid: Double,
-    val change: Double
+    val change: Double,
+    /** Waktu transaksi di DB ("yyyy-MM-dd HH:mm:ss"); null = transaksi baru, pakai waktu sekarang. */
+    val createdAt: String? = null
 )

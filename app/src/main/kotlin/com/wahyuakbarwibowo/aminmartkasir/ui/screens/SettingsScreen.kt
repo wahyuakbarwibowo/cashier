@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 import com.wahyuakbarwibowo.aminmartkasir.ui.components.ConfirmDeleteDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -181,6 +185,7 @@ fun SettingsScreen(
                 PaymentMethodItem(
                     method = method,
                     onDelete = { methodToDelete = method },
+                    onCashChange = { viewModel.updatePaymentMethod(method.copy(isCash = it)) },
                     onMoveUp = { if (index > 0) viewModel.movePaymentMethod(index, index - 1) },
                     onMoveDown = { if (index < uiState.paymentMethods.size - 1) viewModel.movePaymentMethod(index, index + 1) },
                     canMoveUp = index > 0,
@@ -193,8 +198,8 @@ fun SettingsScreen(
     if (showAddPaymentDialog) {
         AddPaymentMethodDialog(
             onDismiss = { showAddPaymentDialog = false },
-            onConfirm = { name ->
-                viewModel.addPaymentMethod(PaymentMethodEntity(name = name))
+            onConfirm = { name, isCash ->
+                viewModel.addPaymentMethod(PaymentMethodEntity(name = name, isCash = isCash))
                 showAddPaymentDialog = false
             }
         )
@@ -205,6 +210,7 @@ fun SettingsScreen(
 fun PaymentMethodItem(
     method: PaymentMethodEntity,
     onDelete: () -> Unit,
+    onCashChange: (Boolean) -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     canMoveUp: Boolean = true,
@@ -218,7 +224,17 @@ fun PaymentMethodItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(method.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    if (method.isCash) "Tunai (masuk laci kas)" else "Non-tunai",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+            Switch(
+                checked = method.isCash,
+                onCheckedChange = onCashChange,
+                modifier = Modifier.semantics { contentDescription = "${method.name} tunai" }
+            )
             
             // Reordering controls
             IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(48.dp)) {
@@ -238,24 +254,36 @@ fun PaymentMethodItem(
 @Composable
 fun AddPaymentMethodDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String, Boolean) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+    var isCash by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Tambah Metode Pembayaran") },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Nama Metode") },
-                placeholder = { Text("Contoh: QRIS, Transfer BCA") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nama Metode") },
+                    placeholder = { Text("Contoh: QRIS, Transfer BCA") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(value = isCash, role = Role.Checkbox, onValueChange = { isCash = it }),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = isCash, onCheckedChange = null)
+                    Text("Uang tunai (dihitung di kas shift)")
+                }
+            }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) {
+            Button(onClick = { onConfirm(name, isCash) }, enabled = name.isNotBlank()) {
                 Text("Simpan")
             }
         },

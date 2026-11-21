@@ -192,18 +192,27 @@
             document.getElementById('total-downloads').textContent = totalDownloads;
             document.getElementById('last-updated').textContent = new Date(data.lastUpdated).toLocaleString('id-ID');
 
+            // Nama halaman berasal dari stats.json; pakai textContent, bukan innerHTML.
+            function statRow(label, value, valueColor) {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center';
+                const labelEl = document.createElement('span');
+                labelEl.className = 'font-medium text-slate-700 dark:text-slate-300';
+                labelEl.textContent = label;
+                const valueEl = document.createElement('span');
+                valueEl.className = `font-bold ${valueColor}`;
+                valueEl.textContent = value;
+                row.append(labelEl, valueEl);
+                return row;
+            }
+
             const pageStatsContainer = document.getElementById('page-stats');
             pageStatsContainer.innerHTML = '';
 
             for (const page in data.pageViews) {
                 const pageStatDiv = document.createElement('div');
                 pageStatDiv.className = 'p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700';
-                pageStatDiv.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium text-slate-700 dark:text-slate-300">${page}</span>
-                        <span class="font-bold text-brand-600 dark:text-brand-400">${data.pageViews[page]} kali dibuka</span>
-                    </div>
-                `;
+                pageStatDiv.appendChild(statRow(page, `${data.pageViews[page]} kali dibuka`, 'text-brand-600 dark:text-brand-400'));
                 pageStatsContainer.appendChild(pageStatDiv);
             }
 
@@ -211,12 +220,7 @@
                 if (data.downloadClicks[page] > 0) {
                     const downloadStatDiv = document.createElement('div');
                     downloadStatDiv.className = 'p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-2';
-                    downloadStatDiv.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <span class="font-medium text-slate-700 dark:text-slate-300">${page} - Download Klik</span>
-                            <span class="font-bold text-green-600 dark:text-green-400">${data.downloadClicks[page]} kali klik</span>
-                        </div>
-                    `;
+                    downloadStatDiv.appendChild(statRow(`${page} - Download Klik`, `${data.downloadClicks[page]} kali klik`, 'text-green-600 dark:text-green-400'));
                     pageStatsContainer.appendChild(downloadStatDiv);
                 }
             }

@@ -63,12 +63,12 @@ fun LoginScreen(modifier: Modifier = Modifier) {
 
     val fieldsEnabled = !isLoading && SupabaseProvider.isConfigured
     val emailValid = email.isBlank() || android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
-    val passwordTooShort = isRegister && password.isNotEmpty() && password.length < 6
+    val passwordTooShort = isRegister && password.isNotEmpty() && !AuthManager.isPasswordStrong(password)
     val passwordMismatch = isRegister && confirmPassword.isNotEmpty() && confirmPassword != password
     val canSubmit = fieldsEnabled &&
         email.isNotBlank() && emailValid &&
         password.isNotBlank() &&
-        (!isRegister || (fullName.isNotBlank() && password.length >= 6 && confirmPassword == password))
+        (!isRegister || (fullName.isNotBlank() && AuthManager.isPasswordStrong(password) && confirmPassword == password))
 
     val submit: () -> Unit = submit@{
         if (!canSubmit) return@submit
@@ -179,7 +179,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                 enabled = fieldsEnabled,
                 isError = passwordTooShort,
                 supportingText = if (isRegister) {
-                    { Text("Minimal 6 karakter") }
+                    { Text(AuthManager.PASSWORD_HINT) }
                 } else null,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,

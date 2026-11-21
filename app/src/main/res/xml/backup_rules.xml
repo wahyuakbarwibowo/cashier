@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 ke bawah. Token sesi tidak ikut backup perangkat; data toko tetap ikut. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="auth_session.xml" />
+    <!-- Penyimpanan sesi bawaan supabase-kt (default SharedPreferences) -->
+    <exclude domain="sharedpref" path="com.wahyuakbarwibowo.aminmartkasir_preferences.xml" />
+</full-backup-content>

@@ -31,6 +31,8 @@ class ReceivableRepository(private val receivableDao: ReceivableDao) {
         return receivableDao.insert(receivable)
     }
 
+    suspend fun addPayment(id: Long, amount: Double) = receivableDao.addPayment(id, amount)
+
     suspend fun update(receivable: ReceivableEntity) {
         receivableDao.update(receivable)
     }

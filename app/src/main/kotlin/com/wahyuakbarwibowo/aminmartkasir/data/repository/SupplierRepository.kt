@@ -37,11 +37,9 @@ class SupplierRepository(
     }
 
     suspend fun delete(supplier: SupplierEntity) {
-        supplierDao.delete(supplier)
-    }
-
-    suspend fun deleteById(id: Long) {
-        supplierDao.deleteById(id)
+        if (supplierDao.deleteIfNoUnpaidPayable(supplier.id) == 0) {
+            throw IllegalStateException("${supplier.name} masih punya hutang belum lunas. Lunasi dulu sebelum dihapus.")
+        }
     }
 }
 
@@ -65,10 +63,6 @@ class PurchaseRepository(
 
     fun getPurchaseItems(purchaseId: Long): Flow<List<PurchaseItemEntity>> {
         return purchaseItemDao.getPurchaseItemsByPurchaseId(purchaseId)
-    }
-
-    suspend fun deletePurchase(purchase: PurchaseEntity) {
-        purchaseDao.delete(purchase)
     }
 
     /**

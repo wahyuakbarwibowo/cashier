@@ -38,14 +38,14 @@ class ProductRepositoryTest {
         var scheduled = 0
         val repository = ProductRepository(productDao) { scheduled++ }
         val product = ProductEntity(name = "Test")
-        whenever(productDao.insert(any())).thenReturn(1L)
+        whenever(productDao.insertWithInitialStock(any(), any())).thenReturn(1L)
 
         repository.insert(product)
         repository.increaseStock(1L, 2)
         repository.deleteById(1L)
         assertEquals(3, scheduled)
 
-        whenever(productDao.insert(any())).thenThrow(IllegalStateException("disk full"))
+        whenever(productDao.insertWithInitialStock(any(), any())).thenThrow(IllegalStateException("disk full"))
         val result = runCatching { repository.insert(product) }
         assertTrue(result.isFailure)
         assertEquals(3, scheduled)
@@ -54,13 +54,13 @@ class ProductRepositoryTest {
     @Test
     fun `scheduling failure does not fail saved product`() = runTest {
         val repository = ProductRepository(productDao) { error("scheduler unavailable") }
-        whenever(productDao.insert(any())).thenReturn(7L)
+        whenever(productDao.insertWithInitialStock(any(), any())).thenReturn(7L)
 
         assertEquals(7L, repository.insert(ProductEntity(name = "Saved locally")))
     }
 
     @Test
-    fun `insert product should call dao insert`() = runTest {
+    fun `insert product should insert with initial stock history`() = runTest {
         // Given
         val product = ProductEntity(
             id = 0,
@@ -79,7 +79,7 @@ class ProductRepositoryTest {
         )
         val generatedId = 1L
 
-        whenever(productDao.insert(any())).thenReturn(generatedId)
+        whenever(productDao.insertWithInitialStock(any(), any())).thenReturn(generatedId)
 
         // When
         val result = productRepository.insert(product)
@@ -87,7 +87,7 @@ class ProductRepositoryTest {
         // Then
         assertEquals(generatedId, result)
         val inserted = argumentCaptor<ProductEntity>()
-        verify(productDao).insert(inserted.capture())
+        verify(productDao).insertWithInitialStock(inserted.capture(), any())
         assertEquals(product.name, inserted.firstValue.name)
         assertEquals(false, inserted.firstValue.isSynced)
         assertEquals(false, inserted.firstValue.isDeleted)
@@ -137,36 +137,15 @@ class ProductRepositoryTest {
     }
 
     @Test
-    fun `update product should call dao update`() = runTest {
-        // Given
-        val product = ProductEntity(
-            id = 1L,
-            code = "TEST001",
-            name = "Updated Product",
-            purchasePrice = 5000.0,
-            purchasePackagePrice = 0.0,
-            purchasePackageQty = 0,
-            sellingPrice = 7500.0,
-            packagePrice = 0.0,
-            packageQty = 0,
-            discount = 0.0,
-            stock = 15,
-            createdAt = null,
-            updatedAt = null
-        )
+    fun `update product applies stock as delta and schedules sync`() = runTest {
+        var scheduled = 0
+        val repository = ProductRepository(productDao) { scheduled++ }
+        val product = ProductEntity(id = 1L, name = "Updated Product", stock = 15)
 
-        whenever(productDao.getProductById(product.id)).thenReturn(product.copy(remoteId = "remote-1", createdAt = "created"))
+        repository.update(product, stockDelta = 5)
 
-        // When
-        productRepository.update(product)
-
-        // Then
-        val updated = argumentCaptor<ProductEntity>()
-        verify(productDao).update(updated.capture())
-        assertEquals("remote-1", updated.firstValue.remoteId)
-        assertEquals("created", updated.firstValue.createdAt)
-        assertEquals(false, updated.firstValue.isSynced)
-        assertEquals(true, updated.firstValue.syncUpdatedAt > 0)
+        verify(productDao).updateWithStockDelta(eq(product), eq(5), any(), any())
+        assertEquals(1, scheduled)
     }
 
     @Test

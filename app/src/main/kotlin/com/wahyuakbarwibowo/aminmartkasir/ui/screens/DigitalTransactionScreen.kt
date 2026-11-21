@@ -355,7 +355,7 @@ private fun InputSection(
                 trailingIcon = {
                     if (targetNumber.isNotEmpty()) {
                         IconButton(onClick = { onTargetNumberChange("") }) {
-                            Icon(Icons.Default.Cancel, null)
+                            Icon(Icons.Default.Cancel, contentDescription = "Hapus nomor")
                         }
                     }
                 },

@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.wahyuakbarwibowo.aminmartkasir.data.local.AppDatabase
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.*
@@ -63,7 +64,8 @@ class ViewModelFactory(
                     saleRepository = saleRepository,
                     stockHistoryRepository = stockHistoryRepository,
                     customerPointsHistoryRepository = customerPointsHistoryRepository,
-                    receivableRepository = receivableRepository
+                    receivableRepository = receivableRepository,
+                    savedState = extras.createSavedStateHandle()
                 ) as T
             }
             modelClass.isAssignableFrom(SalesHistoryViewModel::class.java) -> {
@@ -157,7 +159,9 @@ class ViewModelFactory(
                 ShiftViewModel(
                     shiftRepository = shiftRepository,
                     saleRepository = saleRepository,
-                    expenseRepository = expenseRepository
+                    expenseRepository = expenseRepository,
+                    phoneHistoryRepository = phoneHistoryRepository,
+                    paymentMethodRepository = paymentMethodRepository
                 ) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

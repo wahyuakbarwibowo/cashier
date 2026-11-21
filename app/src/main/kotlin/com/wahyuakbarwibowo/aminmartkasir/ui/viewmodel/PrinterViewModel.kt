@@ -33,9 +33,19 @@ class PrinterViewModel(
     private val _uiState = MutableStateFlow(PrinterUiState())
     val uiState: StateFlow<PrinterUiState> = _uiState.asStateFlow()
     
+    /**
+     * Dipanggil setiap dialog printer dibuka; hanya buat helper sekali supaya socket lama
+     * tidak bocor dan status isConnected tetap sesuai helper yang dipakai.
+     */
     fun initialize(context: Context) {
-        printerHelper = BluetoothPrinterHelper(context)
+        if (printerHelper != null) return
+        printerHelper = BluetoothPrinterHelper(context.applicationContext)
         loadShopProfile()
+    }
+
+    override fun onCleared() {
+        printerHelper?.close()
+        super.onCleared()
     }
     
     private fun loadShopProfile() {
@@ -112,7 +122,7 @@ class PrinterViewModel(
             try {
                 val profile = _uiState.value.shopProfile
                 
-                printerHelper?.printReceipt(
+                requireNotNull(printerHelper) { "Printer belum siap" }.printReceipt(
                     shopName = profile?.name ?: "Aminmart Cashier",
                     shopAddress = profile?.address,
                     shopPhone = profile?.phoneNumber,
@@ -171,7 +181,7 @@ class PrinterViewModel(
             try {
                 val profile = _uiState.value.shopProfile
                 
-                printerHelper?.printDigitalReceipt(
+                requireNotNull(printerHelper) { "Printer belum siap" }.printDigitalReceipt(
                     shopName = profile?.name ?: "Aminmart Cashier",
                     shopAddress = profile?.address,
                     shopPhone = profile?.phoneNumber,

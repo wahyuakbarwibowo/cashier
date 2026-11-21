@@ -3,6 +3,8 @@ package com.wahyuakbarwibowo.aminmartkasir.data.remote
 import android.content.Context
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.UserProfile
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.exception.AuthErrorCode
+import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.exceptions.RestException
@@ -33,6 +35,11 @@ object AuthManager {
     private const val KEY_CACHED_PROFILE = "cached_profile"
     private const val RESET_PASSWORD_URL = "https://wahyuakbarwibowo.github.io/cashier/reset-password.html"
     const val PENDING_MESSAGE = "Akun menunggu persetujuan admin."
+    const val PASSWORD_HINT = "Minimal 8 karakter, berisi huruf dan angka"
+
+    /** Sama dengan minimum_password_length = 8 + password_requirements = letters_digits di server. */
+    fun isPasswordStrong(password: String): Boolean =
+        password.length >= 8 && password.any { it in 'a'..'z' || it in 'A'..'Z' } && password.any { it in '0'..'9' }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -86,12 +93,19 @@ object AuthManager {
                     clearCachedProfile()
                     _state.value = UiState.SignedOut
                 }
-            } catch (e: IOException) {
-                if (readCachedProfile() == null) _state.value = UiState.SignedOut
+            } catch (e: AuthRestException) {
+                // Hanya refresh token yang ditolak server yang mengakhiri sesi.
+                if (e.statusCode in 400..401) {
+                    clearLocalSession()
+                    clearCachedProfile()
+                    _state.value = UiState.SignedOut
+                } else if (readCachedProfile() == null) {
+                    _state.value = UiState.SignedOut
+                }
             } catch (_: Exception) {
-                clearLocalSession()
-                clearCachedProfile()
-                _state.value = UiState.SignedOut
+                // Offline, server down (5xx/429), atau gangguan lain: POS tetap jalan
+                // dengan profil tersimpan.
+                if (readCachedProfile() == null) _state.value = UiState.SignedOut
             }
         }
     }
@@ -123,8 +137,15 @@ object AuthManager {
             _state.value = UiState.Authenticated(profile)
             cacheProfile(profile)
             Result.success(Unit)
+        } catch (e: AuthRestException) {
+            Result.failure(Exception(when (e.errorCode) {
+                AuthErrorCode.EmailNotConfirmed -> "Email belum dikonfirmasi. Cek kotak masuk email Anda."
+                AuthErrorCode.OverRequestRateLimit, AuthErrorCode.OverEmailSendRateLimit ->
+                    "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
+                else -> "Email atau password salah."
+            }))
         } catch (e: RestException) {
-            Result.failure(Exception("Email atau password salah."))
+            Result.failure(Exception("Gagal masuk. Server sedang bermasalah, coba lagi."))
         } catch (e: IOException) {
             Result.failure(Exception("Tidak ada koneksi internet."))
         } catch (e: Exception) {
@@ -158,7 +179,7 @@ object AuthManager {
         error.contains("already registered", true) -> "Email sudah terdaftar. Silakan masuk."
         error.contains("rate limit", true) -> "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
         error.contains("invalid", true) && error.contains("email", true) -> "Format email tidak valid."
-        error.contains("password", true) -> "Password terlalu lemah. Gunakan minimal 6 karakter."
+        error.contains("password", true) -> "Password terlalu lemah. $PASSWORD_HINT."
         else -> "Pendaftaran gagal. Coba lagi."
     }
 
@@ -180,6 +201,10 @@ object AuthManager {
             SupabaseProvider.client.auth.signOut()
         } catch (_: Exception) {
             // abaikan; tetap bersihkan sesi lokal
+        } finally {
+            // signOut() offline melempar sebelum supabase-kt menghapus sesinya sendiri,
+            // sehingga sesi user sebelumnya bisa dipulihkan lagi saat app dibuka.
+            runCatching { SupabaseProvider.client.auth.clearSession() }
         }
         clearLocalSession()
         clearCachedProfile()

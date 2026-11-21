@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.PrinterViewModel
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,12 +101,16 @@ fun BluetoothPrinterDialog(
     // Auto-print when connected and transaction data is provided
     LaunchedEffect(uiState.isConnected, transactionData, digitalTransaction) {
         if (uiState.isConnected && !uiState.isPrinting) {
-            val transactionDate = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
-            
+            // Cetak ulang harus memakai tanggal transaksi, bukan tanggal hari ini.
+            fun receiptDate(createdAt: String?): String {
+                val date = createdAt?.let { runCatching { DateUtils.parseDateTime(it) }.getOrNull() } ?: java.util.Date()
+                return java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(date)
+            }
+
             if (transactionData != null) {
                 viewModel.printReceipt(
                     transactionId = transactionData.transactionId,
-                    date = transactionDate,
+                    date = receiptDate(transactionData.createdAt),
                     items = transactionData.items,
                     subtotal = transactionData.subtotal,
                     discount = transactionData.discount,
@@ -119,7 +124,7 @@ fun BluetoothPrinterDialog(
                 val parsedNote = parseDigitalNote(digitalTransaction.notes)
                 viewModel.printDigitalReceipt(
                     transactionId = "TRX-DIG-${digitalTransaction.id}",
-                    date = transactionDate,
+                    date = receiptDate(digitalTransaction.createdAt),
                     category = digitalTransaction.category,
                     provider = digitalTransaction.provider ?: "-",
                     targetNumber = digitalTransaction.phoneNumber ?: "-",

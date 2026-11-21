@@ -109,7 +109,8 @@ fun MoreMenuSheet(
         val role = (authState as? AuthManager.UiState.Authenticated)?.profile?.role
         fun allowed(route: String) = when (route) {
             Screen.Tenants.route -> role == UserRole.SUPER_ADMIN
-            Screen.Staff.route -> role == UserRole.SUPER_ADMIN || role == UserRole.ADMIN
+            // Restore lokal menghapus seluruh data toko; jangan buka untuk kasir.
+            Screen.Staff.route, Screen.Backup.route -> role == UserRole.SUPER_ADMIN || role == UserRole.ADMIN
             else -> true
         }
         secondaryMenuGroups.forEach { group ->

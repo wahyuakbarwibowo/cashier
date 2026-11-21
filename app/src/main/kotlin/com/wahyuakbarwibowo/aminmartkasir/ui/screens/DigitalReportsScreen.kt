@@ -53,19 +53,15 @@ fun DigitalReportsScreen(
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
 
-    val categories = remember(uiState.phoneHistory) {
-        uiState.phoneHistory.map { it.category }.distinct()
+    LaunchedEffect(searchQuery) { viewModel.searchHistory(searchQuery) }
+    // Saat mencari, pakai hasil DB (semua halaman); kalau tidak, halaman yang sudah dimuat.
+    val sourceHistory = if (searchQuery.isBlank()) uiState.phoneHistory else uiState.historySearchResults.orEmpty()
+
+    val categories = remember(sourceHistory) {
+        sourceHistory.map { it.category }.distinct()
     }
-    val filteredHistory = remember(uiState.phoneHistory, selectedCategory, searchQuery) {
-        uiState.phoneHistory.filter { history ->
-            val categoryMatch = selectedCategory == null || history.category == selectedCategory
-            val query = searchQuery.trim()
-            val queryMatch = query.isBlank() ||
-                history.phoneNumber.orEmpty().contains(query, ignoreCase = true) ||
-                history.provider.orEmpty().contains(query, ignoreCase = true) ||
-                history.notes.orEmpty().contains(query, ignoreCase = true)
-            categoryMatch && queryMatch
-        }
+    val filteredHistory = remember(sourceHistory, selectedCategory) {
+        sourceHistory.filter { history -> selectedCategory == null || history.category == selectedCategory }
     }
 
     // Detect when scrolled to bottom for infinite scroll

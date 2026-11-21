@@ -1,6 +1,7 @@
 package com.wahyuakbarwibowo.aminmartkasir.data.repository
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.InstanceCreator
 import com.wahyuakbarwibowo.aminmartkasir.data.local.AppDatabase
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.BackupData
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +26,11 @@ class BackupRepository(
     private val database: AppDatabase,
     private val featureAccess: FeatureAccess = FeatureAccessManager
 ) {
-    private val gson = Gson()
+    // Backup lama tidak punya kolom isCash; mulai dari instance default (tunai) supaya
+    // field yang tidak ada di JSON tidak jadi false lewat Unsafe allocation Gson.
+    private val gson = GsonBuilder()
+        .registerTypeAdapter(PaymentMethodEntity::class.java, InstanceCreator { PaymentMethodEntity(name = "") })
+        .create()
 
     @Serializable
     private data class CloudBackup(
@@ -91,9 +96,10 @@ class BackupRepository(
     @Suppress("SENSELESS_COMPARISON", "USELESS_ELVIS")
     suspend fun importData(json: String) = withContext(Dispatchers.IO) {
         val backupData = gson.fromJson(json, BackupData::class.java) ?: throw Exception("Format data tidak valid")
+        validateUniqueIds(backupData)
 
         database.withTransaction {
-            kotlin.runCatching {
+            run {
                 // Clear all existing data first (inside transaction for safe rollback)
                 database.clearAllTables()
 
@@ -107,7 +113,9 @@ class BackupRepository(
                     } else {
                         if (product.name == null) product.copy(name = "Produk Tanpa Nama") else product
                     }
-                    database.productDao().insert(sanitized)
+                    // Basis sync di backup bisa sudah basi; biarkan sync berikutnya mengambil
+                    // stok cloud (produk tersinkron) atau menimpanya sekali (produk tertunda).
+                    database.productDao().insert(sanitized.copy(syncedStock = null))
                 }
 
                 backupData.productVariants?.forEach { variant ->
@@ -225,9 +233,42 @@ class BackupRepository(
                 backupData.shifts?.forEach { shift ->
                     database.shiftDao().insert(shift)
                 }
-            }.onFailure {
-                throw it
             }
         }
+    }
+
+    /**
+     * Insert restore memakai REPLACE, jadi baris dengan ID (atau remoteId produk) ganda
+     * diam-diam menimpa baris sebelumnya, mis. baris yang di-copy-paste di Excel.
+     * Tolak sebelum data lama dihapus.
+     */
+    private fun validateUniqueIds(data: BackupData) {
+        fun check(table: String, ids: List<Any?>?) {
+            val duplicates = ids.orEmpty()
+                .filter { it != null && it != 0L && it != "" }
+                .groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+            require(duplicates.isEmpty()) {
+                "Data $table berisi ID ganda: ${duplicates.take(5).joinToString()}. Perbaiki file lalu coba lagi."
+            }
+        }
+        check("produk", data.products?.map { it.id })
+        check("produk (remoteId)", data.products?.map { it.remoteId })
+        check("varian produk", data.productVariants?.map { it.id })
+        check("pelanggan", data.customers?.map { it.id })
+        check("metode bayar", data.paymentMethods?.map { it.id })
+        check("penjualan", data.sales?.map { it.id })
+        check("item penjualan", data.saleItems?.map { it.id })
+        check("supplier", data.suppliers?.map { it.id })
+        check("pembelian", data.purchases?.map { it.id })
+        check("item pembelian", data.purchaseItems?.map { it.id })
+        check("piutang", data.receivables?.map { it.id })
+        check("hutang", data.payables?.map { it.id })
+        check("transaksi digital", data.phoneHistory?.map { it.id })
+        check("produk digital", data.digitalProducts?.map { it.id })
+        check("kategori digital", data.digitalCategories?.map { it.id })
+        check("pengeluaran", data.expenses?.map { it.id })
+        check("riwayat poin", data.customerPointsHistory?.map { it.id })
+        check("riwayat stok", data.stockHistory?.map { it.id })
+        check("shift", data.shifts?.map { it.id })
     }
 }
