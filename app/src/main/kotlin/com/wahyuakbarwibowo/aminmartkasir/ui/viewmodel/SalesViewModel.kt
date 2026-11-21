@@ -61,6 +61,21 @@ data class CartItem(
     val subtotal: Double
 )
 
+/**
+ * Subtotal satu baris produk tanpa varian: harga paket untuk tiap kelipatan packageQty
+ * (hanya bila harga paket diisi), sisanya harga satuan, lalu diskon produk (%),
+ * dibulatkan ke rupiah.
+ */
+internal fun productLineSubtotal(product: ProductEntity, qty: Int): Double {
+    val gross = if (product.packageQty > 0 && product.packagePrice > 0) {
+        (qty / product.packageQty) * product.packagePrice + (qty % product.packageQty) * product.sellingPrice
+    } else {
+        qty * product.sellingPrice
+    }
+    val discountPercent = product.discount.coerceIn(0.0, 100.0)
+    return Math.round(gross * (1 - discountPercent / 100)).toDouble()
+}
+
 class SalesViewModel(
     private val productRepository: ProductRepository,
     private val productVariantRepository: ProductVariantRepository,
@@ -193,23 +208,12 @@ class SalesViewModel(
         }
     }
 
-    private fun getPricePerUnit(product: ProductEntity, qty: Int): Double {
-        return if (product.packageQty > 0 && qty >= product.packageQty) {
-            product.packagePrice / product.packageQty
-        } else {
-            product.sellingPrice
-        }
-    }
+    private fun lineSubtotal(product: ProductEntity, variant: ProductVariantEntity?, qty: Int): Double =
+        variant?.let { it.sellingPrice * qty } ?: productLineSubtotal(product, qty)
 
-    private fun calculateSubtotal(product: ProductEntity, qty: Int): Double {
-        val totalDiscount = product.discount * qty
-        return if (product.packageQty > 0 && product.packagePrice > 0) {
-            val packages = qty / product.packageQty
-            val remainder = qty % product.packageQty
-            (packages * product.packagePrice) + (remainder * product.sellingPrice) - totalDiscount
-        } else {
-            (qty * product.sellingPrice) - totalDiscount
-        }
+    private fun pricedItem(item: CartItem, qty: Int): CartItem {
+        val subtotal = lineSubtotal(item.product, item.variant, qty)
+        return item.copy(qty = qty, price = subtotal / qty, subtotal = subtotal)
     }
 
     suspend fun getVariantsByProductId(productId: Long): List<ProductVariantEntity> {
@@ -229,26 +233,19 @@ class SalesViewModel(
         _uiState.update { state ->
             val newCartItems = if (existingItem != null) {
                 state.cartItems.map {
-                    if (it.product.id == product.id && it.variant?.id == variant?.id) {
-                        val newQty = it.qty + 1
-                        val unitPrice = variant?.sellingPrice ?: getPricePerUnit(product, newQty)
-                        it.copy(
-                            qty = newQty, 
-                            price = unitPrice,
-                            subtotal = unitPrice * newQty
-                        )
-                    } else {
-                        it
-                    }
+                    if (it.product.id == product.id && it.variant?.id == variant?.id) pricedItem(it, it.qty + 1) else it
                 }
             } else {
-                state.cartItems + CartItem(
-                    product = product,
-                    variant = variant,
-                    qty = 1,
-                    price = variant?.sellingPrice ?: getPricePerUnit(product, 1),
-                    costPrice = variant?.purchasePrice ?: product.purchasePrice,
-                    subtotal = variant?.sellingPrice ?: getPricePerUnit(product, 1)
+                state.cartItems + pricedItem(
+                    CartItem(
+                        product = product,
+                        variant = variant,
+                        qty = 1,
+                        price = 0.0,
+                        costPrice = variant?.purchasePrice ?: product.purchasePrice,
+                        subtotal = 0.0
+                    ),
+                    1
                 )
             }
             recalculateState(state.copy(cartItems = newCartItems))
@@ -272,16 +269,7 @@ class SalesViewModel(
 
         _uiState.update { state ->
             val newCartItems = state.cartItems.map {
-                if (it.product.id == productId && it.variant?.id == variantId) {
-                    val unitPrice = it.variant?.sellingPrice ?: getPricePerUnit(it.product, qty)
-                    it.copy(
-                        qty = qty, 
-                        price = unitPrice,
-                        subtotal = unitPrice * qty
-                    )
-                } else {
-                    it
-                }
+                if (it.product.id == productId && it.variant?.id == variantId) pricedItem(it, qty) else it
             }
             recalculateState(state.copy(cartItems = newCartItems))
         }
