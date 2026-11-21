@@ -27,7 +27,7 @@ interface CustomerDao {
     @Delete
     suspend fun delete(customer: CustomerEntity)
 
-    /** Piutang ikut terhapus (FK CASCADE), jadi tolak bila masih ada yang belum lunas. Return 0 = ditolak. */
+    /** Tolak bila masih ada piutang belum lunas; histori lunas tetap ada (FK SET NULL). Return 0 = ditolak. */
     @Query("DELETE FROM customers WHERE id = :id AND NOT EXISTS (SELECT 1 FROM receivables WHERE customerId = :id AND status != 'paid')")
     suspend fun deleteIfNoUnpaidReceivable(id: Long): Int
 

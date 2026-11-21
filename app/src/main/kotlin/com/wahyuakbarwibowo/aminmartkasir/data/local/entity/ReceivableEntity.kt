@@ -18,7 +18,8 @@ import androidx.room.PrimaryKey
             entity = CustomerEntity::class,
             parentColumns = ["id"],
             childColumns = ["customerId"],
-            onDelete = ForeignKey.CASCADE
+            // Histori lunas tetap tersimpan saat kontak dihapus.
+            onDelete = ForeignKey.SET_NULL
         )
     ],
     indices = [Index("saleId"), Index("customerId")]
