@@ -232,15 +232,28 @@ class SaleRepository(
 
         // 7. Reconcile piutang (receivable) sesuai status hutang terbaru dari sale yang diedit
         val existingReceivable = database.receivableDao().getReceivableBySaleId(saleId)
+        // Cicilan yang dicatat lewat menu Piutang hanya tersimpan di paidAmount,
+        // di luar uang muka saat transaksi (oldSale.paid).
+        val installments = existingReceivable?.let { (it.paidAmount - oldSale.paid).coerceAtLeast(0.0) } ?: 0.0
         if (receivable != null) {
+            val paidAmount = receivable.paidAmount + installments
+            val merged = receivable.copy(
+                paidAmount = paidAmount,
+                status = if (paidAmount >= receivable.amount) "paid" else "pending"
+            )
             if (existingReceivable != null) {
                 database.receivableDao().update(
-                    receivable.copy(id = existingReceivable.id, createdAt = existingReceivable.createdAt)
+                    merged.copy(id = existingReceivable.id, createdAt = existingReceivable.createdAt)
                 )
             } else {
-                database.receivableDao().insert(receivable)
+                database.receivableDao().insert(merged)
             }
         } else if (existingReceivable != null) {
+            if (installments > 0) {
+                throw IllegalStateException(
+                    "Piutang transaksi ini sudah dicicil. Metode bayar tidak bisa diganti dari Hutang."
+                )
+            }
             database.receivableDao().delete(existingReceivable)
         }
     }.also { runCatching(onStockChanged) }
