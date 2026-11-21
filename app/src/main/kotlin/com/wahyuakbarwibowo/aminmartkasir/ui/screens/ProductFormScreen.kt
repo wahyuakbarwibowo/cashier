@@ -168,15 +168,9 @@ fun ProductFormScreen(
                                 discount = discount.toDoubleOrNull() ?: 0.0
                             )
 
-                            if (isEdit) {
-                                viewModel.updateProduct(product)
-                                scope.launch {
-                                    viewModel.replaceVariants(product.id, variants)
-                                }
-                            } else {
-                                viewModel.addProduct(product)
+                            viewModel.saveProduct(product, if (isEdit) variants else null) {
+                                onNavigateBack()
                             }
-                            onNavigateBack()
                         }
                     ) {
                         Icon(Icons.Default.Save, contentDescription = "Simpan")

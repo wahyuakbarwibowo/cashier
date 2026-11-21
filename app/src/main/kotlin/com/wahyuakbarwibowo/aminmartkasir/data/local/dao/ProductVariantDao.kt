@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductVariantEntity
 import kotlinx.coroutines.flow.Flow
@@ -40,4 +41,24 @@ interface ProductVariantDao {
 
     @Query("SELECT * FROM product_variants WHERE id = :id")
     suspend fun getVariantById(id: Long): ProductVariantEntity?
+
+    /**
+     * Samakan varian produk dengan daftar dari form: update yang id-nya ada, insert yang
+     * baru (id = 0), hapus sisanya. ID varian lama dipertahankan karena sales_items.variantId
+     * merujuk ke sana (dipakai untuk mengembalikan stok saat transaksi diedit).
+     */
+    @Transaction
+    suspend fun syncForProduct(productId: Long, variants: List<ProductVariantEntity>) {
+        val existing = getByProductIdOnce(productId)
+        val keepIds = variants.filter { it.id != 0L }.map { it.id }.toSet()
+        existing.filter { it.id !in keepIds }.forEach { delete(it) }
+        val existingIds = existing.map { it.id }.toSet()
+        variants.forEach { variant ->
+            if (variant.id != 0L && variant.id in existingIds) {
+                update(variant.copy(productId = productId))
+            } else {
+                insert(variant.copy(id = 0, productId = productId))
+            }
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.wahyuakbarwibowo.aminmartkasir.data.repository
 
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.ProductDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
 import kotlinx.coroutines.flow.Flow
 
 class ProductRepository(
@@ -51,22 +52,30 @@ class ProductRepository(
         return productDao.searchProducts(query)
     }
 
+    /** Simpan produk baru beserta riwayat stok awalnya dalam satu transaksi. */
     suspend fun insert(product: ProductEntity): Long {
-        val id = productDao.insert(product.copy(isSynced = false, isDeleted = false, syncUpdatedAt = System.currentTimeMillis()))
+        val id = productDao.insertWithInitialStock(
+            product.copy(isSynced = false, isDeleted = false, syncUpdatedAt = System.currentTimeMillis()),
+            DateUtils.nowDateTime()
+        )
         scheduleSync()
         return id
     }
 
-    suspend fun update(product: ProductEntity) {
-        val existing = productDao.getProductById(product.id)
-        productDao.update(product.copy(
-            remoteId = existing?.remoteId,
-            createdAt = existing?.createdAt,
-            isDeleted = false,
-            isSynced = false,
-            syncUpdatedAt = System.currentTimeMillis()
-        ))
+    /**
+     * Simpan perubahan dari form. [stockDelta] = stok di form - stok saat form dibuka,
+     * diterapkan relatif ke stok terkini agar penjualan di sela-selanya tidak hilang.
+     */
+    suspend fun update(product: ProductEntity, stockDelta: Int) {
+        productDao.updateWithStockDelta(product, stockDelta, DateUtils.nowDateTime(), System.currentTimeMillis())
         scheduleSync()
+    }
+
+    /** Penyesuaian stok + riwayatnya dalam satu transaksi. False bila produk tidak ada. */
+    suspend fun adjustStock(productId: Long, changeQty: Int, reason: String): Boolean {
+        val adjusted = productDao.adjustStockWithHistory(productId, changeQty, reason, DateUtils.nowDateTime())
+        if (adjusted) scheduleSync()
+        return adjusted
     }
 
     suspend fun delete(product: ProductEntity) {
