@@ -117,7 +117,8 @@ class PurchaseViewModel(
         val newCartItems = if (existingItem != null) {
             currentState.cartItems.map {
                 if (it.product.id == product.id) {
-                    it.copy(qty = it.qty + qty, subtotal = (it.qty + qty) * it.price)
+                    // Harga beli terbaru yang diisi menggantikan harga sebelumnya.
+                    it.copy(qty = it.qty + qty, price = price, subtotal = (it.qty + qty) * price)
                 } else {
                     it
                 }
