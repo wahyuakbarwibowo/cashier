@@ -106,28 +106,38 @@ class DigitalTransactionViewModel(
             }
             currentHistoryPage = 1
 
+            // Flow ini emit lagi setiap produk/kategori berubah. Riwayat halaman 1 dan
+            // muat-ulang produk hanya untuk emisi pertama / saat kategori berganti,
+            // supaya halaman riwayat yang sudah dimuat dan pencarian aktif tidak ter-reset.
+            var isFirst = true
+            var loadedCategory: String? = null
             combine(
                 digitalCategoryRepository.allDigitalCategories,
                 digitalProductRepository.allDigitalProducts
             ) { cats, allProds ->
                 cats to allProds
             }.collect { (cats, allProds) ->
+                val first = isFirst
+                isFirst = false
                 _uiState.update { state ->
                     state.copy(
                         categories = cats,
-                        phoneHistory = initialHistory,
+                        phoneHistory = if (first) initialHistory else state.phoneHistory,
                         allProducts = allProds,
                         isLoading = false,
                         isRefreshing = false,
-                        canLoadMore = !isLastHistoryPage,
+                        canLoadMore = if (first) !isLastHistoryPage else state.canLoadMore,
                         selectedCategory = when {
                             state.selectedCategory != null && cats.any { it.name == state.selectedCategory } -> state.selectedCategory
                             else -> cats.firstOrNull()?.name
                         }
                     )
                 }
-                // Refresh products for initial category
-                _uiState.value.selectedCategory?.let { loadProductsByCategory(it) }
+                val category = _uiState.value.selectedCategory
+                if (category != null && category != loadedCategory) {
+                    loadedCategory = category
+                    loadProductsByCategory(category)
+                }
             }
         }
     }
