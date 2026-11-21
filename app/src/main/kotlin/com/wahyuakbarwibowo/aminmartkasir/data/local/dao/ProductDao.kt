@@ -87,6 +87,10 @@ interface ProductDao {
         expectedIsSynced: Boolean
     ): Int
 
+    /** Pasang remoteId tanpa menulis ulang baris (stok bisa berubah karena penjualan di sela sync). */
+    @Query("UPDATE products SET remoteId = :remoteId WHERE id = :id AND remoteId IS NULL")
+    suspend fun assignRemoteId(id: Long, remoteId: String)
+
     @Query("UPDATE products SET isSynced = 1 WHERE id = :id AND syncUpdatedAt = :syncUpdatedAt")
     suspend fun markSynced(id: Long, syncUpdatedAt: Long)
 

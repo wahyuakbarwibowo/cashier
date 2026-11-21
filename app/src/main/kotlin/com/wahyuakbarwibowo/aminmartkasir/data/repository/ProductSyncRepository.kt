@@ -72,8 +72,8 @@ class ProductSyncRepository(
         var pushed = 0
         for (local in productDao.getPendingSync()) {
             val product = local.copy(remoteId = local.remoteId ?: UUID.randomUUID().toString())
-            if (product.remoteId != local.remoteId) productDao.update(product)
             val remoteId = requireNotNull(product.remoteId)
+            if (local.remoteId == null) productDao.assignRemoteId(product.id, remoteId)
             val existingRemote = cloud.findProduct(storeId, remoteId)
             if (existingRemote != null && existingRemote.syncUpdatedAt > product.syncUpdatedAt) {
                 applyRemote(existingRemote.toLocal(product.id), product.syncUpdatedAt, false)

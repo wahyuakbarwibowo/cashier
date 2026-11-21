@@ -44,9 +44,7 @@ class ProductSyncRepositoryTest {
         assertEquals(1, pushed)
         assertEquals("store-1", cloud.uploads.single().storeId)
         assertNotNull(cloud.uploads.single().remoteId)
-        val persisted = argumentCaptor<ProductEntity>()
-        verify(productDao).update(persisted.capture())
-        assertEquals(cloud.uploads.single().remoteId, persisted.firstValue.remoteId)
+        verify(productDao).assignRemoteId(4, cloud.uploads.single().remoteId)
         verify(productDao).markSynced(4, 100)
     }
 
@@ -179,6 +177,11 @@ class ProductSyncRepositoryTest {
 
         override suspend fun update(product: ProductEntity) {
             rows[rows.indexOfFirst { it.id == product.id }] = product
+        }
+
+        override suspend fun assignRemoteId(id: Long, remoteId: String) {
+            val index = rows.indexOfFirst { it.id == id && it.remoteId == null }
+            if (index >= 0) rows[index] = rows[index].copy(remoteId = remoteId)
         }
 
         override suspend fun markSynced(id: Long, syncUpdatedAt: Long) {
