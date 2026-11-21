@@ -31,8 +31,6 @@ interface ExpenseDao {
     @Query("SELECT * FROM expenses WHERE id = :id")
     suspend fun getExpenseById(id: Long): ExpenseEntity?
 
-    @Query("SELECT * FROM expenses ORDER BY id DESC")
-    fun getExpensesByDateRange(): Flow<List<ExpenseEntity>>
 
     @Query("SELECT SUM(amount) FROM expenses WHERE createdAt >= :startDate AND createdAt <= :endDate")
     suspend fun getTotalExpensesByDateRange(startDate: String, endDate: String): Double?

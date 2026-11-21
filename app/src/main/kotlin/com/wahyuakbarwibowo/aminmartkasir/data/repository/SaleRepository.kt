@@ -68,10 +68,6 @@ class SaleRepository(
         return saleDao.searchSales(query, limit)
     }
 
-    suspend fun deleteSale(sale: SaleEntity) {
-        saleDao.delete(sale)
-    }
-
     /**
      * Memproses checkout transaksi penjualan secara atomik di dalam sebuah Room Database Transaction.
      */

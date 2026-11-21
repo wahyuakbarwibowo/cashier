@@ -65,10 +65,6 @@ class PurchaseRepository(
         return purchaseItemDao.getPurchaseItemsByPurchaseId(purchaseId)
     }
 
-    suspend fun deletePurchase(purchase: PurchaseEntity) {
-        purchaseDao.delete(purchase)
-    }
-
     /**
      * Memproses pembelian stok dari supplier secara atomik di dalam sebuah Room Database Transaction.
      */

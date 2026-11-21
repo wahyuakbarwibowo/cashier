@@ -15,12 +15,6 @@ interface SaleDao {
     @Query("SELECT * FROM sales WHERE id = :id")
     suspend fun getSaleById(id: Long): SaleEntity?
 
-    @Query("SELECT * FROM sales ORDER BY id DESC")
-    fun getSalesByDateRange(): Flow<List<SaleEntity>>
-
-    @Query("SELECT * FROM sales ORDER BY id DESC LIMIT :limit OFFSET :offset")
-    suspend fun getSalesByDateRange(limit: Int, offset: Int): List<SaleEntity>
-
     @Query("SELECT SUM(total) FROM sales WHERE createdAt >= :startDate AND createdAt <= :endDate")
     suspend fun getTotalSalesByDateRange(startDate: String, endDate: String): Double?
 

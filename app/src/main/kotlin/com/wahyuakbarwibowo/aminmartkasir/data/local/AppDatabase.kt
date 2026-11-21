@@ -5,10 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.wahyuakbarwibowo.aminmartkasir.data.local.converter.Converters
 import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.*
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
@@ -38,7 +36,6 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
     version = 13,
     exportSchema = true
 )
-@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun productVariantDao(): ProductVariantDao
