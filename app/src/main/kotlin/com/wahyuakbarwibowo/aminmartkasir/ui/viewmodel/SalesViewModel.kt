@@ -460,6 +460,9 @@ class SalesViewModel(
     }
 
     fun loadSaleIntoCart(saleId: Long) {
+        // LaunchedEffect jalan lagi setiap layar kembali tampil (mis. dari Produk Baru);
+        // jangan timpa keranjang yang sedang diedit dengan versi DB.
+        if (_uiState.value.editingSaleId == saleId) return
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             try {
