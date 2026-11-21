@@ -8,6 +8,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.remote.PaidFeature
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.SupabaseProvider
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.CloudProduct
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -33,10 +34,28 @@ class SupabaseProductCloudDataSource : ProductCloudDataSource {
             .upsert(product) { onConflict = "remote_id" }
     }
 
-    override suspend fun getProducts(storeId: String): List<CloudProduct> =
-        SupabaseProvider.client.postgrest.from("products")
-            .select { filter { eq("store_id", storeId) } }
-            .decodeList()
+    /** PostgREST memotong hasil di max_rows (1000), jadi ambil per halaman sampai habis. */
+    override suspend fun getProducts(storeId: String): List<CloudProduct> {
+        val all = mutableListOf<CloudProduct>()
+        var from = 0L
+        while (true) {
+            val page = SupabaseProvider.client.postgrest.from("products")
+                .select {
+                    filter { eq("store_id", storeId) }
+                    order("remote_id", Order.ASCENDING)
+                    range(from, from + PAGE_SIZE - 1)
+                }
+                .decodeList<CloudProduct>()
+            all += page
+            if (page.size < PAGE_SIZE) return all
+            from += PAGE_SIZE
+        }
+    }
+
+    private companion object {
+        // Harus <= max_rows server supaya halaman penuh tidak disangka halaman terakhir.
+        const val PAGE_SIZE = 500L
+    }
 }
 
 class ProductSyncRepository(
