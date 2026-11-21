@@ -1,9 +1,10 @@
 package com.wahyuakbarwibowo.aminmartkasir.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "expenses")
+@Entity(tableName = "expenses", indices = [Index("createdAt")])
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

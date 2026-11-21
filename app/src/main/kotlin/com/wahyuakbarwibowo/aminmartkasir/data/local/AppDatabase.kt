@@ -35,7 +35,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         StockHistoryEntity::class,
         ShiftEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -103,6 +103,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Dashboard, shift, dan laba rugi menjumlahkan expenses/purchases per rentang createdAt.
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_expenses_createdAt ON expenses (createdAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_purchases_createdAt ON purchases (createdAt)")
+            }
+        }
+
         fun getDatabase(context: Context, storeId: String): AppDatabase {
             val name = TenantDatabaseFiles.name(storeId)
             return synchronized(this) {
@@ -115,7 +123,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     name
                     )
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                     // Versi 1-8 mendahului histori Migration object (dulu pakai fallbackToDestructiveMigration
                     // tanpa batas); tidak ada schema snapshot untuk menulis migrasi asli, jadi scope destructive
                     // fallback hanya untuk versi lama ini. Versi 9+ tetap wajib Migration object di atas.
