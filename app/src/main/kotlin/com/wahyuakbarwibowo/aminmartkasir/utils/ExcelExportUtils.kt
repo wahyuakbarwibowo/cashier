@@ -17,7 +17,10 @@ object ExcelExportUtils {
 
     private fun sanitizeCsvField(field: Any?): String {
         if (field == null) return ""
-        val str = field.toString()
+        var str = field.toString()
+        // Cegah CSV/formula injection: Excel mengeksekusi sel teks yang diawali = + - @
+        // (mis. catatan transaksi yang diketik pelanggan).
+        if (field is String && str.firstOrNull() in setOf('=', '+', '-', '@', '\t', '\r')) str = "'$str"
         if (str.contains(",") || str.contains("\"") || str.contains("\n") || str.contains("\r")) {
             return "\"" + str.replace("\"", "\"\"") + "\""
         }
@@ -91,9 +94,11 @@ object ExcelExportUtils {
 
             val fileName = "Laporan_Aminmart_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.csv"
             val file = File(context.cacheDir, fileName)
-            val outputStream = FileOutputStream(file)
-            outputStream.write(sb.toString().toByteArray())
-            outputStream.close()
+            FileOutputStream(file).use { out ->
+                // BOM agar Excel membaca UTF-8 (nama/catatan beraksara non-ASCII tidak rusak).
+                out.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
+                out.write(sb.toString().toByteArray(Charsets.UTF_8))
+            }
             
             return@withContext file
         } catch (e: Exception) {
