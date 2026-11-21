@@ -224,15 +224,20 @@ class PurchaseViewModel(
     }
 
     fun processPurchase() {
-        if (_uiState.value.isProcessing) return
+        // Set flag secara atomik sebelum launch; tap ganda cepat lolos bila diset di dalam coroutine.
+        var started = false
+        _uiState.update {
+            started = !it.isProcessing
+            if (started) it.copy(isProcessing = true) else it
+        }
+        if (!started) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
                 if (currentState.cartItems.isEmpty()) {
-                    _uiState.update { it.copy(error = "Keranjang kosong") }
+                    _uiState.update { it.copy(isProcessing = false, error = "Keranjang kosong") }
                     return@launch
                 }
-                _uiState.update { it.copy(isProcessing = true) }
 
                 val purchase = PurchaseEntity(
                     supplierId = currentState.selectedSupplier?.id,
