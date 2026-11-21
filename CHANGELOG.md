@@ -16,6 +16,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-21
+
+### Added
+- Tukar poin pelanggan langsung di dialog pembayaran (1 poin = Rp100), dibatasi saldo poin dan sisa tagihan.
+- Tandai metode pembayaran sebagai tunai/non-tunai di Pengaturan; kas shift hanya menghitung metode tunai.
+
+### Changed
+- Stok produk disinkronkan sebagai selisih (delta), sehingga penjualan offline di beberapa perangkat sama-sama mengurangi stok cloud. Semua perangkat toko perlu diperbarui ke versi ini.
+- Password baru minimal 8 karakter dan berisi huruf serta angka.
+- Link reset password memakai token yang baru diverifikasi saat tombol Simpan ditekan.
+- APK rilis lebih kecil (12 MB → 4 MB) karena optimasi R8 diaktifkan.
+
+### Fixed
+- Histori piutang/hutang yang sudah lunas tidak lagi ikut terhapus saat pelanggan/supplier dihapus.
+- Keranjang kasir tidak hilang saat Android menutup aplikasi di latar belakang.
+- Pencarian dengan karakter % atau _ tidak lagi dianggap wildcard.
+- Daftar produk langsung menampilkan produk yang baru ditambah atau diubah.
+- Restore backup tidak mengirim ulang selisih stok yang sudah tersinkron.
+
 ## [3.7.1] - 2026-11-21
 
 ### Security
