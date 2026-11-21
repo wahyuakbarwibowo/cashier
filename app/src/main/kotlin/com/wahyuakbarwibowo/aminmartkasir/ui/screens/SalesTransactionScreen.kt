@@ -593,7 +593,7 @@ fun HeldOrdersDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Pesanan Ditahan", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Tutup") }
                     }
                     if (!cartIsEmpty) {
                         Spacer(Modifier.height(8.dp))
@@ -871,7 +871,7 @@ fun ProductSelectorDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Pilih Produk", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Tutup") }
                     }
                     
                     Spacer(Modifier.height(16.dp))
@@ -883,7 +883,7 @@ fun ProductSelectorDialog(
                         leadingIcon = { Icon(Icons.Default.Search, null) },
                         trailingIcon = {
                             IconButton(onClick = { cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA) }) {
-                                Icon(Icons.Default.QrCodeScanner, null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode", tint = MaterialTheme.colorScheme.primary)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
