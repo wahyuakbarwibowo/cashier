@@ -83,7 +83,7 @@ fun ShiftScreen(
                             Text("Mulai: ${open.openedAt}", style = MaterialTheme.typography.labelMedium)
                             HorizontalDivider(Modifier.padding(vertical = 4.dp))
                             ShiftRow("Modal Awal", formatCurrency(open.openingCash))
-                            ShiftRow("Penjualan", formatCurrency(uiState.liveSales))
+                            ShiftRow("Uang Tunai Masuk", formatCurrency(uiState.liveSales))
                             ShiftRow("Pengeluaran", "- ${formatCurrency(uiState.liveExpenses)}")
                             HorizontalDivider(Modifier.padding(vertical = 4.dp))
                             ShiftRow("Estimasi Uang Laci", formatCurrency(uiState.liveExpectedCash), bold = true)
@@ -180,7 +180,7 @@ private fun ClosedShiftCard(shift: ShiftEntity) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("${shift.openedAt} → ${shift.closedAt ?: "-"}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             ShiftRow("Modal Awal", formatCurrency(shift.openingCash))
-            ShiftRow("Penjualan", formatCurrency(shift.totalSales))
+            ShiftRow("Uang Tunai Masuk", formatCurrency(shift.totalSales))
             ShiftRow("Pengeluaran", "- ${formatCurrency(shift.totalExpenses)}")
             ShiftRow("Estimasi", formatCurrency(shift.expectedCash ?: 0.0))
             ShiftRow("Terhitung", formatCurrency(shift.countedCash ?: 0.0))

@@ -157,7 +157,9 @@ class ViewModelFactory(
                 ShiftViewModel(
                     shiftRepository = shiftRepository,
                     saleRepository = saleRepository,
-                    expenseRepository = expenseRepository
+                    expenseRepository = expenseRepository,
+                    phoneHistoryRepository = phoneHistoryRepository,
+                    paymentMethodRepository = paymentMethodRepository
                 ) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
