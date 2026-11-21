@@ -33,7 +33,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         StockHistoryEntity::class,
         ShiftEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -108,6 +108,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Sync stok berbasis delta: syncedStock = stok terakhir yang disepakati dengan cloud.
+        // Produk yang belum pernah di-upload mulai dari basis 0 (seluruh stok = delta);
+        // produk tertunda yang sudah punya remoteId basisnya tidak diketahui (NULL).
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE products ADD COLUMN syncedStock INTEGER")
+                db.execSQL("UPDATE products SET syncedStock = stock WHERE isSynced = 1 AND remoteId IS NOT NULL")
+                db.execSQL("UPDATE products SET syncedStock = 0 WHERE remoteId IS NULL")
+            }
+        }
+
         fun getDatabase(context: Context, storeId: String): AppDatabase {
             val name = TenantDatabaseFiles.name(storeId)
             return synchronized(this) {
@@ -120,7 +131,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     name
                     )
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                     // Versi 1-8 mendahului histori Migration object (dulu pakai fallbackToDestructiveMigration
                     // tanpa batas); tidak ada schema snapshot untuk menulis migrasi asli, jadi scope destructive
                     // fallback hanya untuk versi lama ini. Versi 9+ tetap wajib Migration object di atas.

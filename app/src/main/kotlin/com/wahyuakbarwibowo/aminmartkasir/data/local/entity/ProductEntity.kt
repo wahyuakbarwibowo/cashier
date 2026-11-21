@@ -24,5 +24,10 @@ data class ProductEntity(
     val remoteId: String? = null,
     val syncUpdatedAt: Long = 0,
     val isSynced: Boolean = false,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    /**
+     * Stok terakhir yang disepakati dengan cloud; selisih `stock - syncedStock` adalah
+     * delta yang belum dikirim. Null = basis tidak diketahui (data dari versi lama/backup).
+     */
+    val syncedStock: Int? = 0
 )

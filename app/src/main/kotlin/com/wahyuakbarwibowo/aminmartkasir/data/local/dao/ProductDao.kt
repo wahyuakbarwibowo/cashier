@@ -49,7 +49,8 @@ interface ProductDao {
     @Update
     suspend fun update(product: ProductEntity)
 
-    @Query("SELECT * FROM products WHERE isSynced = 0")
+    /** Data produk belum terkirim, atau ada delta stok yang belum terkirim. */
+    @Query("SELECT * FROM products WHERE isSynced = 0 OR stock != syncedStock")
     suspend fun getPendingSync(): List<ProductEntity>
 
     @Query("SELECT * FROM products WHERE remoteId = :remoteId")
@@ -62,7 +63,7 @@ interface ProductDao {
         purchasePrice = :purchasePrice, purchasePackagePrice = :purchasePackagePrice,
         purchasePackageQty = :purchasePackageQty, sellingPrice = :sellingPrice,
         packagePrice = :packagePrice, packageQty = :packageQty,
-        discount = :discount, stock = :stock,
+        discount = :discount,
         lowStockThreshold = :lowStockThreshold, createdAt = :createdAt,
         updatedAt = :updatedAt, remoteId = :remoteId,
         syncUpdatedAt = :syncUpdatedAt, isSynced = 1, isDeleted = :isDeleted
@@ -79,7 +80,6 @@ interface ProductDao {
         packagePrice: Double,
         packageQty: Int,
         discount: Double,
-        stock: Int,
         lowStockThreshold: Int,
         createdAt: String?,
         updatedAt: String?,
@@ -89,6 +89,20 @@ interface ProductDao {
         expectedSyncUpdatedAt: Long,
         expectedIsSynced: Boolean
     ): Int
+
+    /**
+     * Samakan stok dengan cloud tanpa membuang delta lokal yang belum terkirim.
+     * Basis null hanya diambil alih bila tidak ada perubahan lokal yang tertunda.
+     */
+    @Query("""UPDATE products SET stock = :remoteStock + COALESCE(stock - syncedStock, 0),
+        syncedStock = :remoteStock
+        WHERE id = :id AND (syncedStock IS NOT NULL OR isSynced = 1)
+        AND (syncedStock IS NULL OR syncedStock != :remoteStock)""")
+    suspend fun reconcileStock(id: Long, remoteStock: Int)
+
+    /** Delta dari [pushedStock] sudah dijumlahkan server menjadi [serverStock]. */
+    @Query("UPDATE products SET stock = stock + (:serverStock - :pushedStock), syncedStock = :serverStock WHERE id = :id")
+    suspend fun markStockPushed(id: Long, pushedStock: Int, serverStock: Int)
 
     /** Pasang remoteId tanpa menulis ulang baris (stok bisa berubah karena penjualan di sela sync). */
     @Query("UPDATE products SET remoteId = :remoteId WHERE id = :id AND remoteId IS NULL")
