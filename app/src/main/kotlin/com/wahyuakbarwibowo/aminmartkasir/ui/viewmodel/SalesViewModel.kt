@@ -1,5 +1,6 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
@@ -11,6 +12,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 sealed class BarcodeAddResult {
     data class Added(val productName: String) : BarcodeAddResult()
@@ -53,6 +56,27 @@ data class HeldOrder(
     val createdAt: String
 )
 
+/** Keranjang ringkas untuk SavedStateHandle; entity diambil ulang dari DB saat dipulihkan. */
+@Serializable
+private data class SavedCart(
+    val lines: List<SavedLine>,
+    val customerId: Long? = null,
+    val discount: Double = 0.0,
+    val pointsRedeemed: Int = 0
+)
+
+@Serializable
+private data class SavedLine(
+    val productId: Long,
+    val variantId: Long? = null,
+    val qty: Int,
+    val price: Double,
+    val costPrice: Double,
+    val subtotal: Double
+)
+
+private const val SAVED_CART_KEY = "cart"
+
 data class CartItem(
     val product: ProductEntity,
     val variant: ProductVariantEntity? = null,
@@ -85,7 +109,8 @@ class SalesViewModel(
     private val saleRepository: SaleRepository,
     private val stockHistoryRepository: StockHistoryRepository,
     private val customerPointsHistoryRepository: CustomerPointsHistoryRepository,
-    private val receivableRepository: ReceivableRepository
+    private val receivableRepository: ReceivableRepository,
+    private val savedState: SavedStateHandle = SavedStateHandle()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SalesTransactionUiState())
@@ -99,6 +124,54 @@ class SalesViewModel(
 
     init {
         loadInitialData()
+        restoreCart()
+        persistCart()
+    }
+
+    /** Android bisa mematikan proses saat app di latar belakang; jangan sampai keranjang hilang. */
+    private fun restoreCart() {
+        val json = savedState.get<String>(SAVED_CART_KEY) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val saved = runCatching { Json.decodeFromString<SavedCart>(json) }.getOrNull() ?: return@launch
+            val items = saved.lines.mapNotNull { line ->
+                val product = productRepository.getProductById(line.productId) ?: return@mapNotNull null
+                val variant = line.variantId?.let { productVariantRepository.getVariantById(it) ?: return@mapNotNull null }
+                CartItem(product, variant, line.qty, line.price, line.costPrice, line.subtotal)
+            }
+            val customer = saved.customerId?.let { customerRepository.getCustomerById(it) }
+            _uiState.update { state ->
+                if (state.cartItems.isNotEmpty() || state.editingSaleId != null) state
+                else recalculateState(
+                    state.copy(
+                        cartItems = items,
+                        selectedCustomer = customer,
+                        discount = saved.discount,
+                        pointsRedeemed = if (customer != null) saved.pointsRedeemed else 0
+                    )
+                )
+            }
+        }
+    }
+
+    private fun persistCart() {
+        viewModelScope.launch {
+            uiState
+                .map { s ->
+                    // Transaksi yang sedang diedit dimuat ulang dari argumen navigasi.
+                    if (s.editingSaleId != null || s.cartItems.isEmpty()) null
+                    else SavedCart(
+                        lines = s.cartItems.map {
+                            SavedLine(it.product.id, it.variant?.id, it.qty, it.price, it.costPrice, it.subtotal)
+                        },
+                        customerId = s.selectedCustomer?.id,
+                        discount = s.discount,
+                        pointsRedeemed = s.pointsRedeemed
+                    )
+                }
+                .distinctUntilChanged()
+                .drop(1) // emisi awal (keranjang kosong) jangan menimpa yang sedang dipulihkan
+                .collect { savedState[SAVED_CART_KEY] = it?.let { cart -> Json.encodeToString(SavedCart.serializer(), cart) } }
+        }
     }
 
     private fun loadInitialData() {
