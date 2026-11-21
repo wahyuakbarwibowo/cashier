@@ -34,7 +34,7 @@ interface CustomerDao {
     @Query("UPDATE customers SET points = points + :points WHERE id = :id")
     suspend fun addPoints(id: Long, points: Int)
 
-    @Query("UPDATE customers SET points = points - :points WHERE id = :id")
+    @Query("UPDATE customers SET points = MAX(points - :points, 0) WHERE id = :id")
     suspend fun deductPoints(id: Long, points: Int)
 
     @Query("SELECT COUNT(*) FROM customers")
