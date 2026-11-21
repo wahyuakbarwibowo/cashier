@@ -6,6 +6,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SaleRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -23,8 +24,13 @@ class SaleDetailViewModel(
     private val _uiState = MutableStateFlow(SaleDetailUiState())
     val uiState: StateFlow<SaleDetailUiState> = _uiState.asStateFlow()
 
+    private var loadJob: Job? = null
+
     fun loadSaleDetail(saleId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
+        // Dipanggil lagi setiap kembali dari layar Edit; collector lama akan menulis header
+        // sale yang basi setiap kali item berubah, jadi batalkan dulu.
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val sale = saleRepository.getSaleById(saleId)
