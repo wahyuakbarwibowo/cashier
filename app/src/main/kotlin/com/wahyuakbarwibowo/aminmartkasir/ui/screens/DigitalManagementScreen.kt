@@ -181,7 +181,8 @@ fun DigitalManagementScreen(
                     ProductList(
                         modifier = Modifier.weight(1f),
                         products = filteredProducts,
-                        onMove = { from, to -> viewModel.moveProduct(from, to) },
+                        // Indeks dari daftar terfilter; VM bekerja di allProducts, jadi kirim id.
+                        onMove = { from, to -> viewModel.moveProduct(filteredProducts[from].id, filteredProducts[to].id) },
                         onDelete = { productToDelete = it }
                     )
 

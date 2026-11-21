@@ -389,9 +389,12 @@ class DigitalTransactionViewModel(
         }
     }
 
-    fun moveProduct(fromIndex: Int, toIndex: Int) {
+    /** Pindahkan produk [fromId] ke posisi produk [toId] di daftar lengkap (bukan daftar terfilter). */
+    fun moveProduct(fromId: Long, toId: Long) {
         val products = _uiState.value.allProducts
-        if (fromIndex !in products.indices || toIndex !in products.indices || fromIndex == toIndex) return
+        val fromIndex = products.indexOfFirst { it.id == fromId }
+        val toIndex = products.indexOfFirst { it.id == toId }
+        if (fromIndex < 0 || toIndex < 0 || fromIndex == toIndex) return
 
         val mutable = products.toMutableList()
         val moved = mutable.removeAt(fromIndex)
