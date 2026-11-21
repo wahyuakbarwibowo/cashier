@@ -17,6 +17,8 @@ data class DigitalTransactionUiState(
     val allProducts: List<DigitalProductEntity> = emptyList(),
     val managementProviders: List<String> = emptyList(),
     val phoneHistory: List<PhoneHistoryEntity> = emptyList(),
+    /** Hasil cari riwayat dari DB (semua halaman); null = tidak sedang mencari. */
+    val historySearchResults: List<PhoneHistoryEntity>? = null,
     val paymentMethods: List<PaymentMethodEntity> = emptyList(),
     val customers: List<CustomerEntity> = emptyList(),
     val selectedCategory: String? = null,
@@ -432,6 +434,23 @@ class DigitalTransactionViewModel(
                     digitalProductRepository.update(product.copy(sortOrder = index))
                 }
             }
+        }
+    }
+
+    private var historySearchJob: Job? = null
+
+    /** Cari di seluruh riwayat (DB), bukan hanya halaman yang sudah dimuat. */
+    fun searchHistory(query: String) {
+        historySearchJob?.cancel()
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) {
+            _uiState.update { it.copy(historySearchResults = null) }
+            return
+        }
+        historySearchJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(300) // debounce ketikan
+            val results = phoneHistoryRepository.searchPhoneHistory(trimmed)
+            _uiState.update { it.copy(historySearchResults = results) }
         }
     }
 }

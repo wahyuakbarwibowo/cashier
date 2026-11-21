@@ -59,4 +59,10 @@ interface PhoneHistoryDao {
         receivable?.let { insertReceivable(it) }
         return id
     }
+
+    @Query("""SELECT * FROM phone_history
+        WHERE phoneNumber LIKE '%' || :query || '%' OR provider LIKE '%' || :query || '%'
+            OR notes LIKE '%' || :query || '%' OR customerName LIKE '%' || :query || '%'
+        ORDER BY createdAt DESC, id DESC LIMIT :limit""")
+    suspend fun searchPhoneHistory(query: String, limit: Int): List<PhoneHistoryEntity>
 }

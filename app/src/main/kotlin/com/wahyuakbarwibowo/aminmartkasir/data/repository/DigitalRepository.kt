@@ -63,6 +63,9 @@ class PhoneHistoryRepository(private val phoneHistoryDao: PhoneHistoryDao) {
     suspend fun insertWithReceivable(phoneHistory: PhoneHistoryEntity, receivable: ReceivableEntity?): Long =
         phoneHistoryDao.insertWithReceivable(phoneHistory, receivable)
 
+    suspend fun searchPhoneHistory(query: String, limit: Int = 100): List<PhoneHistoryEntity> =
+        phoneHistoryDao.searchPhoneHistory(query, limit)
+
     suspend fun getPhoneHistoryById(id: Long): PhoneHistoryEntity? {
         return phoneHistoryDao.getPhoneHistoryById(id)
     }
