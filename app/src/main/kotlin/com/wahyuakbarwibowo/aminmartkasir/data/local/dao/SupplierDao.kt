@@ -24,8 +24,9 @@ interface SupplierDao {
     @Delete
     suspend fun delete(supplier: SupplierEntity)
 
-    @Query("DELETE FROM suppliers WHERE id = :id")
-    suspend fun deleteById(id: Long)
+    /** Hutang ikut terhapus (FK CASCADE), jadi tolak bila masih ada yang belum lunas. Return 0 = ditolak. */
+    @Query("DELETE FROM suppliers WHERE id = :id AND NOT EXISTS (SELECT 1 FROM payables WHERE supplierId = :id AND status != 'paid')")
+    suspend fun deleteIfNoUnpaidPayable(id: Long): Int
 
     @Query("SELECT COUNT(*) FROM suppliers")
     fun getSupplierCount(): Flow<Int>
