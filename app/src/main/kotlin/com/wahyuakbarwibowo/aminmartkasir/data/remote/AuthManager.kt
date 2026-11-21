@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.data.remote
 import android.content.Context
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.UserProfile
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.exception.AuthErrorCode
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -131,8 +132,15 @@ object AuthManager {
             _state.value = UiState.Authenticated(profile)
             cacheProfile(profile)
             Result.success(Unit)
+        } catch (e: AuthRestException) {
+            Result.failure(Exception(when (e.errorCode) {
+                AuthErrorCode.EmailNotConfirmed -> "Email belum dikonfirmasi. Cek kotak masuk email Anda."
+                AuthErrorCode.OverRequestRateLimit, AuthErrorCode.OverEmailSendRateLimit ->
+                    "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
+                else -> "Email atau password salah."
+            }))
         } catch (e: RestException) {
-            Result.failure(Exception("Email atau password salah."))
+            Result.failure(Exception("Gagal masuk. Server sedang bermasalah, coba lagi."))
         } catch (e: IOException) {
             Result.failure(Exception("Tidak ada koneksi internet."))
         } catch (e: Exception) {
