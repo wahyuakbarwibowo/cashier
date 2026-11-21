@@ -60,6 +60,20 @@ class ProductViewModel(
     init {
         loadInitialProducts()
         loadLowStockProducts()
+        reloadOnProductChanges()
+    }
+
+    /**
+     * Form produk memakai instance ViewModel sendiri, jadi daftar di layar Produk perlu
+     * tahu saat tabel berubah. Room memancarkan ulang kueri ini di setiap perubahan tabel.
+     */
+    private fun reloadOnProductChanges() {
+        viewModelScope.launch(Dispatchers.IO) {
+            productRepository.productCount.drop(1).collect {
+                val query = _uiState.value.searchQuery
+                if (query.isBlank()) loadInitialProducts() else searchProducts(query)
+            }
+        }
     }
 
     private fun loadLowStockProducts() {
@@ -225,7 +239,6 @@ class ProductViewModel(
                     variants?.let { productVariantRepository.syncForProduct(product.id, it) }
                     _uiState.update { it.copy(successMessage = "Produk berhasil diperbarui") }
                 }
-                loadInitialProducts()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             } finally {
