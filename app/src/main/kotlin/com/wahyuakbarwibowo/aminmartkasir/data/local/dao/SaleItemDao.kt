@@ -35,12 +35,15 @@ interface SaleItemDao {
     @Query("DELETE FROM sales_items WHERE saleId = :saleId")
     suspend fun deleteBySaleId(saleId: Long)
 
+    // Nama diambil dari produk saat ini (fallback nama di item); kolom non-agregat di
+    // GROUP BY SQLite mengambil baris acak, jadi produk yang diganti nama tampil tidak konsisten.
     @Query("""
-        SELECT productName, SUM(qty) as totalQty 
-        FROM sales_items 
-        WHERE productId IS NOT NULL
-        GROUP BY productId 
-        ORDER BY totalQty DESC 
+        SELECT COALESCE(p.name, MAX(si.productName)) AS productName, SUM(si.qty) AS totalQty
+        FROM sales_items si
+        LEFT JOIN products p ON p.id = si.productId
+        WHERE si.productId IS NOT NULL
+        GROUP BY si.productId
+        ORDER BY totalQty DESC
         LIMIT :limit
     """)
     suspend fun getTopSellingProductsOnce(limit: Int): List<ProductQuantityDto>
