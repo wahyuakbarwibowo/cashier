@@ -40,6 +40,7 @@ data class SalesTransactionUiState(
     val canLoadMore: Boolean = true,
     val editingSaleId: Long? = null,
     val heldOrders: List<HeldOrder> = emptyList(),
+    val isProcessing: Boolean = false,
     val error: String? = null
 )
 
@@ -369,6 +370,20 @@ class SalesViewModel(
         }
     }
 
+    /** Set isProcessing secara atomik; false bila transaksi lain masih berjalan (cegah tap ganda). */
+    private fun tryStartProcessing(): Boolean {
+        var started = false
+        _uiState.update {
+            started = !it.isProcessing
+            if (started) it.copy(isProcessing = true, error = null) else it
+        }
+        return started
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
+    }
+
     /** Simpan payment method "Hutang" virtual (id=-1, dibuat sementara di UI) sebagai row nyata agar bisa di-resolve lagi saat edit transaksi. */
     private suspend fun persistIfVirtual(method: PaymentMethodEntity?): PaymentMethodEntity? {
         if (method == null || method.id != -1L) return method
@@ -377,6 +392,7 @@ class SalesViewModel(
     }
 
     fun processTransaction(onComplete: (saleId: Long) -> Unit = {}) {
+        if (!tryStartProcessing()) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
@@ -445,7 +461,9 @@ class SalesViewModel(
                 onComplete(saleId)
                 
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(error = e.message ?: "Transaksi gagal disimpan") }
+            } finally {
+                _uiState.update { it.copy(isProcessing = false) }
             }
         }
     }
@@ -560,6 +578,7 @@ class SalesViewModel(
     }
 
     fun updateTransaction(saleId: Long, onUpdateComplete: () -> Unit) {
+        if (!tryStartProcessing()) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val currentState = _uiState.value
@@ -654,7 +673,9 @@ class SalesViewModel(
                 onUpdateComplete()
 
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(error = e.message ?: "Transaksi gagal disimpan") }
+            } finally {
+                _uiState.update { it.copy(isProcessing = false) }
             }
         }
     }

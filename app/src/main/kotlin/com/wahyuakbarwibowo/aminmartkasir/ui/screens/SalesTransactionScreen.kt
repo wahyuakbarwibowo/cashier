@@ -404,6 +404,8 @@ fun SalesTransactionScreen(
             onSelectCustomer = { viewModel.setSelectedCustomer(it) },
             onPointsRedeemedChange = { viewModel.setPointsRedeemed(it) },
             onDiscountChange = { viewModel.setDiscount(it) },
+            isProcessing = uiState.isProcessing,
+            errorMessage = uiState.error,
             onDismiss = { showPaymentMethodSelector = false },
             onProcess = { paid, method ->
                 viewModel.setPaid(paid)
@@ -442,6 +444,15 @@ fun SalesTransactionScreen(
                 }
             }
         )
+    }
+
+    // Error saat dialog bayar terbuka tampil di dialog; selain itu lewat snackbar.
+    LaunchedEffect(uiState.error, showPaymentMethodSelector) {
+        val error = uiState.error
+        if (error != null && !showPaymentMethodSelector) {
+            showMessage(error)
+            viewModel.clearError()
+        }
     }
 
     LaunchedEffect(showSuccessDialog) {
@@ -985,6 +996,8 @@ fun PaymentMethodSelectorDialog(
     onSelectCustomer: (CustomerEntity?) -> Unit,
     onPointsRedeemedChange: (Int) -> Unit,
     onDiscountChange: (Double) -> Unit,
+    isProcessing: Boolean = false,
+    errorMessage: String? = null,
     onDismiss: () -> Unit,
     onProcess: (Double, PaymentMethodEntity) -> Unit
 ) {
@@ -1216,13 +1229,25 @@ fun PaymentMethodSelectorDialog(
                     val isCustomerSelected = selectedCustomer != null
                     val isPaidValid = if (isDebt) true else paidValue >= currentTotal
 
+                    if (errorMessage != null) {
+                        Text(
+                            errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
                     Button(
                         onClick = { if (selectedMethod != null) onProcess(paidValue, selectedMethod!!) },
-                        enabled = selectedMethod != null && (!isDebt || isCustomerSelected) && isPaidValid,
+                        enabled = !isProcessing && selectedMethod != null && (!isDebt || isCustomerSelected) && isPaidValid,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("KONFIRMASI PEMBAYARAN", fontWeight = FontWeight.Bold)
+                        if (isProcessing) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("KONFIRMASI PEMBAYARAN", fontWeight = FontWeight.Bold)
+                        }
                     }
                     
                     TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
