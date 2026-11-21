@@ -401,6 +401,7 @@ fun SalesTransactionScreen(
             selectedCustomer = uiState.selectedCustomer,
             customers = uiState.customers,
             pointsRedeemed = uiState.pointsRedeemed,
+            discount = uiState.discount,
             onSelectCustomer = { viewModel.setSelectedCustomer(it) },
             onPointsRedeemedChange = { viewModel.setPointsRedeemed(it) },
             onDiscountChange = { viewModel.setDiscount(it) },
@@ -993,6 +994,7 @@ fun PaymentMethodSelectorDialog(
     selectedCustomer: CustomerEntity?,
     customers: List<CustomerEntity>,
     pointsRedeemed: Int,
+    discount: Double = 0.0,
     onSelectCustomer: (CustomerEntity?) -> Unit,
     onPointsRedeemedChange: (Int) -> Unit,
     onDiscountChange: (Double) -> Unit,
@@ -1002,9 +1004,11 @@ fun PaymentMethodSelectorDialog(
     onProcess: (Double, PaymentMethodEntity) -> Unit
 ) {
     var paidText by remember { mutableStateOf(BigDecimal.valueOf(total).stripTrailingZeros().toPlainString()) }
-    var discountInput by remember { mutableStateOf("0") }
+    // Mulai dari diskon yang sudah ada di VM; kalau tidak, dialog yang dibuka ulang
+    // tampil 0 padahal total masih terdiskon, dan % dihitung dari basis yang salah.
+    var discountInput by remember { mutableStateOf(discount.toLong().toString()) }
     var discountIsPercent by remember { mutableStateOf(false) }
-    var appliedDiscountRp by remember { mutableStateOf(0.0) }
+    var appliedDiscountRp by remember { mutableStateOf(discount) }
     var selectedMethod by remember { mutableStateOf<PaymentMethodEntity?>(paymentMethods.firstOrNull()) }
     var customerExpanded by remember { mutableStateOf(false) }
 
