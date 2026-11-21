@@ -44,9 +44,9 @@ class ProductRepository(
         return productDao.getProductByCode(code)
     }
 
-    fun getLowStockProducts(threshold: Int = 10): Flow<List<ProductEntity>> {
-        return productDao.getLowStockProducts(threshold)
-    }
+    fun getLowStockProducts(): Flow<List<ProductEntity>> = productDao.getLowStockProducts()
+
+    val lowStockCount: Flow<Int> = productDao.getLowStockCount()
 
     fun searchProducts(query: String): Flow<List<ProductEntity>> {
         return productDao.searchProducts(query)

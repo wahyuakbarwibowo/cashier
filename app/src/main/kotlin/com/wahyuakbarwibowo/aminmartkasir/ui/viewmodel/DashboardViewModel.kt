@@ -41,7 +41,7 @@ class DashboardViewModel(
                 productRepository.productCount,
                 customerRepository.customerCount,
                 saleRepository.saleCount,
-                productRepository.getLowStockProducts().map { it.size }
+                productRepository.lowStockCount
             ) { products, customers, sales, lowStock ->
                 _uiState.update { 
                     it.copy(
