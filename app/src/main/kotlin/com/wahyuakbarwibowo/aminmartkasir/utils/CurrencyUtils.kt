@@ -4,17 +4,16 @@ import java.text.NumberFormat
 import java.util.*
 
 object CurrencyUtils {
-    fun formatCurrency(amount: Double): String {
-        val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-        format.minimumFractionDigits = 0
-        format.maximumFractionDigits = 0
-        return format.format(amount.toLong())
+    // Dipanggil per baris list saat recomposition; NumberFormat mahal dibuat dan tidak
+    // thread-safe, jadi satu instance per thread.
+    private val rupiah = ThreadLocal.withInitial {
+        NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
+            minimumFractionDigits = 0
+            maximumFractionDigits = 0
+        }
     }
-    
-    fun formatCurrency(amount: Long): String {
-        val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-        format.minimumFractionDigits = 0
-        format.maximumFractionDigits = 0
-        return format.format(amount)
-    }
+
+    fun formatCurrency(amount: Double): String = formatCurrency(amount.toLong())
+
+    fun formatCurrency(amount: Long): String = rupiah.get()!!.format(amount)
 }

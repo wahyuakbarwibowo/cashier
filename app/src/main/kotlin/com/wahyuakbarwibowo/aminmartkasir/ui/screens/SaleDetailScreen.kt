@@ -45,7 +45,7 @@ fun SaleDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sale = uiState.sale
     val items = uiState.items
-    val dateFormat = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale("id", "ID"))
+    val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale("id", "ID")) }
     var showPrinterDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(saleId) {
