@@ -242,6 +242,12 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Link reset memakai token_hash (diverifikasi saat tombol Simpan ditekan di halaman web),
+# bukan access token di fragment URL.
+[auth.email.template.recovery]
+subject = "Reset password Aminmart Kasir"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
