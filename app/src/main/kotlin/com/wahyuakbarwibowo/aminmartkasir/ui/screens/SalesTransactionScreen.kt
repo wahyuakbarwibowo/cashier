@@ -973,6 +973,13 @@ fun PaymentMethodSelectorDialog(
     val paidValue = paidText.toDoubleOrNull() ?: 0.0
     val changeValue = paidValue - currentTotal
 
+    // Ikuti total baru (diskon/poin berubah) selama kasir belum mengetik nominal sendiri.
+    var lastTotal by remember { mutableStateOf(currentTotal) }
+    LaunchedEffect(currentTotal) {
+        if (paidText.toDoubleOrNull() == lastTotal) paidText = currentTotal.toLong().toString()
+        lastTotal = currentTotal
+    }
+
     // Terapkan diskon (Rp atau %) ke VM. % dihitung dari subtotal yang stabil.
     fun applyDiscount(rawInput: String, isPercent: Boolean) {
         val rp = if (isPercent) {
@@ -1042,6 +1049,32 @@ fun PaymentMethodSelectorDialog(
                                 }
                             }
                         }
+                    }
+
+                    if (selectedCustomer != null && (selectedCustomer.points > 0 || pointsRedeemed > 0)) {
+                        var pointsText by remember(selectedCustomer.id) {
+                            mutableStateOf(if (pointsRedeemed > 0) pointsRedeemed.toString() else "")
+                        }
+                        OutlinedTextField(
+                            value = pointsText,
+                            onValueChange = {
+                                if (it.length <= 7 && it.all { ch -> ch.isDigit() }) {
+                                    pointsText = it
+                                    onPointsRedeemedChange(it.toIntOrNull() ?: 0)
+                                }
+                            },
+                            label = { Text("Tukar Poin") },
+                            supportingText = {
+                                Text(
+                                    "Saldo ${selectedCustomer.points} poin · 1 poin = Rp100" +
+                                        if (pointsRedeemed > 0) " · dipakai $pointsRedeemed (−${formatCurrency(pointsRedeemed * 100.0)})" else ""
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
                     }
 
                     // Diskon: toggle Rp / %

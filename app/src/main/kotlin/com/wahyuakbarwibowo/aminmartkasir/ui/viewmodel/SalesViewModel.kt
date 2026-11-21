@@ -357,16 +357,21 @@ class SalesViewModel(
     }
 
     fun setSelectedCustomer(customer: CustomerEntity?) {
-        _uiState.update { it.copy(selectedCustomer = customer) }
+        // Poin yang ditukar milik pelanggan sebelumnya; mulai lagi dari nol.
+        _uiState.update { recalculateState(it.copy(selectedCustomer = customer, pointsRedeemed = 0)) }
     }
 
     fun setSelectedPaymentMethod(paymentMethod: PaymentMethodEntity?) {
         _uiState.update { it.copy(selectedPaymentMethod = paymentMethod) }
     }
 
+    /** Dibatasi saldo poin pelanggan dan sisa tagihan setelah diskon (1 poin = Rp100). */
     fun setPointsRedeemed(points: Int) {
         _uiState.update { currentState ->
-            recalculateState(currentState.copy(pointsRedeemed = points))
+            val balance = currentState.selectedCustomer?.points ?: 0
+            val byTotal = ((currentState.subtotal - currentState.discount) / 100).toInt()
+            val max = minOf(balance, byTotal).coerceAtLeast(0)
+            recalculateState(currentState.copy(pointsRedeemed = points.coerceIn(0, max)))
         }
     }
 
@@ -497,7 +502,10 @@ class SalesViewModel(
                     } else null
                 }
 
+                // Poin yang dulu ditukar di transaksi ini dikembalikan saat disimpan ulang,
+                // jadi boleh dipakai lagi saat edit.
                 val customer = sale.customerId?.let { customerRepository.getCustomerById(it) }
+                    ?.let { it.copy(points = it.points + sale.pointsRedeemed) }
                 val paymentMethod = sale.paymentMethodId?.let { paymentMethodRepository.getPaymentMethodById(it) }
 
                 _uiState.update { state ->
