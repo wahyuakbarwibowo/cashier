@@ -2,6 +2,7 @@ package com.wahyuakbarwibowo.aminmartkasir.data.local.dao
 
 import androidx.room.*
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ReceivableEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -47,4 +48,15 @@ interface PhoneHistoryDao {
 
     @Query("DELETE FROM phone_history WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Insert
+    suspend fun insertReceivable(receivable: ReceivableEntity): Long
+
+    /** Transaksi digital dan piutangnya (bila Hutang) disimpan bersama atau tidak sama sekali. */
+    @Transaction
+    suspend fun insertWithReceivable(phoneHistory: PhoneHistoryEntity, receivable: ReceivableEntity?): Long {
+        val id = insert(phoneHistory)
+        receivable?.let { insertReceivable(it) }
+        return id
+    }
 }

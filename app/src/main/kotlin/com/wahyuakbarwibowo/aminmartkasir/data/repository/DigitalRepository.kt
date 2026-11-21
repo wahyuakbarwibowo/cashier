@@ -6,6 +6,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.dao.PhoneHistoryDao
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalCategoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.DigitalProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PhoneHistoryEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ReceivableEntity
 import kotlinx.coroutines.flow.Flow
 
 class DigitalCategoryRepository(private val digitalCategoryDao: DigitalCategoryDao) {
@@ -58,6 +59,9 @@ class DigitalProductRepository(private val digitalProductDao: DigitalProductDao)
 
 class PhoneHistoryRepository(private val phoneHistoryDao: PhoneHistoryDao) {
     val allPhoneHistory: Flow<List<PhoneHistoryEntity>> = phoneHistoryDao.getAllPhoneHistory()
+
+    suspend fun insertWithReceivable(phoneHistory: PhoneHistoryEntity, receivable: ReceivableEntity?): Long =
+        phoneHistoryDao.insertWithReceivable(phoneHistory, receivable)
 
     suspend fun getPhoneHistoryById(id: Long): PhoneHistoryEntity? {
         return phoneHistoryDao.getPhoneHistoryById(id)

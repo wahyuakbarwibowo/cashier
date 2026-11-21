@@ -289,23 +289,21 @@ class DigitalTransactionViewModel(
                     createdAt = DateUtils.nowDateTime()
                 )
                 
-                val id = phoneHistoryRepository.insert(phoneHistory)
-                val insertedTransaction = phoneHistory.copy(id = id)
-                
                 // If payment method is debt, record to receivables
-                if (method?.name?.contains("Hutang", ignoreCase = true) == true) {
-                    receivableRepository.insert(
-                        ReceivableEntity(
-                            saleId = null, // digital doesn't use retail saleId
-                            customerId = customer?.id,
-                            amount = product.sellingPrice,
-                            paidAmount = paid,
-                            status = if (paid >= product.sellingPrice) "paid" else "pending",
-                            createdAt = DateUtils.nowDateTime(),
-                            notes = "Hutang dari Transaksi Digital ${product.name} ke $phoneNumber"
-                        )
+                val receivable = if (method?.name?.contains("Hutang", ignoreCase = true) == true) {
+                    ReceivableEntity(
+                        saleId = null, // digital doesn't use retail saleId
+                        customerId = customer?.id,
+                        amount = product.sellingPrice,
+                        paidAmount = paid,
+                        status = if (paid >= product.sellingPrice) "paid" else "pending",
+                        createdAt = DateUtils.nowDateTime(),
+                        notes = "Hutang dari Transaksi Digital ${product.name} ke $phoneNumber"
                     )
-                }
+                } else null
+
+                val id = phoneHistoryRepository.insertWithReceivable(phoneHistory, receivable)
+                val insertedTransaction = phoneHistory.copy(id = id)
                 
                 _uiState.update { 
                     it.copy(
