@@ -9,7 +9,7 @@ import org.junit.Test
 class ShiftCashTest {
 
     private val tunai = PaymentMethodEntity(id = 1, name = "Tunai")
-    private val qris = PaymentMethodEntity(id = 2, name = "QRIS")
+    private val qris = PaymentMethodEntity(id = 2, name = "QRIS", isCash = false)
     private val hutang = PaymentMethodEntity(id = 3, name = "Hutang")
 
     @Test

@@ -33,7 +33,7 @@ import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.ViewModelFactory
         StockHistoryEntity::class,
         ShiftEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -139,6 +139,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Flag tunai per metode bayar menggantikan tebakan dari nama di laporan shift.
+        // Nilai awal mengikuti tebakan lama supaya kas shift yang sudah berjalan tidak berubah.
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE payment_methods ADD COLUMN isCash INTEGER NOT NULL DEFAULT 1")
+                val nonCash = listOf("qris", "transfer", "debit", "kartu", "card", "wallet", "ovo", "gopay", "dana", "shopee", "edc")
+                    .joinToString(" OR ") { "LOWER(name) LIKE '%$it%'" }
+                db.execSQL("UPDATE payment_methods SET isCash = 0 WHERE $nonCash")
+            }
+        }
+
         fun getDatabase(context: Context, storeId: String): AppDatabase {
             val name = TenantDatabaseFiles.name(storeId)
             return synchronized(this) {
@@ -151,7 +162,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     name
                     )
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                     // Versi 1-8 mendahului histori Migration object (dulu pakai fallbackToDestructiveMigration
                     // tanpa batas); tidak ada schema snapshot untuk menulis migrasi asli, jadi scope destructive
                     // fallback hanya untuk versi lama ini. Versi 9+ tetap wajib Migration object di atas.

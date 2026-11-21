@@ -1,6 +1,7 @@
 package com.wahyuakbarwibowo.aminmartkasir.data.repository
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.InstanceCreator
 import com.wahyuakbarwibowo.aminmartkasir.data.local.AppDatabase
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.BackupData
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +26,11 @@ class BackupRepository(
     private val database: AppDatabase,
     private val featureAccess: FeatureAccess = FeatureAccessManager
 ) {
-    private val gson = Gson()
+    // Backup lama tidak punya kolom isCash; mulai dari instance default (tunai) supaya
+    // field yang tidak ada di JSON tidak jadi false lewat Unsafe allocation Gson.
+    private val gson = GsonBuilder()
+        .registerTypeAdapter(PaymentMethodEntity::class.java, InstanceCreator { PaymentMethodEntity(name = "") })
+        .create()
 
     @Serializable
     private data class CloudBackup(

@@ -33,12 +33,7 @@ data class ShiftUiState(
         get() = (openShift?.openingCash ?: 0.0) + liveSales - liveExpenses
 }
 
-// ponytail: metode bayar dibuat bebas oleh user, jadi non-tunai dikenali dari nama.
-// Tambah flag "tunai" di payment_methods kalau nama-nama ini tidak cukup.
-private val NON_CASH_KEYWORDS = listOf("qris", "transfer", "debit", "kartu", "card", "wallet", "ovo", "gopay", "dana", "shopee", "edc")
-
-internal fun isCashMethod(method: PaymentMethodEntity?): Boolean =
-    method == null || NON_CASH_KEYWORDS.none { method.name.contains(it, ignoreCase = true) }
+internal fun isCashMethod(method: PaymentMethodEntity?): Boolean = method?.isCash ?: true
 
 /**
  * Uang tunai yang benar-benar masuk laci: transaksi Hutang hanya menyumbang uang mukanya,
