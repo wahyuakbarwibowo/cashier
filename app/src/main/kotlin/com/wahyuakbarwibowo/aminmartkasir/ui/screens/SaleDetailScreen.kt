@@ -204,6 +204,7 @@ fun SaleDetailScreen(
 
         val transactionData = LastTransactionData(
             transactionId = "TRX-${sale.id}",
+            createdAt = sale.createdAt,
             items = items.map { item ->
                 BluetoothPrinterHelper.ReceiptItem(
                     name = item.productName,
