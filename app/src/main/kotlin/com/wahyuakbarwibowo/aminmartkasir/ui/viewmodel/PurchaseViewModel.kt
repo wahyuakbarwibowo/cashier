@@ -15,6 +15,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.repository.PurchaseRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.SupplierRepository
 import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -58,8 +59,12 @@ class PurchaseViewModel(
         loadInitialData()
     }
 
+    private var dataJob: Job? = null
+
     private fun loadInitialData() {
-        viewModelScope.launch(Dispatchers.IO) {
+        // refreshData() memanggil ini lagi; batalkan collector lama agar tidak menumpuk.
+        dataJob?.cancel()
+        dataJob = viewModelScope.launch(Dispatchers.IO) {
             combine(
                 supplierRepository.allSuppliers,
                 productRepository.allProducts,
