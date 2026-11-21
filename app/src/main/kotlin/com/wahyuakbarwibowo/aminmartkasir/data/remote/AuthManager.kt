@@ -3,6 +3,7 @@ package com.wahyuakbarwibowo.aminmartkasir.data.remote
 import android.content.Context
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.UserProfile
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.exceptions.RestException
@@ -86,12 +87,19 @@ object AuthManager {
                     clearCachedProfile()
                     _state.value = UiState.SignedOut
                 }
-            } catch (e: IOException) {
-                if (readCachedProfile() == null) _state.value = UiState.SignedOut
+            } catch (e: AuthRestException) {
+                // Hanya refresh token yang ditolak server yang mengakhiri sesi.
+                if (e.statusCode in 400..401) {
+                    clearLocalSession()
+                    clearCachedProfile()
+                    _state.value = UiState.SignedOut
+                } else if (readCachedProfile() == null) {
+                    _state.value = UiState.SignedOut
+                }
             } catch (_: Exception) {
-                clearLocalSession()
-                clearCachedProfile()
-                _state.value = UiState.SignedOut
+                // Offline, server down (5xx/429), atau gangguan lain: POS tetap jalan
+                // dengan profil tersimpan.
+                if (readCachedProfile() == null) _state.value = UiState.SignedOut
             }
         }
     }
