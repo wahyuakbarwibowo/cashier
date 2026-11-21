@@ -180,6 +180,10 @@ object AuthManager {
             SupabaseProvider.client.auth.signOut()
         } catch (_: Exception) {
             // abaikan; tetap bersihkan sesi lokal
+        } finally {
+            // signOut() offline melempar sebelum supabase-kt menghapus sesinya sendiri,
+            // sehingga sesi user sebelumnya bisa dipulihkan lagi saat app dibuka.
+            runCatching { SupabaseProvider.client.auth.clearSession() }
         }
         clearLocalSession()
         clearCachedProfile()
