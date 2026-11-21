@@ -59,8 +59,8 @@ interface PhoneHistoryDao {
     }
 
     @Query("""SELECT * FROM phone_history
-        WHERE phoneNumber LIKE '%' || :query || '%' OR provider LIKE '%' || :query || '%'
-            OR notes LIKE '%' || :query || '%' OR customerName LIKE '%' || :query || '%'
+        WHERE instr(LOWER(phoneNumber), LOWER(:query)) > 0 OR instr(LOWER(provider), LOWER(:query)) > 0
+            OR instr(LOWER(notes), LOWER(:query)) > 0 OR instr(LOWER(customerName), LOWER(:query)) > 0
         ORDER BY createdAt DESC, id DESC LIMIT :limit""")
     suspend fun searchPhoneHistory(query: String, limit: Int): List<PhoneHistoryEntity>
 }

@@ -15,7 +15,7 @@ interface CustomerDao {
     @Query("SELECT * FROM customers WHERE id = :id")
     suspend fun getCustomerById(id: Long): CustomerEntity?
 
-    @Query("SELECT * FROM customers WHERE name LIKE '%' || :query || '%' OR phone LIKE '%' || :query || '%'")
+    @Query("SELECT * FROM customers WHERE instr(LOWER(name), LOWER(:query)) > 0 OR instr(LOWER(phone), LOWER(:query)) > 0")
     fun searchCustomers(query: String): Flow<List<CustomerEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

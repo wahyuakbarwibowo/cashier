@@ -33,7 +33,7 @@ interface SaleDao {
     @Query("SELECT * FROM sales WHERE createdAt >= :startDate AND createdAt <= :endDate ORDER BY id DESC")
     suspend fun getSalesByDateRange(startDate: String, endDate: String): List<SaleEntity>
 
-    @Query("SELECT * FROM sales WHERE CAST(id AS TEXT) LIKE '%' || :query || '%' OR createdAt LIKE '%' || :query || '%' ORDER BY id DESC LIMIT :limit")
+    @Query("SELECT * FROM sales WHERE instr(CAST(id AS TEXT), :query) > 0 OR instr(LOWER(createdAt), LOWER(:query)) > 0 ORDER BY id DESC LIMIT :limit")
     suspend fun searchSales(query: String, limit: Int = 20): List<SaleEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

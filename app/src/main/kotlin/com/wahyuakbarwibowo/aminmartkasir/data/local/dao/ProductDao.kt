@@ -40,7 +40,7 @@ interface ProductDao {
     @Query("SELECT COUNT(*) FROM products WHERE stock < lowStockThreshold AND isDeleted = 0")
     fun getLowStockCount(): Flow<Int>
 
-    @Query("SELECT * FROM products WHERE isDeleted = 0 AND (name LIKE '%' || :query || '%' OR code LIKE '%' || :query || '%')")
+    @Query("SELECT * FROM products WHERE isDeleted = 0 AND (instr(LOWER(name), LOWER(:query)) > 0 OR instr(LOWER(code), LOWER(:query)) > 0)")
     fun searchProducts(query: String): Flow<List<ProductEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

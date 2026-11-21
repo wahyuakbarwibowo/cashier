@@ -15,7 +15,7 @@ interface DigitalProductDao {
     @Query("SELECT * FROM digital_products WHERE id = :id")
     suspend fun getDigitalProductById(id: Long): DigitalProductEntity?
 
-    @Query("SELECT * FROM digital_products WHERE name LIKE '%' || :query || '%' ORDER BY sortOrder ASC, name ASC")
+    @Query("SELECT * FROM digital_products WHERE instr(LOWER(name), LOWER(:query)) > 0 ORDER BY sortOrder ASC, name ASC")
     fun searchDigitalProducts(query: String): Flow<List<DigitalProductEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
