@@ -79,35 +79,35 @@ class BluetoothPrinterHelper(private val context: Context) {
         }
     }
     
-    suspend fun disconnect() = withContext(Dispatchers.IO) {
+    suspend fun disconnect() = withContext(Dispatchers.IO) { close() }
+
+    /** Tutup socket tanpa suspend; aman dipanggil dari ViewModel.onCleared(). */
+    fun close() {
         try {
             bluetoothSocket?.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
             bluetoothSocket = null
             connectedDevice = null
             isConnected = false
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
-    
+
+    // IOException sengaja diteruskan: printer mati di tengah cetak harus tampil sebagai
+    // "Gagal mencetak", bukan "Berhasil".
     fun printText(text: String) {
-        if (!isConnected) return
-        try {
-            bluetoothSocket?.outputStream?.write(text.toByteArray(Charsets.UTF_8))
-            bluetoothSocket?.outputStream?.flush()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
+        val out = bluetoothSocket?.outputStream
+        if (!isConnected || out == null) throw IOException("Printer belum terhubung")
+        out.write(text.toByteArray(Charsets.UTF_8))
+        out.flush()
     }
-    
+
     fun sendCommand(command: ByteArray) {
-        if (!isConnected) return
-        try {
-            bluetoothSocket?.outputStream?.write(command)
-            bluetoothSocket?.outputStream?.flush()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
+        val out = bluetoothSocket?.outputStream
+        if (!isConnected || out == null) throw IOException("Printer belum terhubung")
+        out.write(command)
+        out.flush()
     }
     
     suspend fun printReceipt(
@@ -206,6 +206,7 @@ class BluetoothPrinterHelper(private val context: Context) {
             sendCommand(CUT_PAPER)
         } catch (e: Exception) {
             e.printStackTrace()
+            throw e
         }
     }
 
@@ -321,6 +322,7 @@ class BluetoothPrinterHelper(private val context: Context) {
             sendCommand(CUT_PAPER)
         } catch (e: Exception) {
             e.printStackTrace()
+            throw e
         }
     }
     
