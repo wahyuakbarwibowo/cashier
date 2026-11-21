@@ -610,8 +610,9 @@ class SalesViewModel(
                     change = currentState.change,
                     pointsEarned = currentState.pointsEarned,
                     pointsRedeemed = currentState.pointsRedeemed,
-                    profit = newProfit,
-                    createdAt = DateUtils.nowDateTime()
+                    profit = newProfit
+                    // createdAt sengaja dipertahankan: edit tidak boleh memindahkan transaksi
+                    // ke laporan/shift hari ini.
                 )
 
                 // Siapkan item penjualan baru
