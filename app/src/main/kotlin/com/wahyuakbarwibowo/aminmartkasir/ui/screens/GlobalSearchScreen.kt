@@ -1,9 +1,5 @@
 package com.wahyuakbarwibowo.aminmartkasir.ui.screens
 
-import android.Manifest
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,10 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.zxing.client.android.Intents
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
-import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
+import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.rememberBarcodeScanner
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.GlobalSearchViewModel
 import com.wahyuakbarwibowo.aminmartkasir.utils.CurrencyUtils.formatCurrency
 
@@ -53,30 +46,7 @@ fun GlobalSearchScreen(
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        val scannedCode = result.contents
-        if (!scannedCode.isNullOrBlank()) {
-            viewModel.search(scannedCode)
-        }
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            val options = ScanOptions().apply {
-                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
-                setPrompt("Scan barcode produk")
-                setBeepEnabled(true)
-                setOrientationLocked(true)
-                setCaptureActivity(BarcodeCaptureActivity::class.java)
-                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
-            }
-            barcodeLauncher.launch(options)
-        } else {
-            Toast.makeText(context, "Izin kamera diperlukan untuk scan barcode", Toast.LENGTH_SHORT).show()
-        }
-    }
+    val scanBarcode = rememberBarcodeScanner { viewModel.search(it) }
 
     Scaffold(
         topBar = {
@@ -90,7 +60,7 @@ fun GlobalSearchScreen(
                         trailingIcon = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = {
-                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                    scanBarcode()
                                 }) {
                                     Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
                                 }

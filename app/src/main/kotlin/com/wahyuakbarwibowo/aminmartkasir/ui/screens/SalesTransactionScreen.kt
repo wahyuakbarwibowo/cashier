@@ -37,12 +37,7 @@ import androidx.lifecycle.ViewModelProvider.Factory
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
-import com.google.zxing.client.android.Intents
-import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.BarcodeCaptureActivity
+import com.wahyuakbarwibowo.aminmartkasir.ui.scanner.rememberBarcodeScanner
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.*
 import com.wahyuakbarwibowo.aminmartkasir.ui.viewmodel.*
 import com.wahyuakbarwibowo.aminmartkasir.utils.BluetoothPrinterHelper
@@ -111,42 +106,24 @@ fun SalesTransactionScreen(
     }
 
     // Scan barcode langsung dari layar kasir -> auto tambah ke keranjang
-    val quickScanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        val scannedCode = result.contents
-        if (!scannedCode.isNullOrBlank()) {
-            viewModel.addToCartByBarcode(scannedCode) { res ->
-                when (res) {
-                    is BarcodeAddResult.Added -> {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        showMessage("${res.productName} ditambah")
-                    }
-                    is BarcodeAddResult.OutOfStock -> {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        showMessage("Stok ${res.productName} habis/tidak mencukupi")
-                    }
-                    is BarcodeAddResult.NotFound -> {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        showMessage("Produk barcode \"$scannedCode\" tidak ditemukan")
-                    }
+    val quickScan = rememberBarcodeScanner(
+        onPermissionDenied = { showMessage("Izin kamera diperlukan untuk scan barcode") }
+    ) { scannedCode ->
+        viewModel.addToCartByBarcode(scannedCode) { res ->
+            when (res) {
+                is BarcodeAddResult.Added -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    showMessage("${res.productName} ditambah")
+                }
+                is BarcodeAddResult.OutOfStock -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    showMessage("Stok ${res.productName} habis/tidak mencukupi")
+                }
+                is BarcodeAddResult.NotFound -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    showMessage("Produk barcode \"$scannedCode\" tidak ditemukan")
                 }
             }
-        }
-    }
-    val quickScanPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            val options = ScanOptions().apply {
-                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
-                setPrompt("Scan barcode produk")
-                setBeepEnabled(true)
-                setOrientationLocked(true)
-                setCaptureActivity(BarcodeCaptureActivity::class.java)
-                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
-            }
-            quickScanLauncher.launch(options)
-        } else {
-            showMessage("Izin kamera diperlukan untuk scan barcode")
         }
     }
 
@@ -179,7 +156,7 @@ fun SalesTransactionScreen(
                 },
                 windowInsets = WindowInsets.statusBars,
                 actions = {
-                    IconButton(onClick = { quickScanPermissionLauncher.launch(android.Manifest.permission.CAMERA) }) {
+                    IconButton(onClick = { quickScan() }) {
                         Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode", tint = MaterialTheme.colorScheme.onPrimary)
                     }
                     if (uiState.heldOrders.isNotEmpty()) {
@@ -829,30 +806,7 @@ fun ProductSelectorDialog(
         }
     }
     
-    val barcodeLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        val scannedCode = result.contents
-        if (!scannedCode.isNullOrBlank()) {
-            onSearchQueryChange(scannedCode)
-        }
-    }
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            val options = ScanOptions().apply {
-                setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
-                setPrompt("Scan barcode produk")
-                setBeepEnabled(true)
-                setOrientationLocked(true)
-                setCaptureActivity(BarcodeCaptureActivity::class.java)
-                addExtra(Intents.Scan.MISSING_CAMERA_PERMISSION, true)
-            }
-            barcodeLauncher.launch(options)
-        } else {
-            android.widget.Toast.makeText(context, "Izin kamera diperlukan untuk scan barcode", android.widget.Toast.LENGTH_SHORT).show()
-        }
-    }
+val scanBarcode = rememberBarcodeScanner { onSearchQueryChange(it) }
     
     BasicAlertDialog(
         onDismissRequest = onDismiss,
@@ -882,7 +836,7 @@ fun ProductSelectorDialog(
                         placeholder = { Text("Cari nama atau barcode...") },
                         leadingIcon = { Icon(Icons.Default.Search, null) },
                         trailingIcon = {
-                            IconButton(onClick = { cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA) }) {
+                            IconButton(onClick = { scanBarcode() }) {
                                 Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan barcode", tint = MaterialTheme.colorScheme.primary)
                             }
                         },
