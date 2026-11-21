@@ -16,6 +16,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.7.1] - 2026-11-21
+
+### Security
+- Hanya admin/super admin yang bisa melihat dan menimpa backup cloud; menu Backup & Restore disembunyikan dari kasir.
+- Role, status aktif, toko, dan email di profil hanya bisa diubah oleh admin toko yang sama atau super admin.
+- Anggota toko yang dinonaktifkan kehilangan akses data tokonya.
+- Token sesi dan pengaturan tidak lagi ikut backup Android; lalu lintas HTTP tanpa enkripsi dimatikan.
+- Logout saat offline benar-benar menghapus sesi Supabase.
+- Ekspor CSV aman dari formula injection; permission yang tidak dipakai dihapus.
+
+### Fixed
+- Stok dicek ulang di dalam transaksi checkout; simpan produk tidak lagi menimpa stok yang berubah di tempat lain.
+- Harga paket dan diskon produk dihitung benar; total dibulatkan ke rupiah dan poin dihitung setelah diskon.
+- Checkout dan simpan pembelian tidak bisa terkirim dua kali; error transaksi ditampilkan.
+- Edit transaksi tidak lagi mengubah tanggal, mengurangi poin dua kali, atau menghapus cicilan piutang.
+- Pembayaran piutang dan transaksi digital beserta piutangnya disimpan secara atomik.
+- Pelanggan/supplier yang masih berhutang tidak bisa dihapus; poin pelanggan tidak bisa minus.
+- Laba bersih tidak lagi memotong harga modal dua kali; kas shift dihitung dari uang tunai yang diterima.
+- Cetak ulang struk memakai tanggal transaksi; gagal cetak dilaporkan.
+- Stok menipis memakai ambang per produk; nama produk terlaris konsisten.
+- Sync produk ditarik per halaman dan jam perangkat yang maju tidak lagi selalu menang konflik.
+- Restore ditolak bila ada ID ganda; sel Excel kosong tidak lagi gagal di-restore.
+- Keranjang tidak hilang saat ukuran font atau bahasa diubah; pencarian riwayat digital mencakup seluruh data.
+- Aplikasi tidak logout saat server Supabase bermasalah; pesan error login lebih jelas.
+
+### Changed
+- Index tanggal di pengeluaran dan pembelian (migrasi DB 12 → 13) untuk mempercepat laporan.
+
 ## [3.7.0] - 2026-10-31
 
 ### Added
