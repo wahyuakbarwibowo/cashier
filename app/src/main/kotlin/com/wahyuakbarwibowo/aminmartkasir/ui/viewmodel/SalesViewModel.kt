@@ -497,7 +497,9 @@ class SalesViewModel(
                             cartItems = cartItems,
                             selectedCustomer = customer,
                             selectedPaymentMethod = paymentMethod,
-                            discount = (cartItems.sumOf { it.subtotal } - sale.total).coerceAtLeast(0.0),
+                            // sale.total sudah dikurangi nilai poin; jangan hitung poin dua kali
+                            discount = (cartItems.sumOf { it.subtotal } - sale.total - sale.pointsRedeemed * 100)
+                                .coerceAtLeast(0.0),
                             pointsRedeemed = sale.pointsRedeemed,
                             editingSaleId = saleId,
                             isLoading = false
