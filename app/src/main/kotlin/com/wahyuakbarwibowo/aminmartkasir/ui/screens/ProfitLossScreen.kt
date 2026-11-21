@@ -93,7 +93,7 @@ fun ProfitLossScreen(
                 ProfitLossMetricCard(
                     title = "Laba Bersih Estimasi",
                     value = formatCurrency(state.estimatedProfit),
-                    description = "Profit (Kasir + Digital) - Pengeluaran",
+                    description = "Profit (Kasir + Digital) - Pengeluaran (di luar Pembelian Stok)",
                     icon = Icons.Default.Calculate,
                     isPositive = state.estimatedProfit >= 0
                 )

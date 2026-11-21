@@ -6,6 +6,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ProductEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PurchaseEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.PurchaseItemEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ExpenseEntity
+import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.STOCK_PURCHASE_CATEGORY
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.ExpenseRepository
 import com.wahyuakbarwibowo.aminmartkasir.data.repository.StockHistoryRepository
@@ -246,7 +247,7 @@ class PurchaseViewModel(
                 }
 
                 val expense = ExpenseEntity(
-                    category = "Pembelian Stok",
+                    category = STOCK_PURCHASE_CATEGORY,
                     amount = currentState.total,
                     notes = "Pembelian barang ke supplier ${currentState.selectedSupplier?.name ?: "Tanpa Nama"}",
                     createdAt = DateUtils.nowDateTime()

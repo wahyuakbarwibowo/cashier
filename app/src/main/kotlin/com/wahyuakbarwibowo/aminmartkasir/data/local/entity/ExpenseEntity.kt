@@ -12,3 +12,6 @@ data class ExpenseEntity(
     val notes: String? = null,
     val createdAt: String? = null
 )
+
+/** Kategori pengeluaran otomatis dari pembelian stok ke supplier. */
+const val STOCK_PURCHASE_CATEGORY = "Pembelian Stok"
