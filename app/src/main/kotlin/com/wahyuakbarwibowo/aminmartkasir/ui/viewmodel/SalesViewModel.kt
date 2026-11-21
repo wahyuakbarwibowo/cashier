@@ -325,12 +325,15 @@ class SalesViewModel(
     private fun recalculateState(state: SalesTransactionUiState): SalesTransactionUiState {
         val subtotal = state.cartItems.sumOf { it.subtotal }
         val pointsValue = state.pointsRedeemed * 100
-        val total = (subtotal - state.discount - pointsValue).coerceAtLeast(0.0)
+        // Diskon persen bisa menghasilkan pecahan; total harus rupiah utuh agar "Uang Pas"
+        // (paid = total) lolos validasi pembayaran.
+        val total = Math.round(subtotal - state.discount - pointsValue).toDouble().coerceAtLeast(0.0)
         val change = state.paid - total
         return state.copy(
             subtotal = subtotal,
             total = total,
-            change = change
+            change = change,
+            pointsEarned = (total / 10000).toInt() // 1 poin per Rp 10.000, setelah diskon
         )
     }
 
@@ -554,15 +557,6 @@ class SalesViewModel(
 
     fun deleteHeldOrder(id: Long) {
         _uiState.update { it.copy(heldOrders = it.heldOrders.filterNot { o -> o.id == id }) }
-    }
-
-    fun calculatePoints() {
-        val currentState = _uiState.value
-        val pointsEarned = (currentState.total / 10000).toInt() // Asumsi 1 point per Rp 10.000
-
-        _uiState.update {
-            it.copy(pointsEarned = pointsEarned)
-        }
     }
 
     fun updateTransaction(saleId: Long, onUpdateComplete: () -> Unit) {

@@ -156,10 +156,6 @@ fun SalesTransactionScreen(
         }
     }
 
-    LaunchedEffect(uiState.cartItems) {
-        viewModel.calculatePoints()
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
