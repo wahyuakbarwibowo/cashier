@@ -35,6 +35,11 @@ object AuthManager {
     private const val KEY_CACHED_PROFILE = "cached_profile"
     private const val RESET_PASSWORD_URL = "https://wahyuakbarwibowo.github.io/cashier/reset-password.html"
     const val PENDING_MESSAGE = "Akun menunggu persetujuan admin."
+    const val PASSWORD_HINT = "Minimal 8 karakter, berisi huruf dan angka"
+
+    /** Sama dengan minimum_password_length = 8 + password_requirements = letters_digits di server. */
+    fun isPasswordStrong(password: String): Boolean =
+        password.length >= 8 && password.any { it in 'a'..'z' || it in 'A'..'Z' } && password.any { it in '0'..'9' }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -174,7 +179,7 @@ object AuthManager {
         error.contains("already registered", true) -> "Email sudah terdaftar. Silakan masuk."
         error.contains("rate limit", true) -> "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
         error.contains("invalid", true) && error.contains("email", true) -> "Format email tidak valid."
-        error.contains("password", true) -> "Password terlalu lemah. Gunakan minimal 6 karakter."
+        error.contains("password", true) -> "Password terlalu lemah. $PASSWORD_HINT."
         else -> "Pendaftaran gagal. Coba lagi."
     }
 

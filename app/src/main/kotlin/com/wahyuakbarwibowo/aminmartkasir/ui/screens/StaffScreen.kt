@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wahyuakbarwibowo.aminmartkasir.data.remote.AuthManager
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.isPending
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.Store
 import com.wahyuakbarwibowo.aminmartkasir.data.remote.model.UserProfile
@@ -336,7 +337,8 @@ private fun AddStaffDialog(
                 OutlinedTextField(email, { email = it }, label = { Text("Email") }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(password, { password = it }, label = { Text("Password (min. 6 karakter)") },
+                OutlinedTextField(password, { password = it }, label = { Text("Password") },
+                    supportingText = { Text(AuthManager.PASSWORD_HINT) },
                     singleLine = true, visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth())
                 if (allowAdminRole) {
@@ -355,7 +357,7 @@ private fun AddStaffDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirm(name, email, password, storeId, role) },
-                enabled = name.isNotBlank() && email.contains("@") && password.length >= 6 && (!needStore || storeId != null)
+                enabled = name.isNotBlank() && email.contains("@") && AuthManager.isPasswordStrong(password) && (!needStore || storeId != null)
             ) { Text("Simpan") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
