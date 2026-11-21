@@ -113,7 +113,9 @@ class BackupRepository(
                     } else {
                         if (product.name == null) product.copy(name = "Produk Tanpa Nama") else product
                     }
-                    database.productDao().insert(sanitized)
+                    // Basis sync di backup bisa sudah basi; biarkan sync berikutnya mengambil
+                    // stok cloud (produk tersinkron) atau menimpanya sekali (produk tertunda).
+                    database.productDao().insert(sanitized.copy(syncedStock = null))
                 }
 
                 backupData.productVariants?.forEach { variant ->
