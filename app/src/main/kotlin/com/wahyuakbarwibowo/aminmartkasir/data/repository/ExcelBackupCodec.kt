@@ -135,8 +135,9 @@ object ExcelBackupCodec {
                 val item = JsonObject()
                 cells.forEach { (index, value) ->
                     val column = headers[index] ?: error("Kolom tambahan pada sheet ${sheet.name}.")
+                    // Sel kosong = null. "" membuat Gson gagal di kolom angka dan
+                    // remoteId "" bentrok di unique index.
                     if (value.isNotEmpty()) item.addProperty(column, value)
-                    else item.addProperty(column, "")
                 }
                 values.add(item)
                 recordCount++
