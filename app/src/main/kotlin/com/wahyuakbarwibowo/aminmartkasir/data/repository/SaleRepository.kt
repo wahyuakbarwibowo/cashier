@@ -7,6 +7,7 @@ import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.SaleItemEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.CustomerPointsHistoryEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.ReceivableEntity
 import com.wahyuakbarwibowo.aminmartkasir.data.local.entity.StockHistoryEntity
+import com.wahyuakbarwibowo.aminmartkasir.utils.DateUtils
 import kotlinx.coroutines.flow.Flow
 
 class SaleRepository(
@@ -77,8 +78,6 @@ class SaleRepository(
     suspend fun checkoutSaleTransaction(
         sale: SaleEntity,
         items: List<SaleItemEntity>,
-        stockUpdates: List<Triple<Long, Long?, Int>>, // productId to variantId to quantity
-        stockHistories: List<StockHistoryEntity>,
         pointsEarned: Int,
         pointsRedeemed: Int,
         customerId: Long?,
@@ -90,18 +89,10 @@ class SaleRepository(
             saleItemDao.insert(item.copy(saleId = saleId))
         }
 
-        stockUpdates.forEach { (productId, variantId, qty) ->
-            if (variantId != null) {
-                database.productVariantDao().decreaseStock(variantId, qty)
-            } else {
-                database.productDao().decreaseStock(productId, qty)
-            }
-        }
-
-        stockHistories.forEach { history ->
-            database.stockHistoryDao().insert(
-                history.copy(reason = "Transaksi penjualan #$saleId")
-            )
+        val now = DateUtils.nowDateTime()
+        items.forEach { item ->
+            val productId = item.productId ?: return@forEach
+            decreaseStockChecked(productId, item.variantId, item.qty, "Transaksi penjualan #$saleId", now)
         }
 
         if (customerId != null) {
@@ -158,41 +149,11 @@ class SaleRepository(
         customerIdNew: Long?,
         receivable: ReceivableEntity?
     ) = database.withTransaction {
+        val now = DateUtils.nowDateTime()
+
         // 1. Kembalikan stok lama
         stockRestores.forEach { (productId, variantId, qty) ->
-            val product = database.productDao().getProductById(productId)
-            if (product != null) {
-                if (variantId != null) {
-                    val variant = database.productVariantDao().getVariantById(variantId)
-                    if (variant != null) {
-                        database.stockHistoryDao().insert(
-                            StockHistoryEntity(
-                                productId = productId,
-                                productName = "${product.name} - ${variant.name}",
-                                changeQty = qty,
-                                stockBefore = variant.stock,
-                                stockAfter = variant.stock + qty,
-                                reason = "Restock dari update transaksi #$saleId",
-                                createdAt = updatedSale.createdAt ?: ""
-                            )
-                        )
-                        database.productVariantDao().increaseStock(variantId, qty)
-                    }
-                } else {
-                    database.stockHistoryDao().insert(
-                        StockHistoryEntity(
-                            productId = productId,
-                            productName = product.name,
-                            changeQty = qty,
-                            stockBefore = product.stock,
-                            stockAfter = product.stock + qty,
-                            reason = "Restock dari update transaksi #$saleId",
-                            createdAt = updatedSale.createdAt ?: ""
-                        )
-                    )
-                    database.productDao().increaseStock(productId, qty)
-                }
-            }
+            increaseStockLogged(productId, variantId, qty, "Restock dari update transaksi #$saleId", now)
         }
 
         // 2. Batalkan poin lama
@@ -206,7 +167,7 @@ class SaleRepository(
                         points = -oldSale.pointsEarned,
                         type = "REVERSAL",
                         notes = "Reversal poin dari update transaksi",
-                        createdAt = updatedSale.createdAt ?: ""
+                        createdAt = now
                     )
                 )
             }
@@ -219,7 +180,7 @@ class SaleRepository(
                         points = oldSale.pointsRedeemed,
                         type = "REVERSAL",
                         notes = "Reversal poin dari update transaksi",
-                        createdAt = updatedSale.createdAt ?: ""
+                        createdAt = now
                     )
                 )
             }
@@ -236,39 +197,7 @@ class SaleRepository(
 
         // 5. Kurangi stok baru
         stockDecreases.forEach { (productId, variantId, qty) ->
-            val product = database.productDao().getProductById(productId)
-            if (product != null) {
-                if (variantId != null) {
-                    val variant = database.productVariantDao().getVariantById(variantId)
-                    if (variant != null) {
-                        database.stockHistoryDao().insert(
-                            StockHistoryEntity(
-                                productId = productId,
-                                productName = "${product.name} - ${variant.name}",
-                                changeQty = -qty,
-                                stockBefore = variant.stock,
-                                stockAfter = (variant.stock - qty).coerceAtLeast(0),
-                                reason = "Transaksi penjualan update #$saleId",
-                                createdAt = updatedSale.createdAt ?: ""
-                            )
-                        )
-                        database.productVariantDao().decreaseStock(variantId, qty)
-                    }
-                } else {
-                    database.stockHistoryDao().insert(
-                        StockHistoryEntity(
-                            productId = productId,
-                            productName = product.name,
-                            changeQty = -qty,
-                            stockBefore = product.stock,
-                            stockAfter = (product.stock - qty).coerceAtLeast(0),
-                            reason = "Transaksi penjualan update #$saleId",
-                            createdAt = updatedSale.createdAt ?: ""
-                        )
-                    )
-                    database.productDao().decreaseStock(productId, qty)
-                }
-            }
+            decreaseStockChecked(productId, variantId, qty, "Transaksi penjualan update #$saleId", now)
         }
 
         // 6. Tambahkan poin baru
@@ -282,7 +211,7 @@ class SaleRepository(
                         points = pointsEarnedNew,
                         type = "EARNED",
                         notes = "Poin dari update transaksi",
-                        createdAt = updatedSale.createdAt ?: ""
+                        createdAt = now
                     )
                 )
             }
@@ -295,7 +224,7 @@ class SaleRepository(
                         points = -pointsRedeemedNew,
                         type = "REDEEMED",
                         notes = "Penukaran poin dari update transaksi",
-                        createdAt = updatedSale.createdAt ?: ""
+                        createdAt = now
                     )
                 )
             }
@@ -315,4 +244,59 @@ class SaleRepository(
             database.receivableDao().delete(existingReceivable)
         }
     }.also { runCatching(onStockChanged) }
+
+    /**
+     * Kurangi stok setelah memastikan stok saat ini (dibaca di dalam transaksi) cukup.
+     * Daftar produk di layar kasir bisa basi, jadi cek di UI saja tidak cukup.
+     */
+    private suspend fun decreaseStockChecked(productId: Long, variantId: Long?, qty: Int, reason: String, now: String) {
+        val product = database.productDao().getProductById(productId)
+            ?: throw IllegalStateException("Produk sudah dihapus. Hapus dari keranjang lalu coba lagi.")
+        val variant = variantId?.let {
+            database.productVariantDao().getVariantById(it)
+                ?: throw IllegalStateException("Varian ${product.name} sudah dihapus. Hapus dari keranjang lalu coba lagi.")
+        }
+        val name = variant?.let { "${product.name} - ${it.name}" } ?: product.name
+        val before = variant?.stock ?: product.stock
+        if (before < qty) throw IllegalStateException("Stok $name tidak cukup (sisa $before).")
+        if (variant != null) {
+            database.productVariantDao().decreaseStock(variant.id, qty)
+        } else {
+            database.productDao().decreaseStock(productId, qty)
+        }
+        database.stockHistoryDao().insert(
+            StockHistoryEntity(
+                productId = productId,
+                productName = name,
+                changeQty = -qty,
+                stockBefore = before,
+                stockAfter = before - qty,
+                reason = reason,
+                createdAt = now
+            )
+        )
+    }
+
+    /** Kembalikan stok; produk/varian yang sudah dihapus dilewati. */
+    private suspend fun increaseStockLogged(productId: Long, variantId: Long?, qty: Int, reason: String, now: String) {
+        val product = database.productDao().getProductById(productId) ?: return
+        val variant = variantId?.let { database.productVariantDao().getVariantById(it) ?: return }
+        val before = variant?.stock ?: product.stock
+        if (variant != null) {
+            database.productVariantDao().increaseStock(variant.id, qty)
+        } else {
+            database.productDao().increaseStock(productId, qty)
+        }
+        database.stockHistoryDao().insert(
+            StockHistoryEntity(
+                productId = productId,
+                productName = variant?.let { "${product.name} - ${it.name}" } ?: product.name,
+                changeQty = qty,
+                stockBefore = before,
+                stockAfter = before + qty,
+                reason = reason,
+                createdAt = now
+            )
+        )
+    }
 }

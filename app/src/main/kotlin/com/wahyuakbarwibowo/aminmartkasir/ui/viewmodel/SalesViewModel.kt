@@ -179,6 +179,11 @@ class SalesViewModel(
         }
     }
 
+    /** Daftar halaman (non-pencarian) adalah snapshot; muat ulang agar stok di selector tidak basi. */
+    private fun refreshStockAfterSale() {
+        if (_uiState.value.searchQuery.isBlank()) loadInitialProducts()
+    }
+
     fun refreshProducts() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isRefreshingProducts = true) }
@@ -420,25 +425,6 @@ class SalesViewModel(
                     )
                 }
 
-                val stockUpdates = currentState.cartItems.map { item ->
-                    Triple(item.product.id, item.variant?.id, item.qty)
-                }
-
-                val stockHistories = currentState.cartItems.map { item ->
-                    val before = item.variant?.stock ?: item.product.stock
-                    val after = (before - item.qty).coerceAtLeast(0)
-                    val name = item.variant?.let { "${item.product.name} - ${it.name}" } ?: item.product.name
-                    StockHistoryEntity(
-                        productId = item.product.id,
-                        productName = name,
-                        changeQty = -item.qty,
-                        stockBefore = before,
-                        stockAfter = after,
-                        reason = "", // Akan di-copy di repository dengan saleId yang sesuai
-                        createdAt = DateUtils.nowDateTime()
-                    )
-                }
-
                 val receivable = if (selectedPaymentMethod?.name?.contains("Hutang", ignoreCase = true) == true) {
                     ReceivableEntity(
                         saleId = 0,
@@ -455,8 +441,6 @@ class SalesViewModel(
                 val saleId = saleRepository.checkoutSaleTransaction(
                     sale = sale,
                     items = saleItems,
-                    stockUpdates = stockUpdates,
-                    stockHistories = stockHistories,
                     pointsEarned = currentState.pointsEarned,
                     pointsRedeemed = currentState.pointsRedeemed,
                     customerId = currentState.selectedCustomer?.id,
@@ -465,6 +449,7 @@ class SalesViewModel(
 
                 // Clear cart
                 clearCart()
+                refreshStockAfterSale()
 
                 onComplete(saleId)
                 
@@ -677,6 +662,7 @@ class SalesViewModel(
                 )
 
                 clearCart()
+                refreshStockAfterSale()
                 onUpdateComplete()
 
             } catch (e: Exception) {
