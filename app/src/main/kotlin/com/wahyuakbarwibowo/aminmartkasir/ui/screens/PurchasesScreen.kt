@@ -634,7 +634,8 @@ private fun AddPurchaseItemDialog(
                                 enabled = false
                             )
                         } else {
-                            products.forEach { product ->
+                            // Dropdown tidak lazy; batasi supaya ribuan produk tidak dirender sekaligus.
+                            products.take(30).forEach { product ->
                                 DropdownMenuItem(
                                     text = {
                                         Column {
